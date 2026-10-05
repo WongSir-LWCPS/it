@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-Hant-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>彩色列印限額 管理及處理｜IT一站式平台</title>
+  <link rel="icon" href="../../assets/img/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261005o">
+  <script>
+    // 程式載入失敗時顯示原因，而不是一直停在「載入中」
+    (function () {
+      function show(msg) {
+        var el = document.getElementById("loading");
+        if (el) el.innerHTML = "系統未能載入：" + msg + "<br>請按 Ctrl + Shift + R（Mac：Cmd + Shift + R）重新整理。如仍未能解決，請把這段文字告訴IT組。";
+      }
+      window.addEventListener("error", function (e) { show(e.message || "程式錯誤"); });
+      window.addEventListener("unhandledrejection", function (e) { show((e.reason && e.reason.message) || "程式錯誤"); });
+      setTimeout(function () { if (document.getElementById("loading")) show("載入時間過長，請檢查網絡連線"); }, 15000);
+    })();
+  </script>
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+  <p id="loading" class="loading">載入中…</p>
+  <div id="gate" class="gate" hidden></div>
+
+  <main id="main" class="wrap" hidden>
+    <nav class="crumbs" aria-label="位置">
+      <a href="../../index.html">IT一站式平台</a>
+      <span aria-hidden="true">/</span>
+      <a href="index.html">增加彩色列印限額申請</a>
+      <span aria-hidden="true">/</span>
+      <span>管理及處理</span>
+    </nav>
+
+    <div id="admin-area" hidden>
+      <h1>彩色列印限額 管理及處理</h1>
+      <p id="email-status" class="warn" hidden></p>
+
+      <div class="tabs" role="tablist">
+        <button role="tab" class="tab" data-tab="pending" aria-selected="true">待處理 <span id="pending-count" class="count"></span></button>
+        <button role="tab" class="tab" data-tab="all" aria-selected="false">全部申請</button>
+      </div>
+
+      <section id="tab-pending" class="panel" role="tabpanel">
+        <div id="pending-list" class="reviews"></div>
+      </section>
+
+      <section id="tab-all" class="panel" role="tabpanel" hidden>
+        <div class="block-head">
+          <label class="field field--inline"><span>狀態</span>
+            <select id="all-filter">
+              <option value="all">全部</option>
+              <option value="pending">處理中</option>
+              <option value="approved">已增加限額</option>
+              <option value="rejected">未獲批准</option>
+              <option value="cancelled">已取消</option>
+            </select>
+          </label>
+        </div>
+        <div id="all-list"></div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="admin.js?v=20261005o"></script>
+</body>
+</html>

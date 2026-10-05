@@ -1,7 +1,8 @@
-import { boot, db, esc, toast, APP, isBlockedEmail, fmtTimestamp } from "./common.js?v=20261005k";
+import { boot, db, esc, toast, APP, isBlockedEmail, fmtTimestamp } from "./common.js?v=20261005o";
 import {
-  collection, doc, onSnapshot, setDoc, deleteDoc, serverTimestamp,
+  collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { syncNotifyList } from "./notify.js?v=20261005o";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { me: "", admins: [] };
@@ -31,6 +32,19 @@ boot({
       const btn = e.target.closest("[data-remove]");
       if (btn) removeAdmin(btn.dataset.remove);
     });
+    $("#admin-list").addEventListener("change", async (e) => {
+      const box = e.target.closest("[data-notify]");
+      if (!box) return;
+      try {
+        await updateDoc(doc(db, "admins", box.dataset.notify), { notify: box.checked });
+        await syncNotifyList();
+        toast(box.checked ? `${box.dataset.notify} 會收到申請通知。` : `${box.dataset.notify} 不再收到申請通知。`, "success");
+      } catch (err) {
+        box.checked = !box.checked;
+        toast("未能更新：" + err.message, "error");
+      }
+    });
+    syncNotifyList().catch((e) => console.warn(e));
   },
 });
 
@@ -38,12 +52,13 @@ function renderAdmins() {
   $("#admin-list").innerHTML = `
     <div class="table-scroll">
       <table class="table">
-        <thead><tr><th>電郵</th><th>名稱</th><th>加入者</th><th>加入時間</th><th><span class="sr-only">操作</span></th></tr></thead>
+        <thead><tr><th>電郵</th><th>名稱</th><th>接收申請通知</th><th>加入者</th><th>加入時間</th><th><span class="sr-only">操作</span></th></tr></thead>
         <tbody>
           ${S.admins.map((a) => `
             <tr>
               <td>${esc(a.email)}${a.email === S.me ? ' <span class="badge badge--go">你</span>' : ""}</td>
               <td>${esc(a.name || "")}</td>
+              <td><label class="check"><input type="checkbox" data-notify="${esc(a.email)}" ${a.notify !== false ? "checked" : ""}> 電郵通知</label></td>
               <td>${esc(a.addedBy || "（Firebase 設定）")}</td>
               <td class="nowrap">${fmtTimestamp(a.addedAt)}</td>
               <td>${a.email === S.me
@@ -71,10 +86,12 @@ async function addAdmin(e) {
   try {
     await setDoc(doc(db, "admins", email), {
       name: f.name.value.trim(),
+      notify: true,
       addedBy: S.me,
       addedAt: serverTimestamp(),
     });
     f.reset();
+    await syncNotifyList();
     toast(`已加入 ${email} 為管理員。對方重新整理頁面後即可使用管理功能。`, "success");
   } catch (err) {
     warn("未能加入：" + err.message);
@@ -87,6 +104,7 @@ async function removeAdmin(email) {
   if (!confirm(`移除 ${email} 的管理員權限？`)) return;
   try {
     await deleteDoc(doc(db, "admins", email));
+    await syncNotifyList();
     toast(`已移除 ${email}。`, "success");
   } catch (err) {
     toast("未能移除：" + err.message, "error");

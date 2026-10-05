@@ -1,5 +1,5 @@
 import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { APP, db } from "./common.js?v=20261005k";
+import { APP, db } from "./common.js?v=20261005o";
 
 let emailJsLoading = null;
 
@@ -20,13 +20,20 @@ function loadEmailJs() {
 
 export const emailEnabled = () => ["firestore-mail", "emailjs"].includes(APP.email?.mode);
 
-/** 寄出電郵。成功排入寄送佇列時回傳 true；未設定電郵時回傳 false。 */
-export async function sendEmail({ to, subject, html, text }) {
+/**
+ * 寄出電郵。to、cc 可以是一個電郵或電郵陣列。
+ * 成功排入寄送佇列時回傳 true；未設定電郵或沒有收件人時回傳 false。
+ */
+export async function sendEmail({ to, cc = [], subject, html, text }) {
   const mode = APP.email?.mode;
+  const toList = (Array.isArray(to) ? to : [to]).filter(Boolean);
+  const ccList = (Array.isArray(cc) ? cc : [cc]).filter((e) => e && !toList.includes(e));
+  if (!toList.length) return false;
 
   if (mode === "firestore-mail") {
     // Firebase「Trigger Email from Firestore」擴充功能會讀取這份文件並寄出電郵
-    const mail = { to: [to], message: { subject, html, text }, createdAt: serverTimestamp() };
+    const mail = { to: toList, message: { subject, html, text }, createdAt: serverTimestamp() };
+    if (ccList.length) mail.cc = ccList;
     if (APP.email.replyTo) mail.replyTo = APP.email.replyTo;
     await addDoc(collection(db, APP.email.collection || "mail"), mail);
     return true;
@@ -35,13 +42,15 @@ export async function sendEmail({ to, subject, html, text }) {
   if (mode === "emailjs") {
     const ej = await loadEmailJs();
     const c = APP.email.emailjs;
-    await ej.send(c.serviceId, c.templateId, {
-      to_email: to,
-      subject,
-      message_html: html,
-      message: text,
-      reply_to: APP.email.replyTo || "",
-    });
+    for (const addr of [...toList, ...ccList]) {
+      await ej.send(c.serviceId, c.templateId, {
+        to_email: addr,
+        subject,
+        message_html: html,
+        message: text,
+        reply_to: APP.email.replyTo || "",
+      });
+    }
     return true;
   }
 

@@ -11,6 +11,14 @@ export const SYSTEMS = [
     adminHref: "systems/ktv/admin.html",
     icon: "📺",
   },
+  {
+    id: "print",
+    name: "增加彩色列印限額申請",
+    desc: "申請增加彩色列印限額，IT組處理後會以電郵通知，約需 1 個工作天。",
+    href: "systems/print/index.html",
+    adminHref: "systems/print/admin.html",
+    icon: "🖨️",
+  },
   // 範例：
   // {
   //   id: "repair",

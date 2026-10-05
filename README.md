@@ -2,7 +2,7 @@
 
 樂華天主教小學 IT組的校內系統平台。網站放在 GitHub Pages，資料存放在 Firebase（Firestore），老師以學校 Google 帳戶登入。
 
-第一個系統：**樂Kids TV 預約系統**
+系統：**樂Kids TV 預約系統**、**增加彩色列印限額申請**
 
 - 老師：查看播放時間表、預約時段、查看自己的申請及審批結果、取消審批中的申請
 - 管理員：審批申請（批准／不批准並以電郵通知老師）、管理播放日期、直接加入已確認的節目、取消已批准的節目
@@ -122,3 +122,14 @@ python3 tools/set-version.py
 | `mail` | 自動 | 電郵佇列（方法 A） |
 
 時段、播放模式、截止日數、其他時段的時間範圍可在 `systems/ktv/ktv-config.js` 修改。
+
+## 增加彩色列印限額申請（systems/print/）
+
+- 老師：申請人名稱預設為登入的 Google 帳戶名稱，亦可選「其他（自行輸入）」；申請日期為提交當日；登入已驗證身份，毋須簽署。可查看及取消處理中的申請。
+- 提交後：申請人收到確認電郵；「平台設定」中勾選「電郵通知」的管理員收到新申請通知。
+- 管理員：在「管理及處理」按「已增加限額並通知」或「不批准並通知」；結果寄給申請人，並副本給接收通知的管理員。
+
+| 集合 | 說明 |
+| --- | --- |
+| `print_requests` | `applicantName`、`date`（提交日）、`remarks`、`email`、`uid`、`status`（pending / approved / rejected / cancelled）、`reviewNote`、`reviewedBy` |
+| `settings/notify` | `emails`：接收申請通知的管理員（由「平台設定」自動維護） |
