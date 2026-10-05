@@ -213,10 +213,11 @@ function setupEditDialog() {
   f._sync = syncKind;
 
   // 管理員可安排 07:00 至 19:00 的任何時間
-  timePicker(f.start, { from: "07:00", to: "18:55", placeholder: "選擇開始時間" });
+  timePicker(f.start, { from: "07:00", to: "18:55", label: "開始時間" });
   timePicker(f.end, {
-    from: "07:05", to: "19:00", placeholder: "選擇結束時間",
+    from: "07:05", to: "19:00", label: "結束時間",
     isAllowed: (t) => !f.start.value || t > f.start.value,
+    errorText: "結束時間必須遲於開始時間，並在 19:00 或之前。",
   });
   f.start.addEventListener("change", () => {
     if (f.end.value && f.end.value <= f.start.value) f.end._tp.set("", true);

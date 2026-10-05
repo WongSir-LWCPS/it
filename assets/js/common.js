@@ -73,30 +73,68 @@ const CLOCK_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden=
 const hmToMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
 
 /**
- * 時間選擇器（24 小時制）：按下欄位後彈出「時」「分」兩組按鈕。
- * input 為 <input type="hidden">，選好後會觸發 change 事件。
- * opts：from、to（可選範圍）、step（分鐘間距）、placeholder、isAllowed(t)（額外限制）
+ * 把用戶輸入的文字轉為 HH:MM。
+ * 接受：8:30、08:30、0830、830、8.30、13：10、8（＝08:00）、下午1:10、1:10pm
+ */
+export function parseTimeText(text) {
+  let s = String(text ?? "").trim().toLowerCase();
+  if (!s) return "";
+  const pm = /下午|晚上|pm|p\.m\./.test(s);
+  const am = /上午|早上|am|a\.m\./.test(s);
+  s = s.replace(/上午|下午|早上|晚上|[ap]\.?m\.?/g, "").replace(/[：.．時]/g, ":").replace(/分/g, "").replace(/\s/g, "");
+  let h, m, x;
+  if ((x = s.match(/^(\d{1,2}):(\d{1,2})$/))) { h = +x[1]; m = +x[2]; }
+  else if ((x = s.match(/^(\d{3,4})$/))) { h = +s.slice(0, -2); m = +s.slice(-2); }
+  else if ((x = s.match(/^(\d{1,2}):?$/))) { h = +x[1]; m = 0; }
+  else return null;
+  if (pm && h < 12) h += 12;
+  if (am && h === 12) h = 0;
+  if (h > 23 || m > 59) return null;
+  return `${pad(h)}:${pad(m)}`;
+}
+
+/**
+ * 時間欄（24 小時制）：可直接輸入，亦可按時鐘圖示彈出「時」「分」按鈕選擇。
+ * input 為 <input type="hidden">（實際提交的值），值改變時會觸發 change 事件。
+ * opts：from、to（可選範圍）、step（按鈕的分鐘間距）、placeholder、isAllowed(t)、errorText
  */
 export function timePicker(input, opts = {}) {
-  const o = { from: "07:00", to: "19:00", step: 5, placeholder: "選擇時間", isAllowed: () => true, ...opts };
+  const o = {
+    from: "07:00", to: "19:00", step: 5, placeholder: "例如 08:30",
+    isAllowed: () => true, errorText: "", ...opts,
+  };
   const wrap = document.createElement("div");
   wrap.className = "tp";
   input.replaceWith(wrap);
+
+  const text = document.createElement("input");
+  text.type = "text";
+  text.className = "tp-input";
+  text.inputMode = "numeric";
+  text.autocomplete = "off";
+  text.placeholder = o.placeholder;
+  text.setAttribute("aria-label", o.label || "時間（24 小時制）");
+
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.className = "tp-field";
-  btn.setAttribute("aria-haspopup", "true");
+  btn.className = "tp-btn";
+  btn.setAttribute("aria-label", "選擇時間");
   btn.setAttribute("aria-expanded", "false");
+  btn.innerHTML = CLOCK_ICON;
+
+  const err = document.createElement("p");
+  err.className = "tp-error";
+  err.hidden = true;
+
   const pop = document.createElement("div");
   pop.className = "tp-pop";
   pop.hidden = true;
-  wrap.append(input, btn, pop);
-  let hour = null;   // 已選但未選分鐘的小時
+  wrap.append(input, text, btn, pop, err);
+  let hour = null;
 
   const ok = (t) => hmToMin(t) >= hmToMin(o.from) && hmToMin(t) <= hmToMin(o.to) && o.isAllowed(t);
-  const render = () => {
+  const renderPop = () => {
     const v = input.value;
-    btn.innerHTML = `${CLOCK_ICON}<span class="${v ? "" : "tp-ph"}">${v || o.placeholder}</span>`;
     const [vh, vm] = v ? v.split(":") : [null, null];
     const h = hour ?? vh;
     const hours = [];
@@ -111,34 +149,66 @@ export function timePicker(input, opts = {}) {
       <div class="tp-grid">${mins.map((m) => `<button type="button" data-m="${m}" class="${h === vh && m === vm ? "is-on" : ""}"
         ${h && ok(`${h}:${m}`) ? "" : "disabled"}>${m}</button>`).join("")}</div>`;
   };
+  const showError = (msg) => {
+    err.hidden = !msg;
+    err.textContent = msg;
+    text.setAttribute("aria-invalid", msg ? "true" : "false");
+  };
+  const set = (v, silent = false) => {
+    const changed = input.value !== v;
+    input.value = v;
+    text.value = v;
+    hour = null;
+    showError("");
+    if (!pop.hidden) renderPop();
+    if (changed && !silent) input.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+  // 檢查輸入的文字
+  const commit = () => {
+    const raw = text.value.trim();
+    if (!raw) { set(""); return; }
+    const t = parseTimeText(raw);
+    if (!t) {
+      input.value = "";
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      showError("看不懂這個時間，請以 24 小時制輸入，例如 08:30 或 13:10。");
+      return;
+    }
+    if (!ok(t)) {
+      text.value = t;
+      input.value = "";
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      showError(o.errorText || `請輸入 ${o.from} 至 ${o.to} 之間的時間。`);
+      return;
+    }
+    set(t);
+  };
   const close = (focus = true) => {
     pop.hidden = true;
     hour = null;
     btn.setAttribute("aria-expanded", "false");
-    render();
-    if (focus) btn.focus();
+    if (focus) text.focus();
   };
   const open = () => {
     hour = null;
-    render();
+    renderPop();
     pop.hidden = false;
     btn.setAttribute("aria-expanded", "true");
     (pop.querySelector("[data-h].is-on") || pop.querySelector("[data-h]:not(:disabled)"))?.focus();
   };
-  const set = (v, silent = false) => {
-    input.value = v;
-    hour = null;
-    render();
-    if (!silent) input.dispatchEvent(new Event("change", { bubbles: true }));
-  };
 
+  text.addEventListener("change", commit);
+  text.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); commit(); }
+    if (e.key === "ArrowDown" && e.altKey) { e.preventDefault(); open(); }
+  });
   btn.addEventListener("click", () => (pop.hidden ? open() : close()));
   pop.addEventListener("click", (e) => {
     const b = e.target.closest("button");
     if (!b || b.disabled) return;
     if (b.dataset.h) {
       hour = b.dataset.h;
-      render();
+      renderPop();
       pop.querySelector("[data-m]:not(:disabled)")?.focus();
     } else if (b.dataset.m) {
       set(`${hour ?? input.value.split(":")[0]}:${b.dataset.m}`);
@@ -150,10 +220,12 @@ export function timePicker(input, opts = {}) {
   });
   // 用 composedPath：按鈕重繪後 e.target 已不在頁面上，contains() 會誤判為按在外面
   document.addEventListener("click", (e) => { if (!pop.hidden && !e.composedPath().includes(wrap)) close(false); });
-  input.form?.addEventListener("reset", () => setTimeout(render));
 
-  input._tp = { set, refresh: render, setOptions: (n) => { Object.assign(o, n); render(); } };
-  render();
+  input._tp = {
+    set,
+    refresh: () => { if (!pop.hidden) renderPop(); },
+    setOptions: (n) => { Object.assign(o, n); if (!pop.hidden) renderPop(); },
+  };
   return input._tp;
 }
 

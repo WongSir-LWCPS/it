@@ -222,7 +222,9 @@ function setupDialog() {
   timePicker(form.start, {
     from: KTV.customWindow.from,
     to: toHHMM(toMin(KTV.customWindow.to) - 5),
-    placeholder: "選擇開始時間",
+    placeholder: "例如 08:30",
+    label: "開始時間",
+    errorText: `請輸入 ${KTV.customWindow.from} 至 ${toHHMM(toMin(KTV.customWindow.to) - 5)} 之間的時間。`,
   });
   const durations = [5, 10, 15, 20, 25, 30].filter((d) => d <= KTV.maxCustomMinutes);
   $("#duration-choices").innerHTML = durations.map((d, i) => `
