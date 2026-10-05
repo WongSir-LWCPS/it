@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-Hant-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>樂Kids TV 管理及審批｜IT一站式平台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/style.css">
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+  <p id="loading" class="loading">載入中…</p>
+  <div id="gate" class="gate" hidden></div>
+
+  <main id="main" class="wrap" hidden>
+    <nav class="crumbs" aria-label="位置">
+      <a href="../../index.html">IT一站式平台</a>
+      <span aria-hidden="true">/</span>
+      <a href="index.html">樂Kids TV 預約</a>
+      <span aria-hidden="true">/</span>
+      <span>管理及審批</span>
+    </nav>
+
+    <div id="admin-area" hidden>
+      <h1>樂Kids TV 管理及審批</h1>
+      <p id="email-status" class="warn" hidden></p>
+
+      <div class="tabs" role="tablist">
+        <button role="tab" class="tab" data-tab="pending" aria-selected="true">待審批 <span id="pending-count" class="count"></span></button>
+        <button role="tab" class="tab" data-tab="sessions" aria-selected="false">播放日期</button>
+        <button role="tab" class="tab" data-tab="all" aria-selected="false">全部申請</button>
+      </div>
+
+      <!-- 待審批 -->
+      <section id="tab-pending" class="panel" role="tabpanel">
+        <div id="pending-list" class="reviews"></div>
+      </section>
+
+      <!-- 播放日期 -->
+      <section id="tab-sessions" class="panel" role="tabpanel" hidden>
+        <div class="forms-grid">
+          <form id="form-single" class="card-form">
+            <h2>加入一個播放日期</h2>
+            <label class="field"><span>日期</span><input type="date" name="date" required></label>
+            <label class="field"><span>備註（選填）</span><input name="note" maxlength="60" placeholder="例如：開學禮特備節目"></label>
+            <button class="btn btn--primary" type="submit">加入日期</button>
+          </form>
+
+          <form id="form-bulk" class="card-form">
+            <h2>一次過加入整段期間</h2>
+            <div class="field-row">
+              <label class="field"><span>由</span><input type="date" name="from" required></label>
+              <label class="field"><span>至</span><input type="date" name="to" required></label>
+            </div>
+            <label class="field"><span>逢</span>
+              <select name="weekday">
+                <option value="1">星期一</option><option value="2">星期二</option><option value="3">星期三</option>
+                <option value="4">星期四</option><option value="5" selected>星期五</option>
+              </select>
+            </label>
+            <label class="field"><span>略過的日期（假期、考試等，每行一個，如 16/10/2026）</span>
+              <textarea name="skip" rows="3"></textarea>
+            </label>
+            <button class="btn btn--primary" type="submit">加入所有日期</button>
+          </form>
+        </div>
+
+        <h2 class="mt">已加入的播放日期</h2>
+        <div id="session-list"></div>
+
+        <form id="form-manual" class="card-form mt">
+          <h2>直接加入已確認的節目</h2>
+          <p class="hint">用於輸入以往在試算表登記的節目，或IT組直接安排的節目。加入後即為「已批准」，不會寄出電郵。</p>
+          <div class="field-row">
+            <label class="field"><span>播放日期</span><select name="sessionId" id="manual-session" required></select></label>
+            <label class="field"><span>時段</span><select name="slot" id="manual-slot"></select></label>
+          </div>
+          <div class="field-row">
+            <label class="field"><span>主題</span><input name="topic" required maxlength="60"></label>
+            <label class="field"><span>負責老師</span><input name="teacherName" required maxlength="40"></label>
+          </div>
+          <div class="field-row">
+            <label class="field"><span>老師電郵（選填）</span><input type="email" name="teacherEmail"></label>
+            <label class="field"><span>播放模式</span><select name="mode" id="manual-mode"></select></label>
+          </div>
+          <button class="btn btn--primary" type="submit">加入節目</button>
+        </form>
+      </section>
+
+      <!-- 全部申請 -->
+      <section id="tab-all" class="panel" role="tabpanel" hidden>
+        <div class="block-head">
+          <label class="field field--inline"><span>顯示</span>
+            <select id="all-filter">
+              <option value="all">全部</option>
+              <option value="pending">審批中</option>
+              <option value="approved">已批准</option>
+              <option value="rejected">未獲批准</option>
+              <option value="cancelled">已取消</option>
+            </select>
+          </label>
+        </div>
+        <div id="all-list"></div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="admin.js"></script>
+</body>
+</html>

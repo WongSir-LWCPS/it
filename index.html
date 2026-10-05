@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-Hant-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IT一站式平台｜樂華天主教小學</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+  <p id="loading" class="loading">載入中…</p>
+  <div id="gate" class="gate" hidden></div>
+
+  <main id="main" class="wrap" hidden>
+    <section class="home-intro">
+      <h1>IT組校內系統</h1>
+      <p>選擇要使用的系統。IT組加入新系統後，會在下面的清單出現。</p>
+    </section>
+    <ul id="systems" class="systems"></ul>
+  </main>
+
+  <script type="module">
+    import { boot, esc } from "./assets/js/common.js";
+    import { SYSTEMS } from "./assets/js/systems.js";
+
+    boot({
+      root: "./",
+      onReady: ({ isAdmin }) => {
+        document.getElementById("systems").innerHTML = SYSTEMS.map((s) => `
+          <li class="system">
+            <span class="system-icon" aria-hidden="true">${s.icon || "🧩"}</span>
+            <div class="system-body">
+              <h2><a href="${s.href}">${esc(s.name)}</a></h2>
+              <p>${esc(s.desc)}</p>
+            </div>
+            <div class="system-actions">
+              <a class="btn btn--primary" href="${s.href}">開啟</a>
+              ${isAdmin && s.adminHref ? `<a class="btn" href="${s.adminHref}">管理及審批</a>` : ""}
+            </div>
+          </li>`).join("");
+      },
+    });
+  </script>
+</body>
+</html>

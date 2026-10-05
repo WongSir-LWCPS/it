@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-Hant-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>樂Kids TV 預約｜IT一站式平台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/style.css">
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+  <p id="loading" class="loading">載入中…</p>
+  <div id="gate" class="gate" hidden></div>
+
+  <main id="main" class="wrap" hidden>
+    <nav class="crumbs" aria-label="位置">
+      <a href="../../index.html">IT一站式平台</a>
+      <span aria-hidden="true">/</span>
+      <span>樂Kids TV 預約</span>
+      <a id="admin-link" class="btn btn--small crumbs-action" href="admin.html" hidden>管理及審批</a>
+    </nav>
+
+    <section id="hero" class="onair" aria-label="下一次播放"></section>
+
+    <section class="block">
+      <div class="block-head">
+        <h2>播放時間表</h2>
+        <label class="check"><input type="checkbox" id="toggle-past"> 顯示已播放的日期</label>
+      </div>
+      <p class="hint" id="guide-hint"></p>
+      <ul class="legend" aria-label="圖例">
+        <li><span class="swatch swatch--approved"></span>已批准節目</li>
+        <li><span class="swatch swatch--pending"></span>審批中</li>
+        <li><span class="swatch swatch--open"></span>可預約</li>
+      </ul>
+      <div id="guide" class="guide"></div>
+    </section>
+
+    <section class="block">
+      <h2>我的申請</h2>
+      <div id="mine"></div>
+    </section>
+  </main>
+
+  <dialog id="book-dialog" class="sheet" aria-labelledby="book-title">
+    <form id="book-form" novalidate>
+      <h2 id="book-title">預約播放時段</h2>
+      <p class="sheet-when" id="book-when"></p>
+      <input type="hidden" name="sessionId">
+      <input type="hidden" name="slot">
+
+      <label class="field">
+        <span>主題</span>
+        <input name="topic" required maxlength="60" placeholder="例如：趣味中文" autocomplete="off">
+      </label>
+      <label class="field">
+        <span>負責老師</span>
+        <input name="teacherName" required maxlength="40">
+      </label>
+      <fieldset class="field">
+        <legend>播放模式</legend>
+        <div class="choices" id="mode-choices"></div>
+      </fieldset>
+      <label class="field">
+        <span>內容簡介或備註（選填）</span>
+        <textarea name="remarks" rows="3" maxlength="300" placeholder="例如：需要預留咪高峰、會有學生到廣播室"></textarea>
+      </label>
+      <p class="sheet-foot">審批結果會寄到 <strong id="book-email"></strong></p>
+      <div class="actions">
+        <button type="button" class="btn" id="book-cancel">取消</button>
+        <button type="submit" class="btn btn--primary" id="book-submit">提交申請</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="ktv.js"></script>
+</body>
+</html>
