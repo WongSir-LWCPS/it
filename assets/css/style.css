@@ -511,3 +511,9 @@ h3 { font-size: .95rem; }
 .tp-col button.is-on, .tp-col button.is-on:hover { background: #2563EB; color: #fff; font-weight: 600; }
 .tp-col button:disabled { opacity: .28; cursor: not-allowed; }
 .tp-col[data-col="p"] { padding-bottom: 0; }
+
+/* 分頁列：不顯示捲軸（底線改用陰影，避免超出範圍而出現直向捲軸） */
+.tabs { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { margin-bottom: 0; border-bottom: 0; box-shadow: inset 0 -3px 0 transparent; }
+.tab[aria-selected="true"] { box-shadow: inset 0 -3px 0 var(--ink); }
