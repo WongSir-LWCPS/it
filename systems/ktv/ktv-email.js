@@ -1,6 +1,6 @@
-import { APP, esc, fmtDate } from "../../assets/js/common.js?v=20261005q";
-import { KTV } from "./ktv-config.js?v=20261005q";
-import { timeLabel } from "./ktv-common.js?v=20261005q";
+import { APP, esc, fmtDate } from "../../assets/js/common.js?v=20261005r";
+import { KTV } from "./ktv-config.js?v=20261005r";
+import { timeLabel } from "./ktv-common.js?v=20261005r";
 
 const SUBJECT = {
   approved: "【樂Kids TV】你的播放預約已獲批准",

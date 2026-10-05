@@ -1,5 +1,5 @@
-import { APP, fmtDate, fmtTimestamp, mailLayout } from "../../assets/js/common.js?v=20261005q";
-import { COPILOT, purposeText } from "./copilot-config.js?v=20261005q";
+import { APP, fmtDate, fmtTimestamp, mailLayout } from "../../assets/js/common.js?v=20261005r";
+import { COPILOT, purposeText } from "./copilot-config.js?v=20261005r";
 
 /** kind：received（給申請人）、new（給管理員）、approved、rejected、returned */
 export function buildCopilotEmail(r, kind, note = "") {
@@ -12,13 +12,15 @@ export function buildCopilotEmail(r, kind, note = "") {
   };
   const LEAD = {
     received: `我們已收到你的${COPILOT.title}。IT組審批後會再以電郵通知你。`,
-    new: `${r.applicantName}（${r.email}）提交了${COPILOT.title}，請到平台審批。`,
-    approved: `你的 Copilot 借用申請已獲批准，IT組會把 Copilot 授權給你的學校 Microsoft 帳戶（${r.email}）。請使用本校電郵登入 Office。`,
+    new: `${r.applicantName}（${r.applicantEmail || r.email}）提交了${COPILOT.title}，請到平台審批。`,
+    approved: `你的 Copilot 借用申請已獲批准，IT組會把 Copilot 授權給你的學校 Microsoft 帳戶（${r.applicantEmail || r.email}）。請使用本校電郵登入 Office。`,
     rejected: "你的 Copilot 借用申請未獲批准，詳情如下：",
     returned: "你的 Copilot 借用期已完結，授權已收回。如需繼續使用，請再次填表申請。",
   };
   const rows = [
     ["申請人", r.applicantName],
+    ["授權帳戶", r.applicantEmail || r.email],
+    ...(r.applicantEmail && r.applicantEmail !== r.email ? [["提交者", r.email]] : []),
     ["所屬組別/科組", r.group],
     ["借用期間", `${fmtDate(r.startDate)} 至 ${fmtDate(r.endDate)}（${r.days} 天）`],
     ["用途", purposeText(r)],

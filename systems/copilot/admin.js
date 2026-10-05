@@ -1,15 +1,18 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId,
-} from "../../assets/js/common.js?v=20261005q";
+} from "../../assets/js/common.js?v=20261005r";
 import {
   collection, doc, onSnapshot, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { sendEmail, emailEnabled } from "../../assets/js/email.js?v=20261005q";
-import { getNotifyEmails, syncNotifyList } from "../../assets/js/notify.js?v=20261005q";
-import { CSTATUS, purposeText } from "./copilot-config.js?v=20261005q";
-import { buildCopilotEmail } from "./copilot-email.js?v=20261005q";
+import { sendEmail, emailEnabled } from "../../assets/js/email.js?v=20261005r";
+import { getNotifyEmails, syncNotifyList } from "../../assets/js/notify.js?v=20261005r";
+import { CSTATUS, purposeText } from "./copilot-config.js?v=20261005r";
+import { buildCopilotEmail } from "./copilot-email.js?v=20261005r";
 
 const $ = (sel) => document.querySelector(sel);
+const applicantEmail = (r) => r.applicantEmail || r.email;
+/** 申請人電郵；如由他人代為提交，一併顯示提交者 */
+const whoHtml = (r) => esc(applicantEmail(r)) + (r.applicantEmail && r.applicantEmail !== r.email ? `<br><small>由 ${esc(r.email)} 提交</small>` : "");
 const S = { user: null, list: [], filter: "all" };
 const byNewest = (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
 const period = (r) => `${fmtDate(r.startDate)} 至 ${fmtDate(r.endDate)}（${r.days} 天）`;
@@ -62,7 +65,7 @@ boot({
       const btn = e.target.closest("[data-return]");
       if (!btn) return;
       const r = S.list.find((x) => x.id === btn.dataset.return);
-      if (!confirm(`確認已在 Microsoft 365 收回 ${r.applicantName} 的 Copilot 授權？`)) return;
+      if (!confirm(`確認已在 Microsoft 365 收回 ${r.applicantName}（${applicantEmail(r)}）的 Copilot 授權？`)) return;
       decide(r.id, "returned", "", [btn]);
     });
   },
@@ -85,7 +88,7 @@ function renderPending() {
         <span class="review-time">${r.days} 天</span>
       </header>
       <dl class="kv">
-        <dt>授權帳戶</dt><dd>${esc(r.email)}</dd>
+        <dt>授權帳戶</dt><dd>${whoHtml(r)}</dd>
         <dt>組別/科組</dt><dd>${esc(r.group)}</dd>
         <dt>借用期間</dt><dd>${period(r)}</dd>
         <dt>用途</dt><dd>${esc(purposeText(r))}</dd>
@@ -115,7 +118,7 @@ function renderActive() {
           ${list.map((r) => `
             <tr>
               <td>${esc(r.applicantName)}<br><small>${esc(r.group)}</small></td>
-              <td>${esc(r.email)}</td>
+              <td>${whoHtml(r)}</td>
               <td>${period(r)}</td>
               <td>${overdue(r) ? '<span class="badge badge--stop">已到期</span>' : '<span class="badge badge--go">借用中</span>'}</td>
               <td><button class="btn btn--small" data-return="${r.id}">標示為已收回</button></td>
@@ -136,7 +139,7 @@ function renderAll() {
         <tbody>
           ${list.map((r) => `
             <tr>
-              <td>${esc(r.applicantName)}<br><small>${esc(r.email)}</small></td>
+              <td>${esc(r.applicantName)}<br><small>${whoHtml(r)}</small></td>
               <td>${esc(r.group)}</td>
               <td>${period(r)}</td>
               <td>${esc(purposeText(r))}</td>
@@ -167,7 +170,7 @@ async function decide(id, status, note, btns) {
   const done = { approved: "已批准", rejected: "已設為不批准", returned: "已標示為已收回" }[status];
   try {
     const cc = await getNotifyEmails();
-    const sent = await sendEmail({ to: r.email, cc, ...buildCopilotEmail(r, status, note) });
+    const sent = await sendEmail({ to: applicantEmail(r), cc: [...cc, r.email], ...buildCopilotEmail(r, status, note) });
     if (sent) await updateDoc(doc(db, "copilot_requests", id), { notifiedAt: serverTimestamp() });
     toast(`${done}（${sent ? `已寄電郵通知 ${r.applicantName}` : "未設定電郵通知"}）`, "success");
   } catch (e) {

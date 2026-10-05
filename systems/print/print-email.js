@@ -1,5 +1,5 @@
-import { APP, esc, fmtDate, fmtTimestamp } from "../../assets/js/common.js?v=20261005q";
-import { PRINT } from "./print-config.js?v=20261005q";
+import { APP, esc, fmtDate, fmtTimestamp } from "../../assets/js/common.js?v=20261005r";
+import { PRINT } from "./print-config.js?v=20261005r";
 
 const LINKS = {
   applicant: "systems/print/index.html",
@@ -21,13 +21,15 @@ export function buildPrintEmail(r, kind, note = "") {
   };
   const LEAD = {
     received: `我們已收到你的${PRINT.title}。IT組處理後會再以電郵通知你，一般約需 1 個工作天。`,
-    new: `${r.applicantName}（${r.email}）提交了${PRINT.title}，請到平台處理。`,
+    new: `${r.applicantName}（${r.applicantEmail || r.email}）提交了${PRINT.title}，請到平台處理。`,
     approved: "IT組已為你增加彩色列印限額，詳情如下：",
     rejected: "你的增加彩色列印限額申請未獲批准，詳情如下：",
   };
   const greet = kind === "new" ? "IT組管理員：" : `${r.applicantName} 老師：`;
   const rows = [
     ["申請人", r.applicantName],
+    ["申請人電郵", r.applicantEmail || r.email],
+    ...(r.applicantEmail && r.applicantEmail !== r.email ? [["提交者", r.email]] : []),
     ["申請日期", fmtDate(r.date)],
     ...(r.remarks ? [["備註", r.remarks]] : []),
     ...(r.createdAt?.toDate ? [["提交時間", fmtTimestamp(r.createdAt)]] : []),

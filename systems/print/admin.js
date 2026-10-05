@@ -1,15 +1,18 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp,
-} from "../../assets/js/common.js?v=20261005q";
+} from "../../assets/js/common.js?v=20261005r";
 import {
   collection, doc, onSnapshot, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { sendEmail, emailEnabled } from "../../assets/js/email.js?v=20261005q";
-import { getNotifyEmails, syncNotifyList } from "../../assets/js/notify.js?v=20261005q";
-import { PSTATUS } from "./print-config.js?v=20261005q";
-import { buildPrintEmail } from "./print-email.js?v=20261005q";
+import { sendEmail, emailEnabled } from "../../assets/js/email.js?v=20261005r";
+import { getNotifyEmails, syncNotifyList } from "../../assets/js/notify.js?v=20261005r";
+import { PSTATUS } from "./print-config.js?v=20261005r";
+import { buildPrintEmail } from "./print-email.js?v=20261005r";
 
 const $ = (sel) => document.querySelector(sel);
+const applicantEmail = (r) => r.applicantEmail || r.email;
+/** 申請人電郵；如由他人代為提交，一併顯示提交者 */
+const whoHtml = (r) => esc(applicantEmail(r)) + (r.applicantEmail && r.applicantEmail !== r.email ? `<br><small>由 ${esc(r.email)} 提交</small>` : "");
 const S = { user: null, list: [], filter: "all" };
 const byNewest = (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
 
@@ -76,7 +79,7 @@ function renderPending() {
         <span class="review-time">${fmtDate(r.date)}</span>
       </header>
       <dl class="kv">
-        <dt>電郵</dt><dd>${esc(r.email)}</dd>
+        <dt>電郵</dt><dd>${whoHtml(r)}</dd>
         <dt>提交時間</dt><dd>${fmtTimestamp(r.createdAt)}</dd>
         ${r.remarks ? `<dt>備註</dt><dd>${esc(r.remarks)}</dd>` : ""}
       </dl>
@@ -108,7 +111,7 @@ async function decide(id, status, note, btns) {
   try {
     // 結果寄給申請人，副本給接收通知的管理員
     const cc = await getNotifyEmails();
-    const sent = await sendEmail({ to: r.email, cc, ...buildPrintEmail(r, status, note) });
+    const sent = await sendEmail({ to: applicantEmail(r), cc: [...cc, r.email], ...buildPrintEmail(r, status, note) });
     if (sent) await updateDoc(doc(db, "print_requests", id), { notifiedAt: serverTimestamp() });
     toast(`${done}（${sent ? `已寄電郵通知 ${r.applicantName}` : "未設定電郵通知"}）`, "success");
   } catch (e) {
@@ -128,7 +131,7 @@ function renderAll() {
         <tbody>
           ${list.map((r) => `
             <tr>
-              <td>${esc(r.applicantName)}<br><small>${esc(r.email)}</small></td>
+              <td>${esc(r.applicantName)}<br><small>${whoHtml(r)}</small></td>
               <td class="nowrap">${fmtDate(r.date)}</td>
               <td class="nowrap">${fmtTimestamp(r.createdAt)}</td>
               <td><span class="badge badge--${PSTATUS[r.status]?.tone}">${PSTATUS[r.status]?.label || r.status}</span>

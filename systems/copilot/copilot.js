@@ -1,13 +1,13 @@
 import {
-  boot, db, esc, toast, fmtDate, fmtTimestamp, todayId, enhanceDateInputs,
-} from "../../assets/js/common.js?v=20261005q";
+  boot, db, esc, toast, isStaffEmail, fmtDate, fmtTimestamp, todayId, enhanceDateInputs,
+} from "../../assets/js/common.js?v=20261005r";
 import {
   collection, doc, addDoc, updateDoc, onSnapshot, query, where, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { sendEmail } from "../../assets/js/email.js?v=20261005q";
-import { getNotifyEmails } from "../../assets/js/notify.js?v=20261005q";
-import { COPILOT, CSTATUS, loanDays, purposeText } from "./copilot-config.js?v=20261005q";
-import { buildCopilotEmail } from "./copilot-email.js?v=20261005q";
+import { sendEmail } from "../../assets/js/email.js?v=20261005r";
+import { getNotifyEmails } from "../../assets/js/notify.js?v=20261005r";
+import { COPILOT, CSTATUS, loanDays, purposeText } from "./copilot-config.js?v=20261005r";
+import { buildCopilotEmail } from "./copilot-email.js?v=20261005r";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, mine: [] };
@@ -74,20 +74,36 @@ function setupForm() {
   f.querySelectorAll('input[name="nameMode"]').forEach((r) => r.addEventListener("change", () => {
     $("#other-wrap").hidden = f.nameMode.value !== "other";
     if (f.nameMode.value === "other") f.otherName.focus();
+    syncMailTarget();
   }));
+  f.group.addEventListener("change", () => {
+    $("#other-group-wrap").hidden = f.group.value !== "其他";
+    if (f.group.value === "其他") f.otherGroup.focus();
+  });
   $("#purpose-choices").addEventListener("change", () => {
     const other = f.querySelector('input[name="purpose"][value="其他"]').checked;
     $("#other-purpose-wrap").hidden = !other;
   });
 
+  const syncMailTarget = () => {
+    const other = f.nameMode.value === "other" && f.otherEmail.value.trim();
+    $("#req-email").textContent = other ? `${f.otherEmail.value.trim()} 及 ${S.user.email}` : S.user.email;
+  };
+  f.otherEmail.addEventListener("input", syncMailTarget);
+
   f.addEventListener("submit", async (e) => {
     e.preventDefault();
     const warn = (msg) => { const w = $("#req-warn"); w.hidden = !msg; w.textContent = msg; };
-    const applicantName = (f.nameMode.value === "other" ? f.otherName.value : loginName()).trim().slice(0, 40);
+    const isOther = f.nameMode.value === "other";
+    const applicantName = (isOther ? f.otherName.value : loginName()).trim().slice(0, 40);
+    const applicantEmail = (isOther ? f.otherEmail.value : S.user.email).trim().toLowerCase();
     const purposes = [...f.querySelectorAll('input[name="purpose"]:checked')].map((x) => x.value);
     const otherPurpose = purposes.includes("其他") ? f.otherPurpose.value.trim() : "";
     if (!applicantName) return warn("請輸入姓名或代號。");
+    if (isOther && !isStaffEmail(applicantEmail)) return warn("請輸入申請人的學校電郵（@lwcps.edu.hk）。");
+    const group = (f.group.value === "其他" ? f.otherGroup.value : f.group.value).trim().slice(0, 40);
     if (!f.group.value) return warn("請選擇所屬組別/科組。");
+    if (!group) return warn("請輸入所屬組別/科組。");
     const dateMsg = checkDates(f.startDate.value, f.endDate.value);
     if (dateMsg) return warn(dateMsg);
     if (!purposes.length) return warn("請選擇最少一項用途。");
@@ -99,12 +115,13 @@ function setupForm() {
     btn.textContent = "提交中…";
     const data = {
       applicantName,
-      group: f.group.value,
+      group,
       startDate: f.startDate.value,
       endDate: f.endDate.value,
       days: loanDays(f.startDate.value, f.endDate.value),
       purposes,
       otherPurpose,
+      applicantEmail,
       email: S.user.email,
       uid: S.user.uid,
       status: "pending",
@@ -125,7 +142,7 @@ function setupForm() {
     try {
       const r = { ...data, createdAt: null };
       const admins = await getNotifyEmails();
-      const sent = await sendEmail({ to: S.user.email, ...buildCopilotEmail(r, "received") });
+      const sent = await sendEmail({ to: [...new Set([S.user.email, applicantEmail])], ...buildCopilotEmail(r, "received") });
       if (admins.length) await sendEmail({ to: admins, ...buildCopilotEmail(r, "new") });
       if (!sent) mailNote = "（未設定電郵通知）";
     } catch (err) {
@@ -135,7 +152,9 @@ function setupForm() {
     toast(`已提交申請。${mailNote}`, "success");
     f.reset();
     $("#other-wrap").hidden = true;
+    $("#req-email").textContent = S.user.email;
     $("#other-purpose-wrap").hidden = true;
+    $("#other-group-wrap").hidden = true;
     resetDates();
     showDays();
     btn.disabled = false;

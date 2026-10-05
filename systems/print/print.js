@@ -1,13 +1,13 @@
 import {
-  boot, db, esc, toast, fmtDate, fmtTimestamp, todayId,
-} from "../../assets/js/common.js?v=20261005q";
+  boot, db, esc, toast, isStaffEmail, fmtDate, fmtTimestamp, todayId,
+} from "../../assets/js/common.js?v=20261005r";
 import {
   collection, doc, addDoc, updateDoc, onSnapshot, query, where, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { sendEmail } from "../../assets/js/email.js?v=20261005q";
-import { getNotifyEmails } from "../../assets/js/notify.js?v=20261005q";
-import { PRINT, PSTATUS } from "./print-config.js?v=20261005q";
-import { buildPrintEmail } from "./print-email.js?v=20261005q";
+import { sendEmail } from "../../assets/js/email.js?v=20261005r";
+import { getNotifyEmails } from "../../assets/js/notify.js?v=20261005r";
+import { PRINT, PSTATUS } from "./print-config.js?v=20261005r";
+import { buildPrintEmail } from "./print-email.js?v=20261005r";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, mine: [] };
@@ -44,14 +44,24 @@ function setupForm() {
     const other = f.nameMode.value === "other";
     $("#other-wrap").hidden = !other;
     if (other) f.otherName.focus();
+    syncMailTarget();
   };
   f.querySelectorAll('input[name="nameMode"]').forEach((r) => r.addEventListener("change", sync));
+
+  const syncMailTarget = () => {
+    const other = f.nameMode.value === "other" && f.otherEmail.value.trim();
+    $("#req-email").textContent = other ? `${f.otherEmail.value.trim()} 及 ${S.user.email}` : S.user.email;
+  };
+  f.otherEmail.addEventListener("input", syncMailTarget);
 
   f.addEventListener("submit", async (e) => {
     e.preventDefault();
     const warn = (msg) => { const w = $("#req-warn"); w.hidden = !msg; w.textContent = msg; };
-    const applicantName = (f.nameMode.value === "other" ? f.otherName.value : loginName()).trim().slice(0, 40);
+    const isOther = f.nameMode.value === "other";
+    const applicantName = (isOther ? f.otherName.value : loginName()).trim().slice(0, 40);
+    const applicantEmail = (isOther ? f.otherEmail.value : S.user.email).trim().toLowerCase();
     if (!applicantName) return warn("請輸入申請人名稱。");
+    if (isOther && !isStaffEmail(applicantEmail)) return warn("請輸入申請人的學校電郵（@lwcps.edu.hk）。");
     warn("");
 
     const btn = $("#req-submit");
@@ -61,6 +71,7 @@ function setupForm() {
       applicantName,
       date: todayId(),
       remarks: f.remarks.value.trim(),
+      applicantEmail,
       email: S.user.email,
       uid: S.user.uid,
       status: "pending",
@@ -82,7 +93,7 @@ function setupForm() {
     try {
       const admins = await getNotifyEmails();
       const r = { ...data, createdAt: null };
-      const a = await sendEmail({ to: S.user.email, ...buildPrintEmail(r, "received") });
+      const a = await sendEmail({ to: [...new Set([S.user.email, applicantEmail])], ...buildPrintEmail(r, "received") });
       if (admins.length) await sendEmail({ to: admins, ...buildPrintEmail(r, "new") });
       if (!a) mailNote = "（未設定電郵通知）";
     } catch (err) {
@@ -92,6 +103,7 @@ function setupForm() {
     toast(`已提交申請。${mailNote || "確認電郵已寄出。"}`, "success");
     f.reset();
     $("#other-wrap").hidden = true;
+    $("#req-email").textContent = S.user.email;
     btn.disabled = false;
     btn.textContent = "提交申請";
   });

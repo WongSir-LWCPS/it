@@ -1,6 +1,6 @@
 // 樂Kids TV：老師頁面及管理頁面共用的工具
-import { daysUntil, parseDateId, toDateId } from "../../assets/js/common.js?v=20261005q";
-import { KTV } from "./ktv-config.js?v=20261005q";
+import { daysUntil, parseDateId, toDateId } from "../../assets/js/common.js?v=20261005r";
+import { KTV } from "./ktv-config.js?v=20261005r";
 
 export const timeLabel = (b) => `${b.start} - ${b.end}`;
 export const toMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };

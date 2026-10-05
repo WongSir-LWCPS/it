@@ -3,8 +3,8 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261005q";
-import { SYSTEMS } from "./systems.js?v=20261005q";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261005r";
+import { SYSTEMS } from "./systems.js?v=20261005r";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -44,6 +44,14 @@ export function fmtTimestamp(ts) {
 /** 是否屬於被封鎖的帳戶（例如學生帳戶） */
 export function isBlockedEmail(email) {
   return (APP.blockedEmailPatterns || []).some((re) => re.test(email));
+}
+
+/** 是否學校教職員電郵（符合網域，且不是學生帳戶） */
+export function isStaffEmail(email) {
+  const e = String(email || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return false;
+  if (APP.allowedDomain && !e.endsWith("@" + APP.allowedDomain.toLowerCase())) return false;
+  return !isBlockedEmail(e);
 }
 
 /* ---------- 日期及時間選擇 ---------- */

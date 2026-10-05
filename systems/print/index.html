@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../assets/css/style.css?v=20261005q">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261005r">
   <script>
     // 程式載入失敗時顯示原因，而不是一直停在「載入中」
     (function () {
@@ -46,10 +46,10 @@
           <label class="check"><input type="radio" name="nameMode" value="other"> 其他（自行輸入）</label>
         </div>
       </fieldset>
-      <label class="field" id="other-wrap" hidden>
-        <span>申請人名稱</span>
-        <input name="otherName" maxlength="40" placeholder="請輸入申請人名稱">
-      </label>
+      <div class="field-row" id="other-wrap" hidden>
+        <label class="field"><span>申請人名稱</span><input name="otherName" maxlength="40" placeholder="請輸入申請人名稱"></label>
+        <label class="field"><span>申請人電郵</span><input type="email" name="otherEmail" maxlength="80" placeholder="例如 chantm@lwcps.edu.hk" autocomplete="off"></label>
+      </div>
 
       <label class="field">
         <span>備註（選填）</span>
@@ -69,6 +69,6 @@
     </section>
   </main>
 
-  <script type="module" src="print.js?v=20261005q"></script>
+  <script type="module" src="print.js?v=20261005r"></script>
 </body>
 </html>
