@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>增加彩色列印限額申請｜IT一站式平台</title>
+  <title>Copilot借用申請｜IT一站式平台</title>
   <link rel="icon" href="../../assets/img/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,33 +31,49 @@
     <nav class="crumbs" aria-label="位置">
       <a href="../../index.html">IT一站式平台</a>
       <span aria-hidden="true">/</span>
-      <span>增加彩色列印限額申請</span>
-      <a id="admin-link" class="btn btn--small crumbs-action" href="admin.html" hidden>管理及處理</a>
+      <span>Copilot借用申請</span>
+      <a id="admin-link" class="btn btn--small crumbs-action" href="admin.html" hidden>管理及審批</a>
     </nav>
 
-    <h1>增加彩色列印限額申請</h1>
+    <h1>Copilot借用申請</h1>
     <p class="hint" id="intro"></p>
 
     <form id="req-form" class="card-form" novalidate>
       <fieldset class="field">
-        <legend>申請人名稱</legend>
+        <legend>您的姓名/代號</legend>
         <div class="name-choices">
           <label class="check"><input type="radio" name="nameMode" value="login" checked> <span id="login-name"></span></label>
           <label class="check"><input type="radio" name="nameMode" value="other"> 其他（自行輸入）</label>
         </div>
       </fieldset>
       <label class="field" id="other-wrap" hidden>
-        <span>申請人名稱</span>
-        <input name="otherName" maxlength="40" placeholder="請輸入申請人名稱">
+        <span>姓名/代號</span>
+        <input name="otherName" maxlength="40" placeholder="請輸入姓名或代號">
       </label>
 
       <label class="field">
-        <span>備註（選填）</span>
-        <textarea name="remarks" rows="2" maxlength="300" placeholder="例如：需要列印全年級彩色工作紙"></textarea>
+        <span>所屬組別/科組</span>
+        <select name="group" required></select>
       </label>
 
+      <div class="field-row">
+        <label class="field field--date"><span>開始借用日期</span><input type="date" name="startDate" required></label>
+        <label class="field field--date"><span>預計結束借用日期</span><input type="date" name="endDate" required></label>
+      </div>
+      <p class="hint" id="days-info"></p>
+
+      <fieldset class="field">
+        <legend>用途（可選多項）</legend>
+        <div class="choices" id="purpose-choices"></div>
+      </fieldset>
+      <label class="field" id="other-purpose-wrap" hidden>
+        <span>其他用途</span>
+        <input name="otherPurpose" maxlength="100" placeholder="請說明用途">
+      </label>
+
+      <p class="notice-box" id="notice"></p>
       <p class="warn" id="req-warn" role="alert" hidden></p>
-      <p class="sheet-foot">申請日期為提交當日。處理結果會寄到 <strong id="req-email"></strong></p>
+      <p class="sheet-foot">Copilot 會授權給 <strong id="req-email"></strong>，審批結果亦會寄到這個電郵。</p>
       <div class="actions actions--start">
         <button type="submit" class="btn btn--primary" id="req-submit">提交申請</button>
       </div>
@@ -69,6 +85,6 @@
     </section>
   </main>
 
-  <script type="module" src="print.js?v=20261005q"></script>
+  <script type="module" src="copilot.js?v=20261005q"></script>
 </body>
 </html>

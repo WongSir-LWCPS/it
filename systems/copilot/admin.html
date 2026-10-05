@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>彩色列印限額 管理及處理｜IT一站式平台</title>
+  <title>Copilot借用 管理及審批｜IT一站式平台</title>
   <link rel="icon" href="../../assets/img/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,31 +31,36 @@
     <nav class="crumbs" aria-label="位置">
       <a href="../../index.html">IT一站式平台</a>
       <span aria-hidden="true">/</span>
-      <a href="index.html">增加彩色列印限額申請</a>
+      <a href="index.html">Copilot借用申請</a>
       <span aria-hidden="true">/</span>
-      <span>管理及處理</span>
+      <span>管理及審批</span>
     </nav>
 
     <div id="admin-area" hidden>
-      <h1>彩色列印限額 管理及處理</h1>
+      <h1>Copilot借用 管理及審批</h1>
       <p id="email-status" class="warn" hidden></p>
 
       <div class="tabs" role="tablist">
-        <button role="tab" class="tab" data-tab="pending" aria-selected="true">待處理 <span id="pending-count" class="count"></span></button>
+        <button role="tab" class="tab" data-tab="pending" aria-selected="true">待審批 <span id="pending-count" class="count"></span></button>
+        <button role="tab" class="tab" data-tab="active" aria-selected="false">借用中 <span id="active-count" class="count"></span></button>
         <button role="tab" class="tab" data-tab="all" aria-selected="false">全部申請</button>
       </div>
 
       <section id="tab-pending" class="panel" role="tabpanel">
         <div id="pending-list" class="reviews"></div>
       </section>
-
+      <section id="tab-active" class="panel" role="tabpanel" hidden>
+        <p class="hint">已批准的借用。到期後請在 Microsoft 365 管理中心收回授權，再按「標示為已收回」。</p>
+        <div id="active-list"></div>
+      </section>
       <section id="tab-all" class="panel" role="tabpanel" hidden>
         <div class="block-head">
           <label class="field field--inline"><span>狀態</span>
             <select id="all-filter">
               <option value="all">全部</option>
-              <option value="pending">處理中</option>
-              <option value="approved">已增加限額</option>
+              <option value="pending">審批中</option>
+              <option value="approved">已批准</option>
+              <option value="returned">已收回</option>
               <option value="rejected">未獲批准</option>
               <option value="cancelled">已取消</option>
             </select>

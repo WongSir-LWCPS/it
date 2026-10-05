@@ -1,16 +1,16 @@
 import {
-  boot, db, esc, toast, fmtDate, fmtTimestamp, daysUntil, parseDateId, toDateId, pad,
+  boot, db, esc, toast, fmtDate, fmtTimestamp, daysUntil, parseDateId, toDateId, pad, todayId,
   enhanceDateInputs, timePicker,
-} from "../../assets/js/common.js?v=20261005o";
+} from "../../assets/js/common.js?v=20261005q";
 import {
-  collection, doc, onSnapshot, writeBatch, updateDoc, setDoc, serverTimestamp, arrayUnion, arrayRemove,
+  collection, doc, onSnapshot, writeBatch, updateDoc, setDoc, getDoc, serverTimestamp, arrayUnion, arrayRemove,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { KTV, STATUS } from "./ktv-config.js?v=20261005o";
+import { KTV, STATUS } from "./ktv-config.js?v=20261005q";
 import {
   timeLabel, toMin, lockIdOf, isActive, regularIndex, findConflict, sortBookings,
-} from "./ktv-common.js?v=20261005o";
-import { buildKtvEmail } from "./ktv-email.js?v=20261005o";
-import { sendEmail, emailEnabled } from "../../assets/js/email.js?v=20261005o";
+} from "./ktv-common.js?v=20261005q";
+import { buildKtvEmail } from "./ktv-email.js?v=20261005q";
+import { sendEmail, emailEnabled } from "../../assets/js/email.js?v=20261005q";
 
 const S = {
   user: null, regularDates: [], bookings: [], filter: "active", upcoming: false,
@@ -360,6 +360,16 @@ async function addRegularDates(dates) {
 }
 
 function setupDates() {
+  // 以學年設定作為「一次過加入」的預設期間
+  getDoc(doc(db, "settings", "schoolYear")).then((snap) => {
+    const y = snap.data();
+    const f = $("#form-bulk");
+    if (y && !f.from.value && !f.to.value) {
+      f.from.value = y.start > todayId() ? y.start : todayId();
+      f.to.value = y.end;
+    }
+  }).catch(() => {});
+
   $("#form-single").addEventListener("submit", async (e) => {
     e.preventDefault();
     const date = e.target.date.value;

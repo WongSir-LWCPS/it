@@ -1,5 +1,5 @@
-import { APP, esc, fmtDate, fmtTimestamp } from "../../assets/js/common.js?v=20261005o";
-import { PRINT } from "./print-config.js?v=20261005o";
+import { APP, esc, fmtDate, fmtTimestamp } from "../../assets/js/common.js?v=20261005q";
+import { PRINT } from "./print-config.js?v=20261005q";
 
 const LINKS = {
   applicant: "systems/print/index.html",

@@ -2,7 +2,7 @@
 
 樂華天主教小學 IT組的校內系統平台。網站放在 GitHub Pages，資料存放在 Firebase（Firestore），老師以學校 Google 帳戶登入。
 
-系統：**樂Kids TV 預約系統**、**增加彩色列印限額申請**
+系統：**樂Kids TV 預約系統**、**增加彩色列印限額申請**、**Copilot借用申請**
 
 - 老師：查看播放時間表、預約時段、查看自己的申請及審批結果、取消審批中的申請
 - 管理員：審批申請（批准／不批准並以電郵通知老師）、管理播放日期、直接加入已確認的節目、取消已批准的節目
@@ -133,3 +133,15 @@ python3 tools/set-version.py
 | --- | --- |
 | `print_requests` | `applicantName`、`date`（提交日）、`remarks`、`email`、`uid`、`status`（pending / approved / rejected / cancelled）、`reviewNote`、`reviewedBy` |
 | `settings/notify` | `emails`：接收申請通知的管理員（由「平台設定」自動維護） |
+
+## Copilot借用申請（systems/copilot/）
+
+- 老師：姓名預設為登入名稱（或自行輸入）、選擇組別/科組、開始及結束借用日期（最多 14 天，自動計算日數）、用途（可多選，「其他」須說明）。Copilot 會授權給登入的學校電郵。
+- 提交後：申請人收到確認電郵；接收通知的管理員收到新申請通知。
+- 管理員：「待審批」批准或不批准（結果寄給申請人並副本給管理員）；「借用中」列出已批准的借用及已到期的項目，在 Microsoft 365 收回授權後按「標示為已收回」，系統會通知老師。
+- 組別、用途、最多借用日數在 `systems/copilot/copilot-config.js` 修改。
+
+## 學年設定及刪除舊資料（平台設定）
+
+- 「學年設定」：設定目前學年名稱及起訖日期（存於 `settings/schoolYear`）。樂Kids TV「一次過加入整段期間」會以此作預設期間。
+- 「刪除舊學年資料」：列出目前學年開始日期之前的樂Kids TV 節目、播放日、彩色列印限額申請及 Copilot 借用申請（以結束日期計）。可先下載 CSV 備份，再輸入「刪除」確認刪除。刪除後不能復原。

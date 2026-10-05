@@ -19,6 +19,14 @@ export const SYSTEMS = [
     adminHref: "systems/print/admin.html",
     icon: "🖨️",
   },
+  {
+    id: "copilot",
+    name: "Copilot借用申請",
+    desc: "申請借用 Microsoft Copilot，每次最多 14 天，IT組審批後會以電郵通知。",
+    href: "systems/copilot/index.html",
+    adminHref: "systems/copilot/admin.html",
+    icon: "🤖",
+  },
   // 範例：
   // {
   //   id: "repair",

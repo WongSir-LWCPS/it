@@ -538,3 +538,18 @@ h3 { font-size: .95rem; }
 .name-choices { display: flex; flex-direction: column; gap: 8px; }
 .field .name-choices input[type="radio"] { width: 18px; height: 18px; padding: 0; flex: none; accent-color: var(--ink); }
 .name-choices .check { font-size: .92rem; }
+
+/* 文字方格：不出現左右捲軸，只可上下調整大小，並限制最大闊度 */
+.field textarea {
+  overflow-x: hidden; overflow-wrap: anywhere; white-space: pre-wrap;
+  resize: vertical; max-width: 640px;
+}
+.field input[type="text"], .field input[type="email"], .field input:not([type]), .field select { max-width: 640px; }
+.inline-form .field--grow input { max-width: none; }
+
+/* Copilot 表單 */
+.notice-box { padding: 10px 14px; border-radius: 10px; background: var(--school-green-bg); color: var(--school-green); font-size: .88rem; }
+.hint--error { color: var(--stop); }
+.field-row .field--date { flex: 1 1 200px; max-width: 260px; }
+
+.old-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; }

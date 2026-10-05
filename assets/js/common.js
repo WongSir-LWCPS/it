@@ -3,8 +3,8 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261005o";
-import { SYSTEMS } from "./systems.js?v=20261005o";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261005q";
+import { SYSTEMS } from "./systems.js?v=20261005q";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -251,6 +251,47 @@ export function timePicker(input, opts = {}) {
     setOptions: (n) => { Object.assign(o, n); if (!pop.hidden) renderPop(); },
   };
   return input._tp;
+}
+
+/* ---------- 下載 CSV ---------- */
+export function downloadCSV(filename, rows) {
+  const cell = (v) => {
+    const t = String(v ?? "");
+    return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+  };
+  const csv = "\ufeff" + rows.map((r) => r.map(cell).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ---------- 通知電郵版面（各系統共用） ---------- */
+export function mailLayout({ greet, lead, rows = [], note = "", link = "", linkText = "查看詳情" }) {
+  const text = [
+    greet, "", lead,
+    ...rows.map(([k, v]) => `${k}：${v}`),
+    note ? `\nIT組備註：${note}` : "",
+    link ? `\n${linkText}：${link}` : "",
+    "", `${APP.schoolName} IT組`,
+  ].join("\n");
+  const html = `
+  <div style="font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;color:#1B2550;line-height:1.7;max-width:560px">
+    <p>${esc(greet)}</p>
+    <p>${esc(lead)}</p>
+    <table style="border-collapse:collapse;width:100%;margin:12px 0">
+      ${rows.map(([k, v]) => `
+        <tr>
+          <td style="padding:6px 12px;background:#F3F5FA;width:110px;white-space:nowrap">${esc(k)}</td>
+          <td style="padding:6px 12px;border-bottom:1px solid #DCE1EC">${esc(v)}</td>
+        </tr>`).join("")}
+    </table>
+    ${note ? `<p><strong>IT組備註：</strong>${esc(note)}</p>` : ""}
+    ${link ? `<p><a href="${esc(link)}">${esc(linkText)}</a></p>` : ""}
+    <p>${esc(APP.schoolName)} IT組</p>
+  </div>`;
+  return { html, text };
 }
 
 /* ---------- 提示訊息 ---------- */

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=20261005o">
+  <link rel="stylesheet" href="assets/css/style.css?v=20261005q">
   <script>
     // 程式載入失敗時顯示原因，而不是一直停在「載入中」
     (function () {
@@ -35,6 +35,25 @@
     </nav>
     <h1>平台設定</h1>
 
+    <section id="year-section" class="block" hidden>
+      <h2>學年設定</h2>
+      <p class="hint">學年用於整理資料。新學年開始時，先更新學年，再刪除上一個學年的資料。</p>
+      <p class="warn" id="year-warn" hidden></p>
+      <form id="year-form" class="card-form compact-forms">
+        <div class="inline-form">
+          <label class="field field--compact"><span>學年</span><input name="name" required maxlength="20" placeholder="例如 2026-27" size="10"></label>
+          <label class="field field--compact"><span>開始日期</span><input type="date" name="start" required></label>
+          <label class="field field--compact"><span>結束日期</span><input type="date" name="end" required></label>
+          <button class="btn btn--primary btn--small" type="submit">儲存學年</button>
+        </div>
+        <p class="hint" id="year-current"></p>
+      </form>
+
+      <h3 class="mt">刪除舊學年資料</h3>
+      <p class="hint">以下是目前學年開始日期之前的資料。刪除前建議先下載備份。刪除後不能復原。</p>
+      <div id="old-data" class="card-form"><p class="empty">正在統計…</p></div>
+    </section>
+
     <section id="admin-section" class="block" hidden>
       <h2>管理員</h2>
       <p class="hint">管理員可以審批所有系統的申請、管理播放日期、匯入資料，以及在這裏新增或移除管理員。只可加入學校教職員帳戶。勾選「電郵通知」的管理員，會在老師提交申請（例如增加彩色列印限額）時收到電郵。</p>
@@ -56,6 +75,6 @@
     </section>
   </main>
 
-  <script type="module" src="assets/js/settings.js?v=20261005o"></script>
+  <script type="module" src="assets/js/settings.js?v=20261005q"></script>
 </body>
 </html>
