@@ -8,13 +8,14 @@ import {
 import { KTV, STATUS } from "./ktv-config.js";
 import { buildKtvEmail } from "./ktv-email.js";
 import { sendEmail, emailEnabled } from "../../assets/js/email.js";
+import { SEED_2026_27 } from "./seed-2026-27.js";
 
 const S = { user: null, sessions: [], bookings: [], filter: "all", loaded: { s: false, b: false } };
 const $ = (sel) => document.querySelector(sel);
 const byDateSlot = (a, b) => a.sessionId.localeCompare(b.sessionId) || a.slot - b.slot;
 
 boot({
-  root: "../../",
+  root: "../../", current: "ktv-admin",
   onReady: ({ user, isAdmin }) => {
     if (!isAdmin) {
       $("#main").innerHTML = `
@@ -37,6 +38,8 @@ boot({
     setupSessionForms();
     setupManualForm();
     setupActions();
+    setupImport();
+    if (location.hash === "#import") document.querySelector('.tab[data-tab="import"]').click();
 
     onSnapshot(query(collection(db, "ktv_sessions"), orderBy("date")), (snap) => {
       S.sessions = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -385,4 +388,132 @@ function setupActions() {
       }
     } catch (err) { toast("未能更新：" + err.message, "error"); }
   });
+}
+
+/* ---------- 匯入試算表 ---------- */
+const normTime = (t) => t.replace(/\s/g, "").replace(/[–—~至]/g, "-").replace(/：/g, ":");
+
+/** 讀取由試算表複製的內容（Tab 分隔） */
+function parseSheet(text) {
+  const out = new Map();   // sessionId → [{ slot, topic, teacherName, mode }]
+  let cur = null;
+  for (const line of text.split(/\r?\n/)) {
+    const cells = line.split("\t").map((c) => c.trim());
+    const first = cells[0] || "";
+    const m = first.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) {
+      cur = `${m[3]}-${pad(m[2])}-${pad(m[1])}`;
+      if (!out.has(cur)) out.set(cur, []);
+      continue;
+    }
+    if (!cur) continue;
+    const slot = KTV.slots.findIndex((t) => normTime(t) === normTime(first));
+    if (slot < 0) continue;
+    const [, topic = "", teacherName = "", mode = ""] = cells;
+    if (!topic && !teacherName) continue;
+    out.get(cur).push({
+      slot,
+      topic: topic || "（未填主題）",
+      teacherName: teacherName || "（未填）",
+      mode: KTV.modes.includes(mode) ? mode : KTV.modes[0],
+    });
+  }
+  return out;
+}
+
+let pendingImport = null;
+
+function setupImport() {
+  $("#import-seed").addEventListener("click", () => { $("#import-text").value = SEED_2026_27; });
+  $("#import-preview").addEventListener("click", previewImport);
+  $("#import-result").addEventListener("click", (e) => {
+    if (e.target.closest("#import-run")) runImport(e.target.closest("#import-run"));
+  });
+}
+
+function previewImport() {
+  const parsed = parseSheet($("#import-text").value);
+  const box = $("#import-result");
+  if (!parsed.size) {
+    box.innerHTML = `<p class="load-error">找不到任何日期。請確認貼上的內容包含日期（例如 25/9/2026）及時段（例如 13:10 - 13:15）。</p>`;
+    pendingImport = null;
+    return;
+  }
+  const existing = new Set(S.sessions.map((s) => s.id));
+  const map = activeMap();
+  const newSessions = [...parsed.keys()].filter((id) => !existing.has(id));
+  const items = [];
+  let skipped = 0;
+  for (const [sessionId, list] of parsed) {
+    for (const it of list) {
+      if (map.has(`${sessionId}_${it.slot}`)) skipped++;
+      else items.push({ sessionId, ...it });
+    }
+  }
+  pendingImport = { newSessions, items };
+  box.innerHTML = `
+    <h2>預覽</h2>
+    <p>將加入 <strong>${newSessions.length}</strong> 個播放日期及 <strong>${items.length}</strong> 個節目${skipped ? `；${skipped} 個時段已有節目，會略過` : ""}。</p>
+    ${items.length ? `
+      <div class="table-scroll">
+        <table class="table">
+          <thead><tr><th>播放日期</th><th>時段</th><th>主題</th><th>負責老師</th><th>模式</th></tr></thead>
+          <tbody>${items.map((b) => `
+            <tr><td class="nowrap">${fmtDate(b.sessionId)}</td><td class="nowrap">${KTV.slots[b.slot]}</td>
+            <td>${esc(b.topic)}</td><td>${esc(b.teacherName)}</td><td>${esc(b.mode)}</td></tr>`).join("")}
+          </tbody>
+        </table>
+      </div>` : ""}
+    ${newSessions.length || items.length
+      ? `<div class="actions actions--start mt-s"><button class="btn btn--primary" id="import-run">確認匯入</button></div>`
+      : `<p class="empty">沒有新資料需要匯入。</p>`}`;
+}
+
+async function runImport(btn) {
+  if (!pendingImport) return;
+  btn.disabled = true;
+  btn.textContent = "匯入中…";
+  const { newSessions, items } = pendingImport;
+  // 先建立所有寫入動作，再分批提交（每批最多 450 項）
+  const ops = [];
+  newSessions.forEach((date) => ops.push((batch) => batch.set(doc(db, "ktv_sessions", date), {
+    date, open: true, note: "", createdAt: serverTimestamp(),
+  })));
+  items.forEach((it) => ops.push((batch) => {
+    const ref = doc(collection(db, "ktv_bookings"));
+    batch.set(ref, {
+      sessionId: it.sessionId,
+      slot: it.slot,
+      slotLabel: KTV.slots[it.slot],
+      topic: it.topic,
+      teacherName: it.teacherName,
+      teacherEmail: "",
+      mode: it.mode,
+      remarks: "由試算表匯入",
+      uid: "admin-entry",
+      status: "approved",
+      reviewNote: "",
+      reviewedBy: S.user.email,
+      reviewedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    batch.set(doc(db, "ktv_slots", `${it.sessionId}_${it.slot}`), {
+      bookingId: ref.id, sessionId: it.sessionId, slot: it.slot, uid: "admin-entry", createdAt: serverTimestamp(),
+    });
+  }));
+  try {
+    for (let i = 0; i < ops.length; i += 200) {
+      const batch = writeBatch(db);
+      ops.slice(i, i + 200).forEach((op) => op(batch));
+      await batch.commit();
+    }
+    pendingImport = null;
+    $("#import-result").innerHTML = `<p class="empty">已匯入 ${newSessions.length} 個播放日期及 ${items.length} 個節目。到樂Kids TV頁面即可看到。</p>`;
+    toast("匯入完成。", "success");
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = "確認匯入";
+    toast("未能匯入：" + e.message, "error");
+  }
 }

@@ -6,14 +6,16 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { KTV, STATUS } from "./ktv-config.js";
 
-const S = { user: null, sessions: [], bookings: [], showPast: false, loaded: { s: false, b: false } };
+const S = { user: null, isAdmin: false, sessions: [], bookings: [], showPast: false, loaded: { s: false, b: false } };
 const $ = (sel) => document.querySelector(sel);
 
 boot({
-  root: "../../",
+  root: "../../", current: "ktv",
   onReady: ({ user, isAdmin }) => {
     S.user = user;
+    S.isAdmin = isAdmin;
     $("#admin-link").hidden = !isAdmin;
+    $("#guide").innerHTML = `<p class="empty">正在讀取播放時間表…</p>`;
     $("#guide-hint").textContent =
       `每次播放共 ${KTV.slots.length} 個時段，每段 5 分鐘。按「預約此時段」填寫申請，管理員批核後會以電郵通知你。播放日前 ${KTV.cutoffDays} 天截止預約。`;
 
@@ -44,7 +46,11 @@ boot({
 
 function onError(e) {
   console.error(e);
-  toast("未能讀取資料：" + e.message, "error");
+  const hint = e.code === "permission-denied"
+    ? "沒有讀取權限。請確認 Firestore 規則已發佈，並以教職員帳戶登入。"
+    : e.message;
+  $("#guide").innerHTML = `<p class="load-error" role="alert">未能讀取播放時間表：${esc(hint)}</p>`;
+  toast("未能讀取資料：" + hint, "error");
 }
 
 /** 時段 → 有效申請（審批中或已批准） */
@@ -69,12 +75,7 @@ function renderHero(map) {
   const next = S.sessions.find((s) => daysUntil(s.date) >= 0);
   const hero = $("#hero");
   if (!next) {
-    hero.innerHTML = `
-      <div>
-        <p class="onair-label">下一次播放</p>
-        <p class="onair-date onair-date--empty">未有安排</p>
-        <p class="onair-sub">管理員加入播放日期後，會在這裏顯示。</p>
-      </div>`;
+    hero.innerHTML = `<div class="onair-head"><p class="onair-label">下一次播放</p><p class="onair-sub">未有安排</p></div>`;
     return;
   }
   const d = parseDateId(next.date);
@@ -82,18 +83,17 @@ function renderHero(map) {
   const countdown = n === 0 ? "今天播放" : n === 1 ? "明天播放" : `還有 ${n} 天`;
   const lineup = KTV.slots.map((t, i) => {
     const b = map.get(`${next.id}_${i}`);
-    if (b?.status === "approved") {
-      return `<li><span class="t">${t}</span><span><strong>${esc(b.topic)}</strong><br><small>${esc(b.teacherName)}，${esc(b.mode)}</small></span></li>`;
-    }
-    if (b) return `<li class="dim"><span class="t">${t}</span><span>審批中</span></li>`;
-    return `<li class="dim"><span class="t">${t}</span><span>未有節目</span></li>`;
+    const start = t.split("-")[0].trim();
+    if (b?.status === "approved") return `<li><span class="t">${start}</span>${esc(b.topic)}</li>`;
+    if (b) return `<li class="dim"><span class="t">${start}</span>審批中</li>`;
+    return `<li class="dim"><span class="t">${start}</span>未有節目</li>`;
   }).join("");
 
   hero.innerHTML = `
-    <div>
+    <div class="onair-head">
       <p class="onair-label">下一次播放</p>
       <p class="onair-date">${d.getMonth() + 1}月${d.getDate()}日</p>
-      <p class="onair-sub">${weekdayName(next.date)}，${countdown}${next.note ? `<br>${esc(next.note)}` : ""}</p>
+      <p class="onair-sub">${weekdayName(next.date)}，${countdown}${next.note ? `，${esc(next.note)}` : ""}</p>
     </div>
     <ol class="lineup" aria-label="節目次序">${lineup}</ol>`;
 }
@@ -103,7 +103,11 @@ function renderGuide(map) {
   const list = S.sessions.filter((s) => S.showPast || daysUntil(s.date) >= 0);
   const guide = $("#guide");
   if (!list.length) {
-    guide.innerHTML = `<p class="empty">${S.sessions.length ? "沒有即將播放的日期。勾選「顯示已播放的日期」可查看過往節目。" : "管理員尚未加入播放日期。"}</p>`;
+    guide.innerHTML = `<p class="empty">${S.sessions.length
+      ? "沒有即將播放的日期。勾選「顯示已播放的日期」可查看過往節目。"
+      : S.isAdmin
+        ? '資料庫內還未有播放日期。到 <a href="admin.html#import">管理及審批 → 匯入試算表</a> 匯入現有預約，或在「播放日期」加入日期。'
+        : "IT組尚未加入播放日期。"}</p>`;
     return;
   }
   guide.innerHTML = list.map((s) => {

@@ -4,6 +4,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig, APP } from "./firebase-config.js";
+import { SYSTEMS } from "./systems.js";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -62,18 +63,22 @@ export function toast(msg, kind = "info") {
   setTimeout(() => el.remove(), 4500);
 }
 
-/* ---------- 頁首 ---------- */
+/* ---------- 頁首及側邊選單 ---------- */
 function renderHeader(el, root, user, isAdmin) {
   el.innerHTML = `
     <div class="bar">
+      ${user ? `
+        <button class="menu-btn" id="menu-btn" aria-label="開啟系統選單" aria-expanded="false" aria-controls="drawer">
+          <span aria-hidden="true"></span>
+        </button>` : ""}
       <a class="brand" href="${root}index.html">
-        <span class="brand-mark" aria-hidden="true">IT</span>
-        <span class="brand-text"><strong>IT一站式平台</strong><small>${esc(APP.schoolName)} IT組</small></span>
+        <img class="brand-logo" src="${root}assets/img/school-logo.png" alt="${esc(APP.schoolName)}校徽">
+        <span class="brand-text"><strong>IT一站式平台</strong><small>${esc(APP.schoolName)}</small></span>
       </a>
       ${user ? `
         <div class="who">
           <span class="who-name">${esc(user.displayName || user.email)}${isAdmin ? '<span class="role">管理員</span>' : ""}</span>
-          <button class="btn btn--ghost-light btn--small" id="signout">登出</button>
+          <button class="btn btn--small" id="signout">登出</button>
         </div>` : ""}
     </div>`;
   el.querySelector("#signout")?.addEventListener("click", async () => {
@@ -82,11 +87,50 @@ function renderHeader(el, root, user, isAdmin) {
   });
 }
 
+function setupDrawer(root, isAdmin, current) {
+  const backdrop = document.createElement("div");
+  backdrop.className = "drawer-backdrop";
+  const drawer = document.createElement("nav");
+  drawer.id = "drawer";
+  drawer.className = "drawer";
+  drawer.setAttribute("aria-label", "系統選單");
+  const link = (href, label, id, icon = "", sub = false) =>
+    `<a class="drawer-link${sub ? " drawer-link--sub" : ""}${id === current ? " is-current" : ""}" href="${root}${href}"
+       ${id === current ? 'aria-current="page"' : ""}>${icon ? `<span class="drawer-icon" aria-hidden="true">${icon}</span>` : ""}${esc(label)}</a>`;
+
+  drawer.innerHTML = `
+    <div class="drawer-head">
+      <strong>系統選單</strong>
+      <button class="drawer-close" id="drawer-close" aria-label="關閉選單">✕</button>
+    </div>
+    ${link("index.html", "平台首頁", "home", "🏠")}
+    <p class="drawer-group">系統</p>
+    ${SYSTEMS.map((s) => `
+      ${link(s.href, s.name, s.id, s.icon || "🧩")}
+      ${isAdmin && s.adminHref ? link(s.adminHref, "管理及審批", `${s.id}-admin`, "", true) : ""}`).join("")}`;
+  document.body.append(backdrop, drawer);
+
+  const btn = document.getElementById("menu-btn");
+  const set = (open) => {
+    drawer.classList.toggle("is-open", open);
+    backdrop.classList.toggle("is-open", open);
+    btn.setAttribute("aria-expanded", String(open));
+    document.body.classList.toggle("no-scroll", open);
+    if (open) drawer.querySelector(".drawer-link")?.focus();
+  };
+  btn.addEventListener("click", () => set(!drawer.classList.contains("is-open")));
+  backdrop.addEventListener("click", () => set(false));
+  drawer.querySelector("#drawer-close").addEventListener("click", () => { set(false); btn.focus(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && drawer.classList.contains("is-open")) { set(false); btn.focus(); }
+  });
+}
+
 function showGate(gate, msg = "") {
   gate.hidden = false;
   gate.innerHTML = `
     <div class="gate-card">
-      <span class="brand-mark brand-mark--large" aria-hidden="true">IT</span>
+      <img class="gate-logo" src="${gate.dataset.root || "./"}assets/img/school-logo.png" alt="">
       <h1>登入 IT一站式平台</h1>
       <p>請使用學校的 Google 帳戶登入，以使用 IT組的校內系統。</p>
       ${msg ? `<p class="gate-error" role="alert">${esc(msg)}</p>` : ""}
@@ -110,12 +154,14 @@ function showGate(gate, msg = "") {
 /**
  * 每個頁面共用的啟動流程：處理登入、檢查網域及管理員身份。
  * 頁面需要有 #site-header、#gate、#main 三個元素。
+ * current：目前頁面的 ID（用於側邊選單標示），例如 "home"、"ktv"、"ktv-admin"。
  */
-export function boot({ root = "./", onReady }) {
+export function boot({ root = "./", current = "", onReady }) {
   const header = document.getElementById("site-header");
   const gate = document.getElementById("gate");
   const main = document.getElementById("main");
   const loading = document.getElementById("loading");
+  gate.dataset.root = root;
   renderHeader(header, root, null, false);
   let started = false;
 
@@ -144,6 +190,7 @@ export function boot({ root = "./", onReady }) {
       console.warn("未能檢查管理員身份", e);
     }
     renderHeader(header, root, user, isAdmin);
+    setupDrawer(root, isAdmin, current);
     gate.hidden = true;
     main.hidden = false;
     if (!started) {
