@@ -1,14 +1,14 @@
 import {
   boot, db, esc, toast, fmtDate, daysUntil, parseDateId, weekdayName,
   enhanceDateInputs, timePicker, fmtTime12,
-} from "../../assets/js/common.js";
+} from "../../assets/js/common.js?v=20261005j";
 import {
   collection, doc, onSnapshot, writeBatch, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { KTV, STATUS } from "./ktv-config.js";
+import { KTV, STATUS } from "./ktv-config.js?v=20261005j";
 import {
   timeLabel, toMin, lockIdOf, findConflict, buildDays, overlapsKtvWindow, minBookDate, canBook, sortBookings,
-} from "./ktv-common.js";
+} from "./ktv-common.js?v=20261005j";
 
 const S = {
   user: null, isAdmin: false, regularDates: [], bookings: [], hidePast: true,
@@ -27,12 +27,12 @@ boot({
       `樂Kids TV 每次播放共 ${KTV.slots.length} 個時段，每段 5 分鐘。按「預約此時段」填寫申請；如要在其他日子或時間播放，按「預約其他時段」。管理員批核後會以電郵通知你。須在播放日前 ${KTV.cutoffDays} 天申請。`;
 
     onSnapshot(doc(db, "ktv_settings", "main"), (snap) => {
-      S.regularDates = snap.data()?.regularDates || [];
+      S.regularDates = (snap.data()?.regularDates || []).filter((d) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d));
       S.loaded.c = true;
       render();
     }, onError);
     onSnapshot(collection(db, "ktv_bookings"), (snap) => {
-      S.bookings = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((b) => b.date && b.start && b.end);
+      S.bookings = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((b) => /^\d{4}-\d{2}-\d{2}$/.test(b.date || "") && /^\d{2}:\d{2}$/.test(b.start || "") && /^\d{2}:\d{2}$/.test(b.end || ""));
       S.loaded.b = true;
       render();
     }, onError);
@@ -66,10 +66,15 @@ function onError(e) {
 
 function render() {
   if (!S.loaded.c || !S.loaded.b) return;
-  const days = buildDays(S.regularDates, S.bookings);
-  renderHero(days);
-  renderGuide(days);
-  renderMine();
+  try {
+    const days = buildDays(S.regularDates, S.bookings);
+    renderHero(days);
+    renderGuide(days);
+    renderMine();
+  } catch (e) {
+    console.error(e);
+    $("#guide").innerHTML = `<p class="load-error" role="alert">未能顯示播放時間表：${esc(e.message)}。請把這段文字告訴IT組。</p>`;
+  }
 }
 
 /* ---------- 下一次播放 ---------- */

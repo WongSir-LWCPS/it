@@ -1,16 +1,16 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, daysUntil, parseDateId, toDateId, pad,
   enhanceDateInputs, timePicker,
-} from "../../assets/js/common.js";
+} from "../../assets/js/common.js?v=20261005j";
 import {
   collection, doc, onSnapshot, writeBatch, updateDoc, setDoc, serverTimestamp, arrayUnion, arrayRemove,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { KTV, STATUS } from "./ktv-config.js";
+import { KTV, STATUS } from "./ktv-config.js?v=20261005j";
 import {
   timeLabel, toMin, lockIdOf, isActive, regularIndex, findConflict, sortBookings,
-} from "./ktv-common.js";
-import { buildKtvEmail } from "./ktv-email.js";
-import { sendEmail, emailEnabled } from "../../assets/js/email.js";
+} from "./ktv-common.js?v=20261005j";
+import { buildKtvEmail } from "./ktv-email.js?v=20261005j";
+import { sendEmail, emailEnabled } from "../../assets/js/email.js?v=20261005j";
 
 const S = {
   user: null, regularDates: [], bookings: [], filter: "active", upcoming: false,
@@ -47,12 +47,12 @@ boot({
     setupImport();
 
     onSnapshot(settingsRef(), (snap) => {
-      S.regularDates = [...(snap.data()?.regularDates || [])].sort();
+      S.regularDates = [...((snap.data()?.regularDates || []).filter((d) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort();
       S.loaded.c = true;
       render();
     }, onError);
     onSnapshot(collection(db, "ktv_bookings"), (snap) => {
-      S.bookings = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((b) => b.date && b.start && b.end);
+      S.bookings = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((b) => /^\d{4}-\d{2}-\d{2}$/.test(b.date || "") && /^\d{2}:\d{2}$/.test(b.start || "") && /^\d{2}:\d{2}$/.test(b.end || ""));
       S.loaded.b = true;
       render();
     }, onError);
@@ -66,9 +66,9 @@ function onError(e) {
 
 function render() {
   if (!S.loaded.c || !S.loaded.b) return;
-  renderPending();
-  renderAll();
-  renderDates();
+  for (const fn of [renderPending, renderAll, renderDates]) {
+    try { fn(); } catch (e) { console.error(e); toast(`部分內容未能顯示：${e.message}`, "error"); }
+  }
 }
 
 /* ---------- 分頁 ---------- */
@@ -508,8 +508,9 @@ function cellRange(v) {
 }
 
 const cleanMode = (m) => {
-  const t = String(m ?? "").trim();
-  return KTV.modes.find((x) => x.toLowerCase() === t.toLowerCase()) || t || KTV.modes[0];
+  const t = String(m ?? "").trim().toLowerCase();
+  const alias = Object.entries(KTV.modeAliases || {}).find(([k]) => k.toLowerCase() === t);
+  return KTV.modes.find((x) => x.toLowerCase() === t) || alias?.[1] || KTV.modes[0];
 };
 
 /** 讀取工作表內容，支援舊預約表格式及一行一個節目的表格 */

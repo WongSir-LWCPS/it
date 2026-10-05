@@ -51,7 +51,7 @@ firestore.rules             Firestore 安全規則
 ### 4. 加入第一位管理員
 
 Firestore → 開始集合 → 集合 ID：`admins` → 文件 ID：**管理員的電郵（全小楷）**，例如 `it@xxx.edu.hk`，隨意加一個欄位（例如 `name: "IT組"`）。
-之後如要加入其他管理員，照樣在 `admins` 集合加文件即可。
+第一位管理員只需在 Firebase 設定一次。之後由管理員登入平台，在選單的「平台設定」新增或移除管理員即可（只可加入 @lwcps.edu.hk 教職員帳戶，不能移除自己）。
 
 ### 5. 設定電郵通知（二選一）
 
@@ -91,6 +91,16 @@ ES module 不能直接用 `file://` 開啟，請用本機伺服器，例如 VS C
 ```
 python3 -m http.server 8000
 ```
+
+## 更新程式後
+
+每次修改 JS／CSS 後，上載到 GitHub 前執行：
+
+```
+python3 tools/set-version.py
+```
+
+所有檔案的引用會加上新版本號，老師的瀏覽器會自動讀取新版本。
 
 然後在 Firebase Authentication 的已授權網域確認有 `localhost`。
 

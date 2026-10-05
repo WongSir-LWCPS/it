@@ -9,7 +9,10 @@ export const KTV = {
   ],
 
   // 播放模式
-  modes: ["播片", "影片直播", "聲音直播", "Camera直播"],
+  modes: ["播片", "聲音直播", "Camera直播"],
+
+  // 匯入時其他寫法對應的播放模式
+  modeAliases: { "影片直播": "Camera直播", "視像直播": "Camera直播", "鏡頭直播": "Camera直播", "camera": "Camera直播", "聲音": "聲音直播", "影片": "播片" },
 
   // 播放日前多少天截止預約（2 = 最遲在播放日前兩天申請）
   cutoffDays: 2,

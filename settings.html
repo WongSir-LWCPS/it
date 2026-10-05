@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>IT一站式平台｜樂華天主教小學</title>
+  <title>平台設定｜IT一站式平台</title>
   <link rel="icon" href="assets/img/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,36 +28,34 @@
   <div id="gate" class="gate" hidden></div>
 
   <main id="main" class="wrap" hidden>
-    <section class="home-intro">
-      <h1>IT組校內系統</h1>
-      <p>選擇要使用的系統。IT組加入新系統後，會在下面的清單出現。</p>
+    <nav class="crumbs" aria-label="位置">
+      <a href="index.html">IT一站式平台</a>
+      <span aria-hidden="true">/</span>
+      <span>平台設定</span>
+    </nav>
+    <h1>平台設定</h1>
+
+    <section id="admin-section" class="block" hidden>
+      <h2>管理員</h2>
+      <p class="hint">管理員可以審批所有系統的申請、管理播放日期、匯入資料，以及在這裏新增或移除管理員。只可加入學校教職員帳戶。</p>
+
+      <form id="add-admin" class="card-form compact-forms">
+        <div class="inline-form">
+          <label class="field field--compact field--grow"><span>管理員電郵</span>
+            <input type="email" name="email" required placeholder="例如 chantm@lwcps.edu.hk" autocomplete="off">
+          </label>
+          <label class="field field--compact"><span>名稱（選填）</span>
+            <input name="name" maxlength="40" placeholder="例如 陳老師">
+          </label>
+          <button class="btn btn--primary btn--small" type="submit">加入管理員</button>
+        </div>
+        <p class="warn" id="add-warn" role="alert" hidden></p>
+      </form>
+
+      <div id="admin-list" class="mt-s"></div>
     </section>
-    <ul id="systems" class="systems"></ul>
-    <p id="settings-link" class="mt" hidden><a class="btn" href="settings.html">⚙️ 平台設定（管理員名單）</a></p>
   </main>
 
-  <script type="module">
-    import { boot, esc } from "./assets/js/common.js?v=20261005j";
-    import { SYSTEMS } from "./assets/js/systems.js?v=20261005j";
-
-    boot({
-      root: "./", current: "home",
-      onReady: ({ isAdmin }) => {
-        document.getElementById("settings-link").hidden = !isAdmin;
-        document.getElementById("systems").innerHTML = SYSTEMS.map((s) => `
-          <li class="system">
-            <span class="system-icon" aria-hidden="true">${s.icon || "🧩"}</span>
-            <div class="system-body">
-              <h2><a href="${s.href}">${esc(s.name)}</a></h2>
-              <p>${esc(s.desc)}</p>
-            </div>
-            <div class="system-actions">
-              <a class="btn btn--primary" href="${s.href}">開啟</a>
-              ${isAdmin && s.adminHref ? `<a class="btn" href="${s.adminHref}">管理及審批</a>` : ""}
-            </div>
-          </li>`).join("");
-      },
-    });
-  </script>
+  <script type="module" src="assets/js/settings.js?v=20261005j"></script>
 </body>
 </html>
