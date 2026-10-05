@@ -28,14 +28,20 @@
     <section class="block">
       <div class="block-head">
         <h2>播放時間表</h2>
-        <label class="check"><input type="checkbox" id="toggle-past"> 顯示已播放的日期</label>
+        <div class="block-tools">
+          <button type="button" class="btn btn--small" id="jump-next">跳到下一次播放</button>
+          <label class="check"><input type="checkbox" id="toggle-past"> 隱藏已播放的日期</label>
+        </div>
       </div>
       <p class="hint" id="guide-hint"></p>
-      <ul class="legend" aria-label="圖例">
-        <li><span class="swatch swatch--approved"></span>已批准節目</li>
-        <li><span class="swatch swatch--pending"></span>審批中</li>
-        <li><span class="swatch swatch--open"></span>可預約</li>
-      </ul>
+      <div class="guide-actions">
+        <ul class="legend" aria-label="圖例">
+          <li><span class="swatch swatch--approved"></span>已批准節目</li>
+          <li><span class="swatch swatch--pending"></span>審批中</li>
+          <li><span class="swatch swatch--open"></span>可預約</li>
+        </ul>
+        <button type="button" class="btn btn--primary" id="book-custom">預約其他時段</button>
+      </div>
       <div id="guide" class="guide"></div>
     </section>
 
@@ -48,9 +54,21 @@
   <dialog id="book-dialog" class="sheet" aria-labelledby="book-title">
     <form id="book-form" novalidate>
       <h2 id="book-title">預約播放時段</h2>
+      <input type="hidden" name="kind">
+      <input type="hidden" name="rdate">
+      <input type="hidden" name="rslot">
+
       <p class="sheet-when" id="book-when"></p>
-      <input type="hidden" name="sessionId">
-      <input type="hidden" name="slot">
+
+      <div id="custom-fields" hidden>
+        <p class="hint" id="custom-hint"></p>
+        <label class="field"><span>日期</span><input type="date" name="date"></label>
+        <div class="field-row">
+          <label class="field"><span>開始時間</span><input type="time" name="start" step="300"></label>
+          <label class="field"><span>結束時間</span><input type="time" name="end" step="300"></label>
+        </div>
+      </div>
+      <p class="warn" id="book-warn" role="alert" hidden></p>
 
       <label class="field">
         <span>主題</span>

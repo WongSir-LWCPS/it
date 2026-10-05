@@ -319,7 +319,7 @@ body.no-scroll { overflow: hidden; }
 .kv { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 4px 12px; margin: 0 0 16px; font-size: .92rem; }
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; overflow-wrap: anywhere; }
-.forms-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+.forms-grid { align-items: start; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
 .card-form { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
 
 /* ---------- 提示訊息 ---------- */
@@ -329,3 +329,33 @@ body.no-scroll { overflow: hidden; }
 .toast--error { background: var(--stop); }
 .actions--start { justify-content: flex-start; }
 .mt-s { margin-top: 16px; }
+
+/* ---------- 時間表：其他時段 ---------- */
+.ep-row { grid-template-columns: 104px minmax(0, 1fr); }
+.ep-slots { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.ep-date--extra { background: var(--ink-2); }
+.tag--extra { margin-left: 6px; background: var(--signal); color: var(--ink); font-family: var(--font); }
+.block-tools { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.guide-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.guide-actions .legend { margin: 0; }
+@media (max-width: 860px) {
+  .ep-row { grid-template-columns: 1fr; }
+  .ep-date { grid-column: auto; }
+  .ep-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---------- 播放日清單 ---------- */
+.month { margin-bottom: 20px; }
+.month h3 { font-size: 1rem; margin-bottom: 8px; }
+.chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 8px; padding: 4px 4px 4px 12px;
+  border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: .9rem;
+}
+.chip.is-past { opacity: .6; }
+.chip-count { font-family: var(--font-display); font-size: .8rem; color: var(--muted); }
+.chip button {
+  width: 26px; height: 26px; border: 0; border-radius: 50%; background: transparent;
+  color: var(--muted); cursor: pointer; font-size: .8rem;
+}
+.chip button:hover { background: var(--stop-bg); color: var(--stop); }

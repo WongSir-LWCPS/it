@@ -1,42 +1,43 @@
 import { APP, esc, fmtDate } from "../../assets/js/common.js";
 import { KTV } from "./ktv-config.js";
+import { timeLabel } from "./ktv-common.js";
 
 const SUBJECT = {
   approved: "【樂Kids TV】你的播放預約已獲批准",
   rejected: "【樂Kids TV】你的播放預約未獲批准",
   cancelled: "【樂Kids TV】你的節目已被取消",
+  updated: "【樂Kids TV】你的節目資料已更改",
 };
 
 const LEAD = {
   approved: "你的樂Kids TV播放預約已獲批准，詳情如下：",
   rejected: "你的樂Kids TV播放預約未獲批准，詳情如下：",
   cancelled: "你已獲批准的樂Kids TV節目已被取消，詳情如下：",
+  updated: "IT組已更改你的樂Kids TV節目資料，最新詳情如下：",
 };
 
-/** 為審批結果建立電郵內容 */
+/** 建立通知電郵內容；status：approved / rejected / cancelled / updated */
 export function buildKtvEmail(b, status, note = "") {
   const rows = [
-    ["播放日期", fmtDate(b.sessionId)],
-    ["時段", b.slotLabel],
+    ["播放日期", fmtDate(b.date)],
+    ["時間", timeLabel(b) + (b.kind === "custom" ? "（其他時段）" : "")],
     ["主題", b.topic],
     ["負責老師", b.teacherName],
     ["播放模式", b.mode],
   ];
   const link = APP.siteUrl ? `${APP.siteUrl}systems/ktv/index.html` : "";
-  const fileTip = status === "approved"
+  const fileTip = status === "approved" || status === "updated"
     ? `請於播放前與IT老師確認，並把相關PPT／影片放於以下位置的播放日期資料夾內：\n${KTV.fileLocation}`
     : "";
 
   const text = [
-    `${b.teacherName} 老師：`,
-    "",
+    `${b.teacherName} 老師：`, "",
     LEAD[status],
     ...rows.map(([k, v]) => `${k}：${v}`),
     note ? `\n管理員備註：${note}` : "",
     fileTip ? `\n${fileTip}` : "",
     link ? `\n查看播放時間表：${link}` : "",
-    "",
-    `${APP.schoolName} IT組`,
+    "", `${APP.schoolName} IT組`,
   ].join("\n");
 
   const html = `

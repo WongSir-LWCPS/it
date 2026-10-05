@@ -77,10 +77,12 @@ Firestore → 開始集合 → 集合 ID：`admins` → 文件 ID：**管理員�
 
 ### 7. 開始使用
 
-1. 以管理員帳戶登入 → 樂Kids TV 預約 → 管理及審批 → **播放日期**。
-2. 用「一次過加入整段期間」加入全年播放日期（例如逢星期五，略過假期）。
-3. 用「直接加入已確認的節目」輸入試算表內已登記的節目。
+1. 以管理員帳戶登入 → 樂Kids TV 預約 → 管理及審批 → **匯入**。
+2. 在 Google 試算表選「檔案 → 下載 → Microsoft Excel (.xlsx)」，上載整個檔案，選擇學年的工作表（例如 26-27），預覽後按「確認匯入」。所有播放日及已登記的節目會一次過加入。
+3. 如有新的播放日，可在「播放日期」加入；用「新增節目」直接加入樂Kids TV時段的節目時，日期亦會自動加入。
 4. 把平台網址發給老師。
+
+老師可以：預約樂Kids TV播放日的固定時段，或按「預約其他時段」在其他日子或時間（07:30 至 17:30，每次最長 30 分鐘）申請播放。
 
 ## 本機測試
 
@@ -103,8 +105,10 @@ python3 -m http.server 8000
 
 | 集合 | 文件 ID | 說明 |
 | --- | --- | --- |
-| `ktv_sessions` | `2026-10-09` | 播放日期：`date`、`open`（是否開放預約）、`note` |
-| `ktv_bookings` | 自動 | 申請：`sessionId`、`slot`、`topic`、`teacherName`、`teacherEmail`、`mode`、`remarks`、`status`（pending / approved / rejected / cancelled）、`reviewNote`、`reviewedBy` |
-| `ktv_slots` | `2026-10-09_0` | 時段鎖，防止兩位老師同時預約同一時段 |
+| `ktv_settings` | `main` | `regularDates`：樂Kids TV 播放日清單 |
+| `ktv_bookings` | 自動 | 節目／申請：`date`、`start`、`end`、`kind`（regular 樂Kids TV時段／custom 其他時段）、`topic`、`teacherName`、`teacherEmail`、`mode`、`remarks`、`status`（pending / approved / rejected / cancelled）、`reviewNote`、`lockId` |
+| `ktv_slots` | `2026-10-09_1310` | 時段鎖，防止兩位老師同時預約同一時間 |
 | `admins` | 電郵 | 管理員名單 |
 | `mail` | 自動 | 電郵佇列（方法 A） |
+
+時段、播放模式、截止日數、其他時段的時間範圍可在 `systems/ktv/ktv-config.js` 修改。
