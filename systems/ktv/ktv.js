@@ -31,7 +31,7 @@ boot({
       render();
     }, onError);
     onSnapshot(collection(db, "ktv_bookings"), (snap) => {
-      S.bookings = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      S.bookings = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((b) => b.date && b.start && b.end);
       S.loaded.b = true;
       render();
     }, onError);

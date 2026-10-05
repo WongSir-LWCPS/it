@@ -359,3 +359,12 @@ body.no-scroll { overflow: hidden; }
   color: var(--muted); cursor: pointer; font-size: .8rem;
 }
 .chip button:hover { background: var(--stop-bg); color: var(--stop); }
+
+/* 匯入確認列 */
+.import-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  position: sticky; top: 64px; z-index: 5;
+  padding: 14px 18px; border-radius: 12px; background: var(--go-bg); border: 1px solid #B9DFC9;
+}
+.import-bar p { margin: 0; }
+.import-bar--none { background: var(--paper); border-color: var(--line); position: static; }

@@ -50,7 +50,7 @@ boot({
       render();
     }, onError);
     onSnapshot(collection(db, "ktv_bookings"), (snap) => {
-      S.bookings = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      S.bookings = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((b) => b.date && b.start && b.end);
       S.loaded.b = true;
       render();
     }, onError);
@@ -431,15 +431,26 @@ function renderDates() {
 let XLSX = null;
 const IMP = { wb: null, parsed: null };
 
-function loadXlsx() {
-  if (window.XLSX) return Promise.resolve(window.XLSX);
+const XLSX_SOURCES = [
+  "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
+  "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",
+];
+function loadScript(src) {
   return new Promise((resolve, reject) => {
     const s = document.createElement("script");
-    s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-    s.onload = () => resolve(window.XLSX);
-    s.onerror = () => reject(new Error("未能載入 Excel 讀取工具，請檢查網絡。"));
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => { s.remove(); reject(new Error(src)); };
     document.head.append(s);
   });
+}
+async function loadXlsx() {
+  for (const src of XLSX_SOURCES) {
+    if (window.XLSX) break;
+    try { await loadScript(src); } catch { /* 試下一個來源 */ }
+  }
+  if (!window.XLSX) throw new Error("未能載入 Excel 讀取工具。學校網絡可能封鎖了 cdnjs.cloudflare.com 及 cdn.jsdelivr.net。");
+  return window.XLSX;
 }
 
 function decodeText(buf) {
@@ -581,14 +592,23 @@ function setupImport() {
   });
   $("#import-sheet").addEventListener("change", previewImport);
   $("#import-result").addEventListener("click", (e) => {
-    const btn = e.target.closest("#import-run");
-    if (btn) runImport(btn);
+    const btn = e.target.closest("[data-import-run]");
+    if (btn) runImport();
   });
 }
 
 const sheetRows = (name) => XLSX.utils.sheet_to_json(IMP.wb.Sheets[name], { header: 1, raw: true, defval: "" });
 
 function previewImport() {
+  try {
+    buildPreview();
+  } catch (err) {
+    console.error(err);
+    $("#import-result").innerHTML = `<p class="load-error">未能分析這個工作表：${esc(err.message)}</p>`;
+  }
+}
+
+function buildPreview() {
   const box = $("#import-result");
   const { regular, items } = parseRows(sheetRows($("#import-sheet").value));
   if (!regular.length && !items.length) {
@@ -608,11 +628,22 @@ function previewImport() {
   IMP.parsed = { newDates, items: accepted };
   const skipped = items.length - accepted.length;
 
+  const canImport = newDates.length > 0 || accepted.length > 0;
+  const bar = canImport
+    ? `<div class="import-bar">
+         <p>將加入 <strong>${newDates.length}</strong> 個樂Kids TV播放日及 <strong>${accepted.length}</strong> 個節目${skipped ? `；${skipped} 個會略過` : ""}。</p>
+         <button class="btn btn--primary" data-import-run>確認匯入</button>
+       </div>`
+    : `<div class="import-bar import-bar--none">
+         <p>這個檔案的資料已全部在系統內，沒有需要匯入的項目。${skipped ? "略過的原因見下表。" : ""}</p>
+       </div>`;
+
   box.innerHTML = `
     <h2>預覽</h2>
-    <p>將加入 <strong>${newDates.length}</strong> 個樂Kids TV播放日（檔案內共 ${regular.length} 個，${regular[0] ? `${fmtDate(regular[0])} 至 ${fmtDate(regular[regular.length - 1])}` : ""}）及 <strong>${accepted.length}</strong> 個節目${skipped ? `；${skipped} 個會略過` : ""}。</p>
+    <p class="hint">檔案內共 ${regular.length} 個樂Kids TV播放日${regular[0] ? `（${fmtDate(regular[0])} 至 ${fmtDate(regular[regular.length - 1])}）` : ""}及 ${items.length} 個節目。</p>
+    ${bar}
     ${items.length ? `
-      <div class="table-scroll">
+      <div class="table-scroll mt-s">
         <table class="table">
           <thead><tr><th>播放日期</th><th>時間</th><th>主題</th><th>負責老師</th><th>模式</th><th>結果</th></tr></thead>
           <tbody>${items.map((b) => `
@@ -624,15 +655,13 @@ function previewImport() {
           </tbody>
         </table>
       </div>` : ""}
-    ${newDates.length || accepted.length
-      ? `<div class="actions actions--start mt-s"><button class="btn btn--primary" id="import-run">確認匯入</button></div>`
-      : `<p class="empty mt-s">所有資料已在系統內，沒有需要匯入的項目。</p>`}`;
+    ${canImport && items.length > 8 ? `<div class="actions actions--start mt-s"><button class="btn btn--primary" data-import-run>確認匯入</button></div>` : ""}`;
 }
 
-async function runImport(btn) {
+async function runImport() {
   if (!IMP.parsed) return;
-  btn.disabled = true;
-  btn.textContent = "匯入中…";
+  const btns = [...document.querySelectorAll("[data-import-run]")];
+  btns.forEach((b) => { b.disabled = true; b.textContent = "匯入中…"; });
   const { newDates, items } = IMP.parsed;
   try {
     await addRegularDates(newDates);
@@ -660,8 +689,7 @@ async function runImport(btn) {
     $("#import-file").value = "";
     toast("匯入完成。", "success");
   } catch (e) {
-    btn.disabled = false;
-    btn.textContent = "確認匯入";
+    btns.forEach((b) => { b.disabled = false; b.textContent = "確認匯入"; });
     toast("未能匯入：" + e.message, "error");
   }
 }
