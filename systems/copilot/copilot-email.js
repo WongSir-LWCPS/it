@@ -1,5 +1,5 @@
-import { APP, fmtDate, fmtTimestamp, mailLayout } from "../../assets/js/common.js?v=20261005r";
-import { COPILOT, purposeText } from "./copilot-config.js?v=20261005r";
+import { APP, fmtDate, fmtTimestamp, mailLayout } from "../../assets/js/common.js?v=20261005s";
+import { COPILOT, purposeText } from "./copilot-config.js?v=20261005s";
 
 /** kind：received（給申請人）、new（給管理員）、approved、rejected、returned */
 export function buildCopilotEmail(r, kind, note = "") {

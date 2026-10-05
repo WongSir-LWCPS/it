@@ -1,6 +1,6 @@
 // 管理員通知名單：存於 settings/notify（emails 陣列）
 // 老師提交申請時，通知電郵會寄給這個名單。名單由「平台設定」維護。
-import { db } from "./common.js?v=20261005r";
+import { db } from "./common.js?v=20261005s";
 import {
   collection, doc, getDoc, getDocs, setDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
