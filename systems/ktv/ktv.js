@@ -1,6 +1,6 @@
 import {
   boot, db, esc, toast, fmtDate, daysUntil, parseDateId, weekdayName,
-  enhanceDateInputs, timePicker,
+  enhanceDateInputs, timePicker, fmtTime12,
 } from "../../assets/js/common.js";
 import {
   collection, doc, onSnapshot, writeBatch, serverTimestamp,
@@ -222,18 +222,22 @@ function setupDialog() {
   timePicker(form.start, {
     from: KTV.customWindow.from,
     to: toHHMM(toMin(KTV.customWindow.to) - 5),
-    placeholder: "例如 08:30",
     label: "開始時間",
-    errorText: `請輸入 ${KTV.customWindow.from} 至 ${toHHMM(toMin(KTV.customWindow.to) - 5)} 之間的時間。`,
+    errorText: `請輸入 ${fmtTime12(KTV.customWindow.from)} 至 ${fmtTime12(toHHMM(toMin(KTV.customWindow.to) - 5))} 之間的時間。`,
   });
-  const durations = [5, 10, 15, 20, 25, 30].filter((d) => d <= KTV.maxCustomMinutes);
-  $("#duration-choices").innerHTML = durations.map((d, i) => `
-    <label class="choice"><input type="radio" name="duration" value="${d}" ${i === 0 ? "checked" : ""}><span>${d} 分鐘</span></label>`).join("");
+  timePicker(form.end, {
+    from: toHHMM(toMin(KTV.customWindow.from) + 5),
+    to: KTV.customWindow.to,
+    label: "結束時間",
+    isAllowed: (t) => !form.start.value
+      || (toMin(t) > toMin(form.start.value) && toMin(t) - toMin(form.start.value) <= KTV.maxCustomMinutes),
+    errorText: `結束時間須遲於開始時間，每次最長 ${KTV.maxCustomMinutes} 分鐘，並在 ${fmtTime12(KTV.customWindow.to)} 或之前。`,
+  });
 
-  // 選擇開始時間或長度後，計算結束時間並即時檢查
-  form.start.addEventListener("change", syncEnd);
+  // 填寫日期或時間後即時檢查
+  form.start.addEventListener("change", () => { form.end._tp.refresh(); syncEnd(); });
+  form.end.addEventListener("change", syncEnd);
   form.date.addEventListener("change", syncEnd);
-  form.querySelectorAll('input[name="duration"]').forEach((r) => r.addEventListener("change", syncEnd));
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -293,15 +297,15 @@ function setupDialog() {
 
 const toHHMM = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
-/** 由開始時間及長度計算結束時間，並即時檢查 */
+/** 顯示播放時間並即時檢查 */
 function syncEnd() {
   const form = $("#book-form");
   const start = form.start.value;
-  const mins = Number(form.querySelector('input[name="duration"]:checked')?.value || 0);
-  form.end.value = start && mins ? toHHMM(toMin(start) + mins) : "";
-  $("#end-preview").textContent = form.end.value ? `播放時間：${start} 至 ${form.end.value}` : "";
+  const end = form.end.value;
+  const mins = start && end ? toMin(end) - toMin(start) : 0;
+  $("#end-preview").textContent = mins > 0 ? `播放時間：${start} 至 ${end}（${mins} 分鐘）` : "";
   const warn = $("#book-warn");
-  const msg = form.date.value && form.end.value ? checkCustom(form.date.value, start, form.end.value) : "";
+  const msg = form.date.value && start && end ? checkCustom(form.date.value, start, end) : "";
   warn.hidden = !msg;
   warn.textContent = msg;
 }
@@ -327,6 +331,7 @@ function openDialog({ kind, date = "", slot = 0 }) {
     form.date.min = minBookDate();
     form.date.value = date;
     form.start._tp.set("", true);
+    form.end._tp.set("", true);
     setTimeout(syncEnd);
   } else {
     form.rdate.value = date;

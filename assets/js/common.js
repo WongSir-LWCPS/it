@@ -93,14 +93,22 @@ export function parseTimeText(text) {
   return `${pad(h)}:${pad(m)}`;
 }
 
+/** HH:MM → 「下午 01:40」 */
+export function fmtTime12(v) {
+  if (!v) return "";
+  const [h, m] = v.split(":").map(Number);
+  return `${h < 12 ? "上午" : "下午"} ${pad(h % 12 === 0 ? 12 : h % 12)}:${pad(m)}`;
+}
+
 /**
- * 時間欄（24 小時制）：可直接輸入，亦可按時鐘圖示彈出「時」「分」按鈕選擇。
- * input 為 <input type="hidden">（實際提交的值），值改變時會觸發 change 事件。
- * opts：from、to（可選範圍）、step（按鈕的分鐘間距）、placeholder、isAllowed(t)、errorText
+ * 時間欄：可直接輸入（例如 830、13:10、下午1:40），
+ * 亦可按時鐘圖示，在「上午／下午」「時」「分」三欄中選擇。
+ * input 為 <input type="hidden">，實際值為 24 小時制 HH:MM，改變時觸發 change 事件。
+ * opts：from、to（可選範圍）、placeholder、isAllowed(t)、errorText、label
  */
 export function timePicker(input, opts = {}) {
   const o = {
-    from: "07:00", to: "19:00", step: 5, placeholder: "例如 08:30",
+    from: "07:00", to: "19:00", placeholder: "-- --:--",
     isAllowed: () => true, errorText: "", ...opts,
   };
   const wrap = document.createElement("div");
@@ -110,10 +118,9 @@ export function timePicker(input, opts = {}) {
   const text = document.createElement("input");
   text.type = "text";
   text.className = "tp-input";
-  text.inputMode = "numeric";
   text.autocomplete = "off";
   text.placeholder = o.placeholder;
-  text.setAttribute("aria-label", o.label || "時間（24 小時制）");
+  text.setAttribute("aria-label", o.label || "時間");
 
   const btn = document.createElement("button");
   btn.type = "button";
@@ -130,25 +137,41 @@ export function timePicker(input, opts = {}) {
   pop.className = "tp-pop";
   pop.hidden = true;
   wrap.append(input, text, btn, pop, err);
-  let hour = null;
 
   const ok = (t) => hmToMin(t) >= hmToMin(o.from) && hmToMin(t) <= hmToMin(o.to) && o.isAllowed(t);
-  const renderPop = () => {
-    const v = input.value;
-    const [vh, vm] = v ? v.split(":") : [null, null];
-    const h = hour ?? vh;
-    const hours = [];
-    for (let i = Number(o.from.slice(0, 2)); i <= Number(o.to.slice(0, 2)); i++) hours.push(pad(i));
-    const mins = [];
-    for (let m = 0; m < 60; m += o.step) mins.push(pad(m));
-    pop.innerHTML = `
-      <p class="tp-label">時</p>
-      <div class="tp-grid">${hours.map((x) => `<button type="button" data-h="${x}" class="${x === h ? "is-on" : ""}"
-        ${mins.some((m) => ok(`${x}:${m}`)) ? "" : "disabled"}>${x}</button>`).join("")}</div>
-      <p class="tp-label">分${h ? "" : "（請先選時）"}</p>
-      <div class="tp-grid">${mins.map((m) => `<button type="button" data-m="${m}" class="${h === vh && m === vm ? "is-on" : ""}"
-        ${h && ok(`${h}:${m}`) ? "" : "disabled"}>${m}</button>`).join("")}</div>`;
+  const to24 = (p, h12, m) => `${pad((h12 % 12) + (p === "下午" ? 12 : 0))}:${m}`;
+  const HOURS = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
+  const MINS = Array.from({ length: 60 }, (_, i) => pad(i));
+  const anyIn = (p, h) => MINS.some((m) => ok(to24(p, Number(h), m)));
+  // 正在選擇中的值：{ p, h, m }
+  let draft = {};
+
+  const fromValue = (v) => {
+    if (!v) return {};
+    const [h, m] = v.split(":").map(Number);
+    return { p: h < 12 ? "上午" : "下午", h: pad(h % 12 === 0 ? 12 : h % 12), m: pad(m) };
   };
+
+  const renderPop = () => {
+    const d = draft;
+    const col = (key, items, isDisabled) => `
+      <div class="tp-col" data-col="${key}" role="listbox" aria-label="${{ p: "上午或下午", h: "時", m: "分" }[key]}">
+        ${items.map((x) => `<button type="button" role="option" data-${key}="${x}"
+          class="${d[key] === x ? "is-on" : ""}" aria-selected="${d[key] === x}"
+          ${isDisabled(x) ? "disabled" : ""}>${x}</button>`).join("")}
+      </div>`;
+    pop.innerHTML =
+      col("p", ["上午", "下午"], (p) => !HOURS.some((h) => anyIn(p, h)))
+      + col("h", HOURS, (h) => !(d.p ? anyIn(d.p, h) : ["上午", "下午"].some((p) => anyIn(p, h))))
+      + col("m", MINS, (m) => (d.p && d.h ? !ok(to24(d.p, Number(d.h), m)) : false));
+  };
+  const scrollToSelected = () => {
+    pop.querySelectorAll(".tp-col").forEach((c) => {
+      const on = c.querySelector(".is-on") || c.querySelector("button:not(:disabled)");
+      if (on) c.scrollTop = on.offsetTop - c.offsetTop - 4;
+    });
+  };
+
   const showError = (msg) => {
     err.hidden = !msg;
     err.textContent = msg;
@@ -157,66 +180,67 @@ export function timePicker(input, opts = {}) {
   const set = (v, silent = false) => {
     const changed = input.value !== v;
     input.value = v;
-    text.value = v;
-    hour = null;
+    text.value = fmtTime12(v);
     showError("");
-    if (!pop.hidden) renderPop();
+    if (!silent) draft = fromValue(v);
     if (changed && !silent) input.dispatchEvent(new Event("change", { bubbles: true }));
   };
-  // 檢查輸入的文字
+
+  // 由輸入的文字取值
   const commit = () => {
     const raw = text.value.trim();
     if (!raw) { set(""); return; }
     const t = parseTimeText(raw);
-    if (!t) {
+    const fail = (msg) => {
       input.value = "";
       input.dispatchEvent(new Event("change", { bubbles: true }));
-      showError("看不懂這個時間，請以 24 小時制輸入，例如 08:30 或 13:10。");
-      return;
-    }
-    if (!ok(t)) {
-      text.value = t;
-      input.value = "";
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-      showError(o.errorText || `請輸入 ${o.from} 至 ${o.to} 之間的時間。`);
-      return;
-    }
+      showError(msg);
+    };
+    if (!t) return fail("看不懂這個時間，請輸入例如 08:30、13:10 或 下午1:10。");
+    if (!ok(t)) { text.value = fmtTime12(t); return fail(o.errorText || `請輸入 ${fmtTime12(o.from)} 至 ${fmtTime12(o.to)} 之間的時間。`); }
     set(t);
   };
+
   const close = (focus = true) => {
     pop.hidden = true;
-    hour = null;
     btn.setAttribute("aria-expanded", "false");
     if (focus) text.focus();
   };
   const open = () => {
-    hour = null;
+    draft = fromValue(input.value);
     renderPop();
     pop.hidden = false;
     btn.setAttribute("aria-expanded", "true");
-    (pop.querySelector("[data-h].is-on") || pop.querySelector("[data-h]:not(:disabled)"))?.focus();
+    scrollToSelected();
   };
 
   text.addEventListener("change", commit);
   text.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); commit(); }
+    if (e.key === "Enter") { e.preventDefault(); commit(); close(false); }
     if (e.key === "ArrowDown" && e.altKey) { e.preventDefault(); open(); }
   });
   btn.addEventListener("click", () => (pop.hidden ? open() : close()));
+
   pop.addEventListener("click", (e) => {
     const b = e.target.closest("button");
     if (!b || b.disabled) return;
-    if (b.dataset.h) {
-      hour = b.dataset.h;
-      renderPop();
-      pop.querySelector("[data-m]:not(:disabled)")?.focus();
-    } else if (b.dataset.m) {
-      set(`${hour ?? input.value.split(":")[0]}:${b.dataset.m}`);
-      close();
+    const key = Object.keys(b.dataset)[0];        // p、h 或 m
+    draft = { ...draft, [key]: b.dataset[key] };
+    // 未選的部分自動填上第一個可用的值（與瀏覽器內置時間欄相同）
+    if (!draft.p) draft.p = ["上午", "下午"].find((p) => HOURS.some((h) => anyIn(p, h)));
+    if (!draft.h || !anyIn(draft.p, draft.h)) draft.h = HOURS.find((h) => anyIn(draft.p, h));
+    if (!draft.m || !ok(to24(draft.p, Number(draft.h), draft.m))) {
+      draft.m = MINS.find((m) => ok(to24(draft.p, Number(draft.h), m)));
     }
+    const cols = [...pop.querySelectorAll(".tp-col")].map((c) => c.scrollTop);
+    renderPop();
+    pop.querySelectorAll(".tp-col").forEach((c, i) => { c.scrollTop = cols[i]; });
+    if (draft.p && draft.h && draft.m) set(to24(draft.p, Number(draft.h), draft.m), false);
+    // 選完分鐘即關閉
+    if (key === "m") close();
   });
   pop.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); }
+    if (e.key === "Escape" || e.key === "Enter") { e.preventDefault(); e.stopPropagation(); close(); }
   });
   // 用 composedPath：按鈕重繪後 e.target 已不在頁面上，contains() 會誤判為按在外面
   document.addEventListener("click", (e) => { if (!pop.hidden && !e.composedPath().includes(wrap)) close(false); });

@@ -217,7 +217,7 @@ function setupEditDialog() {
   timePicker(f.end, {
     from: "07:05", to: "19:00", label: "結束時間",
     isAllowed: (t) => !f.start.value || t > f.start.value,
-    errorText: "結束時間必須遲於開始時間，並在 19:00 或之前。",
+    errorText: "結束時間必須遲於開始時間，並在下午 07:00 或之前。",
   });
   f.start.addEventListener("change", () => {
     if (f.end.value && f.end.value <= f.start.value) f.end._tp.set("", true);

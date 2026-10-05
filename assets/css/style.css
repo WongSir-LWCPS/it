@@ -492,3 +492,22 @@ h3 { font-size: .95rem; }
 .tp-btn:hover, .tp-btn[aria-expanded="true"] { background: var(--paper); color: var(--ink); }
 .tp-pop { top: 42px; }
 .tp-error { margin: 4px 0 0; font-size: .78rem; color: var(--stop); }
+
+/* ---------- 時間選擇：上午／下午、時、分 三欄 ---------- */
+.tp-pop {
+  display: flex; gap: 4px; width: auto; padding: 6px;
+  top: 42px; border-radius: 10px;
+}
+.tp-col {
+  display: flex; flex-direction: column; gap: 2px;
+  width: 64px; max-height: 252px; overflow-y: auto; scrollbar-width: thin;
+  padding-bottom: 210px;   /* 讓最後的項目也可捲到頂部 */
+}
+.tp-col button {
+  flex: none; height: 34px; border: 0; border-radius: 6px; background: transparent;
+  font: inherit; font-size: .95rem; color: var(--ink); cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.tp-col button:hover:not(:disabled) { background: var(--paper); }
+.tp-col button.is-on, .tp-col button.is-on:hover { background: #2563EB; color: #fff; font-weight: 600; }
+.tp-col button:disabled { opacity: .28; cursor: not-allowed; }
+.tp-col[data-col="p"] { padding-bottom: 0; }
