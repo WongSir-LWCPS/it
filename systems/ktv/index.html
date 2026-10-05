@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../assets/css/style.css?v=20261005b">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261005d">
 </head>
 <body>
   <header id="site-header" class="site-header"></header>
@@ -30,7 +30,7 @@
         <h2>播放時間表</h2>
         <div class="block-tools">
           <button type="button" class="btn btn--small" id="jump-next">跳到下一次播放</button>
-          <label class="check"><input type="checkbox" id="toggle-past"> 隱藏已播放的日期</label>
+          <label class="check"><input type="checkbox" id="toggle-past" checked> 隱藏已播放的日期</label>
         </div>
       </div>
       <p class="hint" id="guide-hint"></p>
@@ -64,8 +64,8 @@
         <p class="hint" id="custom-hint"></p>
         <label class="field"><span>日期</span><input type="date" name="date"></label>
         <div class="field-row">
-          <label class="field"><span>開始時間</span><input type="time" name="start" step="300"></label>
-          <label class="field"><span>結束時間</span><input type="time" name="end" step="300"></label>
+          <label class="field"><span>開始時間</span><select name="start" class="time-select"></select></label>
+          <label class="field"><span>結束時間</span><select name="end" class="time-select"></select></label>
         </div>
       </div>
       <p class="warn" id="book-warn" role="alert" hidden></p>
@@ -94,6 +94,6 @@
     </form>
   </dialog>
 
-  <script type="module" src="ktv.js?v=20261005b"></script>
+  <script type="module" src="ktv.js?v=20261005d"></script>
 </body>
 </html>

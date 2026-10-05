@@ -368,3 +368,75 @@ body.no-scroll { overflow: hidden; }
 }
 .import-bar p { margin: 0; }
 .import-bar--none { background: var(--paper); border-color: var(--line); position: static; }
+
+/* ---------- 精簡字體及元素尺寸 ---------- */
+body { font-size: 15px; line-height: 1.6; }
+h1 { font-size: 1.45rem; }
+h2 { font-size: 1.08rem; }
+h3 { font-size: .95rem; }
+.btn { min-height: 36px; padding: 6px 14px; font-size: .9rem; white-space: nowrap; }
+.btn--small { min-height: 30px; padding: 3px 10px; font-size: .82rem; }
+.hint { font-size: .85rem; }
+.empty { padding: 18px; font-size: .9rem; }
+.field { margin-bottom: 12px; gap: 4px; }
+.field > span, .field > legend { font-size: .85rem; }
+.field input, .field select, .field textarea { padding: 7px 10px; font-size: .9rem; }
+.choice span { padding: 6px 14px; font-size: .88rem; }
+.table { font-size: .85rem; }
+.table th, .table td { padding: 8px 12px; }
+.row-actions { flex-wrap: nowrap; }
+.badge { font-size: .75rem; }
+.tab { padding: 8px 14px; font-size: .92rem; }
+.card-form { padding: 16px 18px; }
+.review { padding: 16px; }
+.kv { font-size: .87rem; }
+.sheet { padding: 22px; }
+
+/* 時間表 */
+.onair-date { font-size: 1.35rem; }
+.onair-sub, .onair-label { font-size: .85rem; }
+.lineup li { font-size: .8rem; padding: 3px 9px; }
+.ep-row { grid-template-columns: 88px minmax(0, 1fr); }
+.ep-date { padding: 8px 4px; border-radius: 10px; }
+.ep-day { font-size: 1.6rem; }
+.ep-month, .ep-week { font-size: .72rem; }
+.slot { min-height: 70px; padding: 8px 10px; border-radius: 10px; }
+.slot-time { font-size: .76rem; }
+.slot-topic { font-size: .9rem; }
+.slot-meta, .slot-note { font-size: .78rem; }
+.slot-cta { font-size: .85rem; }
+.tag { font-size: .7rem; }
+.legend { font-size: .8rem; }
+@media (max-width: 860px) {
+  .ep-row { grid-template-columns: 1fr; }
+  .ep-day { font-size: 1.3rem; }
+  .slot { min-height: 60px; }
+}
+
+/* 播放日期：精簡表格 */
+.compact-forms { display: grid; gap: 14px; }
+.inline-form { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.inline-form h3 { flex-basis: 100%; margin: 0; }
+.inline-form + .inline-form { padding-top: 14px; border-top: 1px solid var(--line); }
+.field--compact { flex: 0 0 auto; margin: 0; }
+.field--compact input, .field--compact select { width: auto; }
+.field--grow { flex: 1 1 220px; }
+.field--grow input { width: 100%; }
+.inline-form .field--compact input, .inline-form .field--compact select { height: 34px; padding-top: 0; padding-bottom: 0; }
+.inline-form .btn { height: 34px; min-height: 34px; }
+
+/* ---------- 日期欄月曆圖示、時間下拉選單 ---------- */
+.picker { position: relative; display: block; }
+.field--compact .picker { display: inline-block; }
+.picker input { padding-right: 42px; }
+.picker input::-webkit-calendar-picker-indicator { display: none; }
+.picker-btn {
+  position: absolute; top: 50%; right: 4px; transform: translateY(-50%);
+  width: 32px; height: 28px; display: grid; place-items: center;
+  border: 0; border-radius: 6px; background: transparent; color: var(--ink-2); cursor: pointer;
+}
+.picker-btn:hover { background: var(--paper); color: var(--ink); }
+.field .time-select, .time-select {
+  padding-left: 34px !important;
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233A4570' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") no-repeat 10px center / 16px;
+}

@@ -1,5 +1,6 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, daysUntil, parseDateId, toDateId, pad,
+  enhanceDateInputs, timeList, fillTimeSelect,
 } from "../../assets/js/common.js";
 import {
   collection, doc, onSnapshot, writeBatch, updateDoc, setDoc, serverTimestamp, arrayUnion, arrayRemove,
@@ -32,6 +33,7 @@ boot({
     }
     S.user = user;
     $("#admin-area").hidden = false;
+    enhanceDateInputs();
     if (!emailEnabled()) {
       const w = $("#email-status");
       w.hidden = false;
@@ -210,6 +212,17 @@ function setupEditDialog() {
   $("#add-booking").addEventListener("click", () => openEdit(null));
   f._sync = syncKind;
 
+  // 管理員可安排 07:00 至 19:00 的任何時間
+  const ADMIN_TIMES = timeList("07:00", "19:00");
+  f._syncEnd = () => {
+    const start = f.start.value;
+    if (!start) { fillTimeSelect(f.end, [], "", "請先選開始時間"); return; }
+    fillTimeSelect(f.end, ADMIN_TIMES.filter((t) => t > start), f.end.value);
+  };
+  fillTimeSelect(f.start, ADMIN_TIMES.slice(0, -1));
+  f._syncEnd();
+  f.start.addEventListener("change", f._syncEnd);
+
   f.addEventListener("submit", async (e) => {
     e.preventDefault();
     const warn = (msg) => { const w = $("#edit-warn"); w.hidden = !msg; w.textContent = msg; };
@@ -278,6 +291,8 @@ function setupEditDialog() {
   });
 }
 
+const ADMIN_TIME_SET = () => [...$("#edit-form").start.options].map((o) => o.value);
+
 function openEdit(b) {
   const f = $("#edit-form");
   f.reset();
@@ -289,7 +304,10 @@ function openEdit(b) {
     f.querySelector(`input[name="kind"][value="${i >= 0 ? "regular" : "custom"}"]`).checked = true;
     f.date.value = b.date;
     f.slot.value = String(Math.max(i, 0));
+    if (!ADMIN_TIME_SET().includes(b.start)) f.start.insertAdjacentHTML("beforeend", `<option>${b.start}</option>`);
     f.start.value = b.start;
+    f._syncEnd();
+    if (![...f.end.options].some((o) => o.value === b.end)) f.end.insertAdjacentHTML("beforeend", `<option>${b.end}</option>`);
     f.end.value = b.end;
     f.topic.value = b.topic;
     f.teacherName.value = b.teacherName;
@@ -300,6 +318,7 @@ function openEdit(b) {
     f.date.value = S.regularDates.find((d) => daysUntil(d) >= 0) || "";
   }
   $("#edit-notify-wrap").hidden = !(b && b.status === "approved" && b.teacherEmail);
+  if (!b) f._syncEnd();
   f._sync();
   $("#edit-dialog").showModal();
 }

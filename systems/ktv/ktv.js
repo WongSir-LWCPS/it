@@ -1,5 +1,6 @@
 import {
   boot, db, esc, toast, fmtDate, daysUntil, parseDateId, weekdayName,
+  enhanceDateInputs, timeList, fillTimeSelect,
 } from "../../assets/js/common.js";
 import {
   collection, doc, onSnapshot, writeBatch, serverTimestamp,
@@ -10,7 +11,7 @@ import {
 } from "./ktv-common.js";
 
 const S = {
-  user: null, isAdmin: false, regularDates: [], bookings: [], hidePast: false,
+  user: null, isAdmin: false, regularDates: [], bookings: [], hidePast: true,
   loaded: { c: false, b: false },
 };
 const $ = (sel) => document.querySelector(sel);
@@ -217,8 +218,13 @@ function setupDialog() {
     `用於樂Kids TV播放時間以外的日子或時間。可預約 ${KTV.customWindow.from} 至 ${KTV.customWindow.to}，每次最長 ${KTV.maxCustomMinutes} 分鐘。`;
   $("#book-cancel").addEventListener("click", () => dialog.close());
 
+  enhanceDateInputs(form);
+  fillTimeSelect(form.start, timeList(KTV.customWindow.from, toHHMM(toMin(KTV.customWindow.to) - 5)));
+  syncEndOptions();
+  form.start.addEventListener("change", syncEndOptions);
+
   // 即時檢查自訂時間
-  ["date", "start", "end"].forEach((n) => form[n].addEventListener("input", () => {
+  ["date", "start", "end"].forEach((n) => form[n].addEventListener("change", () => {
     const { date, start, end } = form;
     const warn = $("#book-warn");
     const msg = date.value && start.value && end.value ? checkCustom(date.value, start.value, end.value) : "";
@@ -282,6 +288,18 @@ function setupDialog() {
   });
 }
 
+const toHHMM = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+
+/** 結束時間只列出開始時間之後、不超過最長時間的選項 */
+function syncEndOptions() {
+  const form = $("#book-form");
+  const start = form.start.value;
+  if (!start) { fillTimeSelect(form.end, [], "", "請先選開始時間"); return; }
+  const last = Math.min(toMin(start) + KTV.maxCustomMinutes, toMin(KTV.customWindow.to));
+  const list = timeList(toHHMM(toMin(start) + 5), toHHMM(last));
+  fillTimeSelect(form.end, list, form.end.value || list[0]);
+}
+
 function showWarn(msg) {
   const w = $("#book-warn");
   w.hidden = false;
@@ -302,6 +320,7 @@ function openDialog({ kind, date = "", slot = 0 }) {
   if (custom) {
     form.date.min = minBookDate();
     form.date.value = date;
+    syncEndOptions();
   } else {
     form.rdate.value = date;
     form.rslot.value = slot;

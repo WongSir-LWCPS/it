@@ -46,6 +46,43 @@ export function isBlockedEmail(email) {
   return (APP.blockedEmailPatterns || []).some((re) => re.test(email));
 }
 
+/* ---------- 日期及時間選擇 ---------- */
+const CAL_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>`;
+
+/** 為所有日期欄加上月曆圖示，按下後彈出月曆 */
+export function enhanceDateInputs(scope = document) {
+  scope.querySelectorAll('input[type="date"]:not([data-enhanced])').forEach((input) => {
+    input.dataset.enhanced = "1";
+    const wrap = document.createElement("span");
+    wrap.className = "picker";
+    input.replaceWith(wrap);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "picker-btn";
+    btn.setAttribute("aria-label", "開啟月曆");
+    btn.innerHTML = CAL_ICON;
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      try { input.showPicker(); } catch { input.focus(); input.click(); }
+    });
+    wrap.append(input, btn);
+  });
+}
+
+/** 產生時間清單（24 小時制，每 step 分鐘） */
+export function timeList(from, to, step = 5) {
+  const toMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+  const out = [];
+  for (let m = toMin(from); m <= toMin(to); m += step) out.push(`${pad(Math.floor(m / 60))}:${pad(m % 60)}`);
+  return out;
+}
+
+/** 填入時間下拉選單；value 不在清單內時保留空白 */
+export function fillTimeSelect(sel, list, value = "", placeholder = "請選擇") {
+  sel.innerHTML = `<option value="">${placeholder}</option>` + list.map((t) => `<option>${t}</option>`).join("");
+  sel.value = list.includes(value) ? value : "";
+}
+
 /* ---------- 提示訊息 ---------- */
 export function toast(msg, kind = "info") {
   let box = document.getElementById("toasts");

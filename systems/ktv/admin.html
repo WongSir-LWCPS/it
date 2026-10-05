@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../assets/css/style.css?v=20261005b">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261005d">
 </head>
 <body>
   <header id="site-header" class="site-header"></header>
@@ -64,28 +64,26 @@
       <!-- 播放日期 -->
       <section id="tab-dates" class="panel" role="tabpanel" hidden>
         <p class="hint">這裏是樂Kids TV的固定播放日。老師可以在這些日子預約 13:10 至 13:30 的時段。新增節目或匯入時，如使用樂Kids TV時段，日期會自動加入，不需要先在這裏設定。</p>
-        <div class="forms-grid">
-          <form id="form-single" class="card-form">
-            <h2>加入一個日期</h2>
-            <label class="field"><span>日期</span><input type="date" name="date" required></label>
-            <button class="btn btn--primary" type="submit">加入日期</button>
+        <div class="card-form compact-forms">
+          <form id="form-single" class="inline-form">
+            <h3>加入一個日期</h3>
+            <label class="field field--compact"><span>日期</span><input type="date" name="date" required></label>
+            <button class="btn btn--primary btn--small" type="submit">加入</button>
           </form>
-          <form id="form-bulk" class="card-form">
-            <h2>一次過加入整段期間</h2>
-            <div class="field-row">
-              <label class="field"><span>由</span><input type="date" name="from" required></label>
-              <label class="field"><span>至</span><input type="date" name="to" required></label>
-            </div>
-            <label class="field"><span>逢</span>
+          <form id="form-bulk" class="inline-form">
+            <h3>一次過加入整段期間</h3>
+            <label class="field field--compact"><span>由</span><input type="date" name="from" required></label>
+            <label class="field field--compact"><span>至</span><input type="date" name="to" required></label>
+            <label class="field field--compact"><span>逢</span>
               <select name="weekday">
                 <option value="1">星期一</option><option value="2">星期二</option><option value="3">星期三</option>
                 <option value="4">星期四</option><option value="5" selected>星期五</option>
               </select>
             </label>
-            <label class="field"><span>略過的日期（假期、考試等，每行一個，如 16/10/2026）</span>
-              <textarea name="skip" rows="3"></textarea>
+            <label class="field field--compact field--grow"><span>略過的日期（以逗號分隔，如 16/10/2026, 13/11/2026）</span>
+              <input name="skip" placeholder="假期、考試等">
             </label>
-            <button class="btn btn--primary" type="submit">加入所有日期</button>
+            <button class="btn btn--primary btn--small" type="submit">加入所有日期</button>
           </form>
         </div>
         <div id="dates-list" class="mt"></div>
@@ -125,8 +123,8 @@
       </fieldset>
       <label class="field" id="edit-slot-wrap"><span>時段</span><select name="slot"></select></label>
       <div class="field-row" id="edit-custom-wrap" hidden>
-        <label class="field"><span>開始時間</span><input type="time" name="start" step="300"></label>
-        <label class="field"><span>結束時間</span><input type="time" name="end" step="300"></label>
+        <label class="field"><span>開始時間</span><select name="start" class="time-select"></select></label>
+        <label class="field"><span>結束時間</span><select name="end" class="time-select"></select></label>
       </div>
       <div class="field-row">
         <label class="field"><span>主題</span><input name="topic" required maxlength="60"></label>
@@ -146,6 +144,6 @@
     </form>
   </dialog>
 
-  <script type="module" src="admin.js?v=20261005b"></script>
+  <script type="module" src="admin.js?v=20261005d"></script>
 </body>
 </html>
