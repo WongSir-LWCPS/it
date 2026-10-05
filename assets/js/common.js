@@ -69,18 +69,92 @@ export function enhanceDateInputs(scope = document) {
   });
 }
 
-/** 產生時間清單（24 小時制，每 step 分鐘） */
-export function timeList(from, to, step = 5) {
-  const toMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
-  const out = [];
-  for (let m = toMin(from); m <= toMin(to); m += step) out.push(`${pad(Math.floor(m / 60))}:${pad(m % 60)}`);
-  return out;
-}
+const CLOCK_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`;
+const hmToMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
 
-/** 填入時間下拉選單；value 不在清單內時保留空白 */
-export function fillTimeSelect(sel, list, value = "", placeholder = "請選擇") {
-  sel.innerHTML = `<option value="">${placeholder}</option>` + list.map((t) => `<option>${t}</option>`).join("");
-  sel.value = list.includes(value) ? value : "";
+/**
+ * 時間選擇器（24 小時制）：按下欄位後彈出「時」「分」兩組按鈕。
+ * input 為 <input type="hidden">，選好後會觸發 change 事件。
+ * opts：from、to（可選範圍）、step（分鐘間距）、placeholder、isAllowed(t)（額外限制）
+ */
+export function timePicker(input, opts = {}) {
+  const o = { from: "07:00", to: "19:00", step: 5, placeholder: "選擇時間", isAllowed: () => true, ...opts };
+  const wrap = document.createElement("div");
+  wrap.className = "tp";
+  input.replaceWith(wrap);
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "tp-field";
+  btn.setAttribute("aria-haspopup", "true");
+  btn.setAttribute("aria-expanded", "false");
+  const pop = document.createElement("div");
+  pop.className = "tp-pop";
+  pop.hidden = true;
+  wrap.append(input, btn, pop);
+  let hour = null;   // 已選但未選分鐘的小時
+
+  const ok = (t) => hmToMin(t) >= hmToMin(o.from) && hmToMin(t) <= hmToMin(o.to) && o.isAllowed(t);
+  const render = () => {
+    const v = input.value;
+    btn.innerHTML = `${CLOCK_ICON}<span class="${v ? "" : "tp-ph"}">${v || o.placeholder}</span>`;
+    const [vh, vm] = v ? v.split(":") : [null, null];
+    const h = hour ?? vh;
+    const hours = [];
+    for (let i = Number(o.from.slice(0, 2)); i <= Number(o.to.slice(0, 2)); i++) hours.push(pad(i));
+    const mins = [];
+    for (let m = 0; m < 60; m += o.step) mins.push(pad(m));
+    pop.innerHTML = `
+      <p class="tp-label">時</p>
+      <div class="tp-grid">${hours.map((x) => `<button type="button" data-h="${x}" class="${x === h ? "is-on" : ""}"
+        ${mins.some((m) => ok(`${x}:${m}`)) ? "" : "disabled"}>${x}</button>`).join("")}</div>
+      <p class="tp-label">分${h ? "" : "（請先選時）"}</p>
+      <div class="tp-grid">${mins.map((m) => `<button type="button" data-m="${m}" class="${h === vh && m === vm ? "is-on" : ""}"
+        ${h && ok(`${h}:${m}`) ? "" : "disabled"}>${m}</button>`).join("")}</div>`;
+  };
+  const close = (focus = true) => {
+    pop.hidden = true;
+    hour = null;
+    btn.setAttribute("aria-expanded", "false");
+    render();
+    if (focus) btn.focus();
+  };
+  const open = () => {
+    hour = null;
+    render();
+    pop.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+    (pop.querySelector("[data-h].is-on") || pop.querySelector("[data-h]:not(:disabled)"))?.focus();
+  };
+  const set = (v, silent = false) => {
+    input.value = v;
+    hour = null;
+    render();
+    if (!silent) input.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+
+  btn.addEventListener("click", () => (pop.hidden ? open() : close()));
+  pop.addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b || b.disabled) return;
+    if (b.dataset.h) {
+      hour = b.dataset.h;
+      render();
+      pop.querySelector("[data-m]:not(:disabled)")?.focus();
+    } else if (b.dataset.m) {
+      set(`${hour ?? input.value.split(":")[0]}:${b.dataset.m}`);
+      close();
+    }
+  });
+  pop.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); }
+  });
+  // 用 composedPath：按鈕重繪後 e.target 已不在頁面上，contains() 會誤判為按在外面
+  document.addEventListener("click", (e) => { if (!pop.hidden && !e.composedPath().includes(wrap)) close(false); });
+  input.form?.addEventListener("reset", () => setTimeout(render));
+
+  input._tp = { set, refresh: render, setOptions: (n) => { Object.assign(o, n); render(); } };
+  render();
+  return input._tp;
 }
 
 /* ---------- 提示訊息 ---------- */

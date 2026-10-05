@@ -440,3 +440,38 @@ h3 { font-size: .95rem; }
   padding-left: 34px !important;
   background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233A4570' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") no-repeat 10px center / 16px;
 }
+
+/* ---------- 時間選擇器 ---------- */
+.tp { position: relative; }
+.tp-field {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px;
+  padding: 7px 10px; border: 1px solid #C7CEDF; border-radius: 8px; background: var(--surface);
+  font: inherit; font-size: .95rem; color: var(--ink); text-align: left; cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.tp-field:hover { border-color: var(--ink); }
+.tp-field[aria-expanded="true"] { outline: 2px solid var(--ink); border-color: var(--ink); }
+.tp-field svg { color: var(--ink-2); flex: none; }
+.tp-ph { color: var(--muted); }
+.tp-pop {
+  position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; width: 248px;
+  padding: 10px 12px 12px; border-radius: 12px; background: var(--surface);
+  border: 1px solid var(--line); box-shadow: 0 12px 32px rgba(27, 37, 80, .2);
+}
+.tp-label { margin: 4px 0 6px; font-size: .78rem; color: var(--muted); }
+.tp-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.tp-grid button {
+  height: 30px; border: 0; border-radius: 6px; background: var(--paper);
+  font: inherit; font-size: .85rem; color: var(--ink); cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.tp-grid button:hover:not(:disabled) { background: var(--school-green-bg); }
+.tp-grid button.is-on { background: var(--ink); color: #fff; }
+.tp-grid button:disabled { opacity: .3; cursor: not-allowed; }
+.field--time { flex: 0 1 180px; }
+.choices--tight { gap: 6px; }
+.choices--tight .choice span { padding: 5px 11px; font-size: .84rem; }
+#end-preview { margin: -4px 0 12px; font-variant-numeric: tabular-nums; }
+#end-preview:empty { display: none; }
+/* 選項按鈕內隱藏的 radio 不應佔位（避免視窗出現橫向捲動） */
+.field .choice input { position: absolute; opacity: 0; width: 1px; height: 1px; padding: 0; margin: 0; }
+.tp-grid button.is-on, .tp-grid button.is-on:hover { background: var(--ink); color: #fff; }

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../assets/css/style.css?v=20261005d">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261005e">
 </head>
 <body>
   <header id="site-header" class="site-header"></header>
@@ -123,8 +123,8 @@
       </fieldset>
       <label class="field" id="edit-slot-wrap"><span>時段</span><select name="slot"></select></label>
       <div class="field-row" id="edit-custom-wrap" hidden>
-        <label class="field"><span>開始時間</span><select name="start" class="time-select"></select></label>
-        <label class="field"><span>結束時間</span><select name="end" class="time-select"></select></label>
+        <div class="field field--time"><span>開始時間</span><input type="hidden" name="start"></div>
+        <div class="field field--time"><span>結束時間</span><input type="hidden" name="end"></div>
       </div>
       <div class="field-row">
         <label class="field"><span>主題</span><input name="topic" required maxlength="60"></label>
@@ -144,6 +144,6 @@
     </form>
   </dialog>
 
-  <script type="module" src="admin.js?v=20261005d"></script>
+  <script type="module" src="admin.js?v=20261005e"></script>
 </body>
 </html>

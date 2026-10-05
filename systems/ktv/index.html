@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../assets/css/style.css?v=20261005d">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261005e">
 </head>
 <body>
   <header id="site-header" class="site-header"></header>
@@ -64,9 +64,14 @@
         <p class="hint" id="custom-hint"></p>
         <label class="field"><span>日期</span><input type="date" name="date"></label>
         <div class="field-row">
-          <label class="field"><span>開始時間</span><select name="start" class="time-select"></select></label>
-          <label class="field"><span>結束時間</span><select name="end" class="time-select"></select></label>
+          <div class="field field--time"><span>開始時間</span><input type="hidden" name="start"></div>
+          <fieldset class="field">
+            <legend>播放時間長度</legend>
+            <div class="choices choices--tight" id="duration-choices"></div>
+          </fieldset>
         </div>
+        <input type="hidden" name="end">
+        <p class="hint" id="end-preview"></p>
       </div>
       <p class="warn" id="book-warn" role="alert" hidden></p>
 
@@ -94,6 +99,6 @@
     </form>
   </dialog>
 
-  <script type="module" src="ktv.js?v=20261005d"></script>
+  <script type="module" src="ktv.js?v=20261005e"></script>
 </body>
 </html>

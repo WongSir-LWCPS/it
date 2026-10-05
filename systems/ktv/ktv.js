@@ -1,6 +1,6 @@
 import {
   boot, db, esc, toast, fmtDate, daysUntil, parseDateId, weekdayName,
-  enhanceDateInputs, timeList, fillTimeSelect,
+  enhanceDateInputs, timePicker,
 } from "../../assets/js/common.js";
 import {
   collection, doc, onSnapshot, writeBatch, serverTimestamp,
@@ -219,18 +219,19 @@ function setupDialog() {
   $("#book-cancel").addEventListener("click", () => dialog.close());
 
   enhanceDateInputs(form);
-  fillTimeSelect(form.start, timeList(KTV.customWindow.from, toHHMM(toMin(KTV.customWindow.to) - 5)));
-  syncEndOptions();
-  form.start.addEventListener("change", syncEndOptions);
+  timePicker(form.start, {
+    from: KTV.customWindow.from,
+    to: toHHMM(toMin(KTV.customWindow.to) - 5),
+    placeholder: "選擇開始時間",
+  });
+  const durations = [5, 10, 15, 20, 25, 30].filter((d) => d <= KTV.maxCustomMinutes);
+  $("#duration-choices").innerHTML = durations.map((d, i) => `
+    <label class="choice"><input type="radio" name="duration" value="${d}" ${i === 0 ? "checked" : ""}><span>${d} 分鐘</span></label>`).join("");
 
-  // 即時檢查自訂時間
-  ["date", "start", "end"].forEach((n) => form[n].addEventListener("change", () => {
-    const { date, start, end } = form;
-    const warn = $("#book-warn");
-    const msg = date.value && start.value && end.value ? checkCustom(date.value, start.value, end.value) : "";
-    warn.hidden = !msg;
-    warn.textContent = msg;
-  }));
+  // 選擇開始時間或長度後，計算結束時間並即時檢查
+  form.start.addEventListener("change", syncEnd);
+  form.date.addEventListener("change", syncEnd);
+  form.querySelectorAll('input[name="duration"]').forEach((r) => r.addEventListener("change", syncEnd));
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -290,14 +291,17 @@ function setupDialog() {
 
 const toHHMM = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 
-/** 結束時間只列出開始時間之後、不超過最長時間的選項 */
-function syncEndOptions() {
+/** 由開始時間及長度計算結束時間，並即時檢查 */
+function syncEnd() {
   const form = $("#book-form");
   const start = form.start.value;
-  if (!start) { fillTimeSelect(form.end, [], "", "請先選開始時間"); return; }
-  const last = Math.min(toMin(start) + KTV.maxCustomMinutes, toMin(KTV.customWindow.to));
-  const list = timeList(toHHMM(toMin(start) + 5), toHHMM(last));
-  fillTimeSelect(form.end, list, form.end.value || list[0]);
+  const mins = Number(form.querySelector('input[name="duration"]:checked')?.value || 0);
+  form.end.value = start && mins ? toHHMM(toMin(start) + mins) : "";
+  $("#end-preview").textContent = form.end.value ? `播放時間：${start} 至 ${form.end.value}` : "";
+  const warn = $("#book-warn");
+  const msg = form.date.value && form.end.value ? checkCustom(form.date.value, start, form.end.value) : "";
+  warn.hidden = !msg;
+  warn.textContent = msg;
 }
 
 function showWarn(msg) {
@@ -320,7 +324,8 @@ function openDialog({ kind, date = "", slot = 0 }) {
   if (custom) {
     form.date.min = minBookDate();
     form.date.value = date;
-    syncEndOptions();
+    form.start._tp.set("", true);
+    setTimeout(syncEnd);
   } else {
     form.rdate.value = date;
     form.rslot.value = slot;
