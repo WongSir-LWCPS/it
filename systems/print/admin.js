@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp,
-} from "../../assets/js/common.js?v=20261005s";
+} from "../../assets/js/common.js?v=20261005w";
 import {
   collection, doc, onSnapshot, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { sendEmail, emailEnabled } from "../../assets/js/email.js?v=20261005s";
-import { getNotifyEmails, syncNotifyList } from "../../assets/js/notify.js?v=20261005s";
-import { PSTATUS } from "./print-config.js?v=20261005s";
-import { buildPrintEmail } from "./print-email.js?v=20261005s";
+import { emailEnabled } from "../../assets/js/email.js?v=20261005w";
+import { notifyAdmins, syncNotifyList } from "../../assets/js/notify.js?v=20261005w";
+import { PSTATUS } from "./print-config.js?v=20261005w";
+import { buildPrintEmail } from "./print-email.js?v=20261005w";
 
 const $ = (sel) => document.querySelector(sel);
 const applicantEmail = (r) => r.applicantEmail || r.email;
@@ -33,7 +33,7 @@ boot({
     if (!emailEnabled()) {
       const w = $("#email-status");
       w.hidden = false;
-      w.textContent = "尚未設定電郵通知：處理結果只會在系統內更新，不會寄給老師。設定方法見 README.md。";
+      w.textContent = "尚未設定電郵通知：管理員不會收到電郵。設定方法見 README.md。";
     }
     // 確保通知名單存在（第一次使用時建立）
     syncNotifyList().catch((e) => console.warn(e));
@@ -83,12 +83,12 @@ function renderPending() {
         <dt>提交時間</dt><dd>${fmtTimestamp(r.createdAt)}</dd>
         ${r.remarks ? `<dt>備註</dt><dd>${esc(r.remarks)}</dd>` : ""}
       </dl>
-      <label class="field"><span>給老師的回覆（選填，會放入通知電郵）</span>
+      <label class="field"><span>給老師的回覆（選填，老師可在「我的申請」看到）</span>
         <textarea rows="2" maxlength="300">${esc(drafts[r.id] || "")}</textarea>
       </label>
       <div class="actions">
-        <button class="btn btn--stop" data-act="reject">不批准並通知</button>
-        <button class="btn btn--go" data-act="approve">已增加限額並通知</button>
+        <button class="btn btn--stop" data-act="reject">不批准</button>
+        <button class="btn btn--go" data-act="approve">已增加限額</button>
       </div>
     </article>`).join("");
 }
@@ -108,16 +108,9 @@ async function decide(id, status, note, btns) {
     return;
   }
   const done = status === "approved" ? "已標示為已增加限額" : "已設為不批准";
-  try {
-    // 結果寄給申請人，副本給接收通知的管理員
-    const cc = await getNotifyEmails();
-    const sent = await sendEmail({ to: applicantEmail(r), cc: [...cc, r.email], ...buildPrintEmail(r, status, note) });
-    if (sent) await updateDoc(doc(db, "print_requests", id), { notifiedAt: serverTimestamp() });
-    toast(`${done}（${sent ? `已寄電郵通知 ${r.applicantName}` : "未設定電郵通知"}）`, "success");
-  } catch (e) {
-    console.error(e);
-    toast(`${done}，但電郵未能寄出：${e.message}`, "error");
-  }
+  const result = await notifyAdmins("print", buildPrintEmail(r, status, note, S.user.email));
+  if (result.startsWith("已通知")) await updateDoc(doc(db, "print_requests", id), { notifiedAt: serverTimestamp() });
+  toast(`${done}（${result}）`, "success");
 }
 
 function renderAll() {

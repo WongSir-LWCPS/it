@@ -1,16 +1,17 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, daysUntil, parseDateId, toDateId, pad, todayId,
   enhanceDateInputs, timePicker,
-} from "../../assets/js/common.js?v=20261005s";
+} from "../../assets/js/common.js?v=20261005w";
 import {
   collection, doc, onSnapshot, writeBatch, updateDoc, setDoc, getDoc, serverTimestamp, arrayUnion, arrayRemove,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { KTV, STATUS } from "./ktv-config.js?v=20261005s";
+import { KTV, STATUS } from "./ktv-config.js?v=20261005w";
 import {
   timeLabel, toMin, lockIdOf, isActive, regularIndex, findConflict, sortBookings,
-} from "./ktv-common.js?v=20261005s";
-import { buildKtvEmail } from "./ktv-email.js?v=20261005s";
-import { sendEmail, emailEnabled } from "../../assets/js/email.js?v=20261005s";
+} from "./ktv-common.js?v=20261005w";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261005w";
+import { buildKtvEmail } from "./ktv-email.js?v=20261005w";
+import { emailEnabled } from "../../assets/js/email.js?v=20261005w";
 
 const S = {
   user: null, regularDates: [], bookings: [], filter: "active", upcoming: false,
@@ -37,7 +38,7 @@ boot({
     if (!emailEnabled()) {
       const w = $("#email-status");
       w.hidden = false;
-      w.textContent = "尚未設定電郵通知：審批結果只會在系統內更新，不會寄給老師。設定方法見 README.md。";
+      w.textContent = "尚未設定電郵通知：管理員不會收到電郵。設定方法見 README.md。";
     }
 
     setupTabs();
@@ -117,29 +118,22 @@ function renderPending() {
         ${b.remarks ? `<dt>備註</dt><dd>${esc(b.remarks)}</dd>` : ""}
         <dt>申請時間</dt><dd>${fmtTimestamp(b.createdAt)}</dd>
       </dl>
-      <label class="field"><span>給老師的回覆（選填，會放入通知電郵）</span>
+      <label class="field"><span>給老師的回覆（選填，老師可在「我的申請」看到）</span>
         <textarea rows="2" maxlength="300">${esc(drafts[b.id] || "")}</textarea>
       </label>
       <div class="actions">
         <button class="btn btn--small" data-act="edit">修改</button>
-        <button class="btn btn--stop" data-act="reject">不批准並通知老師</button>
-        <button class="btn btn--go" data-act="approve">批准並通知老師</button>
+        <button class="btn btn--stop" data-act="reject">不批准</button>
+        <button class="btn btn--go" data-act="approve">批准</button>
       </div>
     </article>`;
   }).join("");
 }
 
 async function notify(b, status, note) {
-  if (!b.teacherEmail) return "沒有老師電郵，未寄出通知";
-  try {
-    const sent = await sendEmail({ to: b.teacherEmail, ...buildKtvEmail(b, status, note) });
-    if (!sent) return "未設定電郵通知";
-    await updateDoc(doc(db, "ktv_bookings", b.id), { notifiedAt: serverTimestamp() });
-    return `已寄電郵通知 ${b.teacherName}`;
-  } catch (e) {
-    console.error(e);
-    return `電郵未能寄出：${e.message}`;
-  }
+  const result = await notifyAdmins("ktv", buildKtvEmail(b, status, note, S.user.email));
+  if (result.startsWith("已通知")) await updateDoc(doc(db, "ktv_bookings", b.id), { notifiedAt: serverTimestamp() });
+  return result;
 }
 
 async function decide(id, status, note, btns = []) {
@@ -280,7 +274,7 @@ function setupEditDialog() {
       await batch.commit();
       dialog.close();
       let msg = old ? "已儲存更改" : "已加入節目";
-      if (old && old.status === "approved" && f.notify.checked && data.teacherEmail) {
+      if (old && old.status === "approved" && f.notify.checked) {
         msg += `（${await notify({ ...old, ...data }, "updated", "")}）`;
       }
       toast(msg + "。", "success");

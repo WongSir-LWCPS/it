@@ -1,11 +1,13 @@
 import {
   boot, db, esc, toast, APP, isBlockedEmail, fmtTimestamp, fmtDate, todayId, enhanceDateInputs, downloadCSV,
-} from "./common.js?v=20261005s";
+} from "./common.js?v=20261005w";
 import {
   collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, getDocs, writeBatch,
-  serverTimestamp, arrayRemove,
+  serverTimestamp, arrayRemove, addDoc, query, orderBy, limit,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { syncNotifyList } from "./notify.js?v=20261005s";
+import { SYSTEMS } from "./systems.js?v=20261005w";
+import { sendEmail } from "./email.js?v=20261005w";
+import { syncNotifyList, wantsNotify } from "./notify.js?v=20261005w";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { me: "", admins: [] };
@@ -25,7 +27,9 @@ boot({
     S.me = user.email.toLowerCase();
     $("#admin-section").hidden = false;
     $("#year-section").hidden = false;
+    $("#mail-section").hidden = false;
     setupYear();
+    setupMailCheck();
 
     onSnapshot(collection(db, "admins"), (snap) => {
       S.admins = snap.docs.map((d) => ({ email: d.id, ...d.data() })).sort((a, b) => a.email.localeCompare(b.email));
@@ -40,10 +44,12 @@ boot({
     $("#admin-list").addEventListener("change", async (e) => {
       const box = e.target.closest("[data-notify]");
       if (!box) return;
+      const { notify: email, sys } = box.dataset;
+      const name = SYSTEMS.find((x) => x.id === sys)?.name || sys;
       try {
-        await updateDoc(doc(db, "admins", box.dataset.notify), { notify: box.checked });
+        await updateDoc(doc(db, "admins", email), { [`notifySystems.${sys}`]: box.checked });
         await syncNotifyList();
-        toast(box.checked ? `${box.dataset.notify} 會收到申請通知。` : `${box.dataset.notify} 不再收到申請通知。`, "success");
+        toast(`${email} ${box.checked ? "會" : "不會"}收到「${name}」的通知。`, "success");
       } catch (err) {
         box.checked = !box.checked;
         toast("未能更新：" + err.message, "error");
@@ -57,13 +63,15 @@ function renderAdmins() {
   $("#admin-list").innerHTML = `
     <div class="table-scroll">
       <table class="table">
-        <thead><tr><th>電郵</th><th>名稱</th><th>接收申請通知</th><th>加入者</th><th>加入時間</th><th><span class="sr-only">操作</span></th></tr></thead>
+        <thead><tr><th>電郵</th><th>名稱</th><th>接收電郵通知</th><th>加入者</th><th>加入時間</th><th><span class="sr-only">操作</span></th></tr></thead>
         <tbody>
           ${S.admins.map((a) => `
             <tr>
               <td>${esc(a.email)}${a.email === S.me ? ' <span class="badge badge--go">你</span>' : ""}</td>
               <td>${esc(a.name || "")}</td>
-              <td><label class="check"><input type="checkbox" data-notify="${esc(a.email)}" ${a.notify !== false ? "checked" : ""}> 電郵通知</label></td>
+              <td><div class="notify-checks">${SYSTEMS.map((sys) => `
+                <label class="check"><input type="checkbox" data-notify="${esc(a.email)}" data-sys="${sys.id}"
+                  ${wantsNotify(a, sys.id) ? "checked" : ""}> ${esc(sys.name)}</label>`).join("")}</div></td>
               <td>${esc(a.addedBy || "（Firebase 設定）")}</td>
               <td class="nowrap">${fmtTimestamp(a.addedAt)}</td>
               <td>${a.email === S.me
@@ -91,7 +99,7 @@ async function addAdmin(e) {
   try {
     await setDoc(doc(db, "admins", email), {
       name: f.name.value.trim(),
-      notify: true,
+      notifySystems: Object.fromEntries(SYSTEMS.map((x) => [x.id, true])),
       addedBy: S.me,
       addedAt: serverTimestamp(),
     });
@@ -258,4 +266,84 @@ async function deleteOld() {
     toast("未能刪除：" + e.message, "error");
   }
   loadOldData();
+}
+
+/* ================= 電郵通知檢查 ================= */
+const STATE = {
+  PENDING: ["等待擴充功能處理", "wait"],
+  PROCESSING: ["寄出中", "wait"],
+  RETRY: ["重試中", "wait"],
+  SUCCESS: ["已寄出", "go"],
+  ERROR: ["寄出失敗", "stop"],
+};
+
+function setupMailCheck() {
+  const mode = APP.email?.mode || "none";
+  const coll = APP.email?.collection || "mail";
+  $("#mail-mode").textContent = {
+    "firestore-mail": `目前使用 Firebase「Trigger Email from Firestore」擴充功能：平台會把電郵放入 Firestore 的「${coll}」集合，由擴充功能寄出。下表顯示最近的電郵及寄送結果。`,
+    emailjs: "目前使用 EmailJS 寄出電郵。",
+    none: "目前未設定電郵通知（firebase-config.js 的 email.mode 為 \"none\"），所有系統都不會寄出電郵。",
+  }[mode] || `未知的電郵設定：${mode}`;
+  $("#mail-test-to").value = S.me;
+  $("#mail-test").addEventListener("click", sendTest);
+  if (mode === "firestore-mail") watchMailLog(coll);
+}
+
+async function sendTest() {
+  const to = $("#mail-test-to").value.trim();
+  const out = $("#mail-test-result");
+  if (!to) return;
+  const mode = APP.email?.mode || "none";
+  if (mode === "none") { out.textContent = "未設定電郵通知，無法測試。"; return; }
+  out.textContent = "正在寄出…";
+  try {
+    const sent = await sendEmail({
+      to,
+      subject: "【IT一站式平台】測試電郵",
+      text: `這是 IT一站式平台的測試電郵，寄出時間：${new Date().toLocaleString("zh-HK")}。收到即代表電郵通知設定正確。`,
+      html: `<p>這是 IT一站式平台的測試電郵，寄出時間：${esc(new Date().toLocaleString("zh-HK"))}。</p><p>收到即代表電郵通知設定正確。</p>`,
+    });
+    out.textContent = !sent ? "未設定電郵通知。"
+      : mode === "emailjs" ? `EmailJS 已接受寄出要求，請檢查 ${to} 的收件匣及垃圾郵件。`
+      : "已放入電郵佇列，請留意下表的寄送結果（一般在 1 分鐘內更新）。";
+  } catch (e) {
+    console.error(e);
+    out.textContent = `未能寄出：${e.text || e.message || e}`;
+  }
+}
+
+function watchMailLog(coll) {
+  const box = $("#mail-log");
+  onSnapshot(query(collection(db, coll), orderBy("createdAt", "desc"), limit(15)), (snap) => {
+    if (!snap.size) {
+      box.innerHTML = `<p class="empty">「${esc(coll)}」集合內還沒有電郵。按「寄出測試電郵」試試。如老師提交申請後這裏仍然沒有電郵，請確認 Firestore 規則已更新。</p>`;
+      return;
+    }
+    const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const stuck = rows.some((r) => !r.delivery && r.createdAt?.toMillis && Date.now() - r.createdAt.toMillis() > 120000);
+    box.innerHTML = `
+      ${stuck ? `<p class="warn">有電郵超過 2 分鐘仍未處理：Trigger Email 擴充功能可能未安裝、未啟用，或監聽的集合名稱不是「${esc(coll)}」。請參考 README 的「電郵通知」設定。</p>` : ""}
+      <div class="table-scroll">
+        <table class="table">
+          <thead><tr><th>建立時間</th><th>收件人</th><th>標題</th><th>結果</th></tr></thead>
+          <tbody>
+            ${rows.map((r) => {
+              const st = r.delivery?.state || "PENDING";
+              const [label, tone] = STATE[st] || [st, "muted"];
+              return `
+                <tr>
+                  <td class="nowrap">${fmtTimestamp(r.createdAt)}</td>
+                  <td>${esc((r.to || []).join("、"))}${r.cc?.length ? `<br><small>副本：${esc(r.cc.join("、"))}</small>` : ""}</td>
+                  <td>${esc(r.message?.subject || "")}</td>
+                  <td><span class="badge badge--${tone}">${label}</span>
+                    ${r.delivery?.error ? `<br><small class="hint--error">${esc(r.delivery.error)}</small>` : ""}</td>
+                </tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  }, (e) => {
+    box.innerHTML = `<p class="load-error">未能讀取電郵紀錄：${esc(e.message)}。請確認已發佈最新的 Firestore 規則。</p>`;
+  });
 }

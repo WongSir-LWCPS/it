@@ -34,9 +34,13 @@ export const APP = {
     // "firestore-mail"：使用 Firebase 的 Trigger Email 擴充功能（建議）
     // "emailjs"       ：使用 EmailJS 免費服務
     // "none"          ：不寄電郵
-    mode: "firestore-mail",
+    mode: "emailjs",
     collection: "mail",        // Trigger Email 擴充功能監聽的集合名稱
     replyTo: "",               // 老師回覆電郵時寄往的地址，例如 IT組電郵
-    emailjs: { serviceId: "", templateId: "", publicKey: "" },
+    emailjs: {
+      serviceId: "service_03k7tol",
+      templateId: "template_1ybw9z7",
+      publicKey: "ryAKqcVkwwhVrkLng",
+    },
   },
 };

@@ -57,11 +57,16 @@ Firestore → 開始集合 → 集合 ID：`admins` → 文件 ID：**管理員�
 
 **方法 A：Firebase Trigger Email 擴充功能（建議）**
 
-- 需要把 Firebase 升級為 Blaze（按用量付費）方案；學校用量極少，一般不會產生費用，但建議設定預算警示。
-- Firebase Console → Extensions → 安裝 **Trigger Email from Firestore**。
-- 集合名稱填 `mail`；SMTP 可使用學校 Gmail／Google Workspace 帳戶（需建立「應用程式密碼」），例如
-  `smtps://it@xxx.edu.hk@smtp.gmail.com:465`。
-- `firebase-config.js` 設定 `email.mode: "firestore-mail"`。
+1. Firebase Console → 左下角「Upgrade」→ 升級為 **Blaze**（按用量付費）方案。學校用量極少，一般不會產生費用，建議同時在 Google Cloud 設定預算警示（例如 HK$10）。
+2. Firebase Console → **Extensions** → 搜尋 **Trigger Email from Firestore** → Install。
+3. 安裝時填寫：
+   - **Email documents collection**：`mail`
+   - **SMTP connection URI**：
+     - 學校 Gmail／Google Workspace：`smtps://it@lwcps.edu.hk@smtp.gmail.com:465`
+     - Microsoft 365／Outlook：`smtp://it@lwcps.edu.hk@smtp.office365.com:587`
+   - **SMTP password**：該帳戶的密碼。Gmail 須先在 Google 帳戶開啟兩步驗證，再建立「應用程式密碼」；Microsoft 365 須由管理員為該帳戶開啟「SMTP AUTH」。
+   - **Default FROM address**：例如 `IT組 <it@lwcps.edu.hk>`
+4. 安裝完成（約 3–5 分鐘）後，到平台「平台設定 → 電郵通知檢查」按「寄出測試電郵」。下表會顯示「已寄出」或錯誤原因。
 
 **方法 B：EmailJS（免費，每月 200 封）**
 
@@ -145,3 +150,8 @@ python3 tools/set-version.py
 
 - 「學年設定」：設定目前學年名稱及起訖日期（存於 `settings/schoolYear`）。樂Kids TV「一次過加入整段期間」會以此作預設期間。
 - 「刪除舊學年資料」：列出目前學年開始日期之前的樂Kids TV 節目、播放日、彩色列印限額申請及 Copilot 借用申請（以結束日期計）。可先下載 CSV 備份，再輸入「刪除」確認刪除。刪除後不能復原。
+
+## 電郵通知對象
+
+平台只會寄電郵給管理員，不會寄給申請的老師；老師在各系統的「我的申請」查看審批結果。
+在「平台設定 → 管理員」可為每位管理員逐個系統勾選「接收電郵通知」。老師提交申請時，以及管理員批准、不批准、修改、取消或收回後，勾選了該系統的管理員都會收到電郵。

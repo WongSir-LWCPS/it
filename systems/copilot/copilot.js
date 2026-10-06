@@ -1,13 +1,12 @@
 import {
   boot, db, esc, toast, isStaffEmail, fmtDate, fmtTimestamp, todayId, enhanceDateInputs,
-} from "../../assets/js/common.js?v=20261005s";
+} from "../../assets/js/common.js?v=20261005w";
 import {
   collection, doc, addDoc, updateDoc, onSnapshot, query, where, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { sendEmail } from "../../assets/js/email.js?v=20261005s";
-import { getNotifyEmails } from "../../assets/js/notify.js?v=20261005s";
-import { COPILOT, CSTATUS, loanDays, purposeText } from "./copilot-config.js?v=20261005s";
-import { buildCopilotEmail } from "./copilot-email.js?v=20261005s";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261005w";
+import { COPILOT, CSTATUS, loanDays, purposeText } from "./copilot-config.js?v=20261005w";
+import { buildCopilotEmail } from "./copilot-email.js?v=20261005w";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, mine: [] };
@@ -20,7 +19,6 @@ boot({
     $("#admin-link").hidden = !isAdmin;
     $("#intro").textContent = COPILOT.intro;
     $("#notice").textContent = COPILOT.notice;
-    $("#req-email").textContent = user.email;
     setupForm();
 
     onSnapshot(query(collection(db, "copilot_requests"), where("uid", "==", user.uid)), (snap) => {
@@ -74,7 +72,6 @@ function setupForm() {
   f.querySelectorAll('input[name="nameMode"]').forEach((r) => r.addEventListener("change", () => {
     $("#other-wrap").hidden = f.nameMode.value !== "other";
     if (f.nameMode.value === "other") f.otherName.focus();
-    syncMailTarget();
   }));
   f.group.addEventListener("change", () => {
     $("#other-group-wrap").hidden = f.group.value !== "其他";
@@ -84,12 +81,6 @@ function setupForm() {
     const other = f.querySelector('input[name="purpose"][value="其他"]').checked;
     $("#other-purpose-wrap").hidden = !other;
   });
-
-  const syncMailTarget = () => {
-    const other = f.nameMode.value === "other" && f.otherEmail.value.trim();
-    $("#req-email").textContent = other ? `${f.otherEmail.value.trim()} 及 ${S.user.email}` : S.user.email;
-  };
-  f.otherEmail.addEventListener("input", syncMailTarget);
 
   f.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -138,21 +129,11 @@ function setupForm() {
       return;
     }
 
-    let mailNote = "確認電郵已寄出。";
-    try {
-      const r = { ...data, createdAt: null };
-      const admins = await getNotifyEmails();
-      const sent = await sendEmail({ to: [...new Set([S.user.email, applicantEmail])], ...buildCopilotEmail(r, "received") });
-      if (admins.length) await sendEmail({ to: admins, ...buildCopilotEmail(r, "new") });
-      if (!sent) mailNote = "（未設定電郵通知）";
-    } catch (err) {
-      console.error(err);
-      mailNote = "（通知電郵未能寄出，IT組仍會在平台看到你的申請）";
-    }
-    toast(`已提交申請。${mailNote}`, "success");
+    const result = await notifyAdmins("copilot", buildCopilotEmail({ ...data, createdAt: null }, "new"));
+    console.info("通知管理員：", result);
+    toast("已提交申請，IT組審批後可在下方「我的申請」查看結果。", "success");
     f.reset();
     $("#other-wrap").hidden = true;
-    $("#req-email").textContent = S.user.email;
     $("#other-purpose-wrap").hidden = true;
     $("#other-group-wrap").hidden = true;
     resetDates();
