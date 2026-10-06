@@ -11,7 +11,7 @@ var WD_MF_EN = {1:'Mon',2:'Tue',3:'Wed',4:'Thu',5:'Fri'};
 
 var I18N = {
   zh: {
-    appTitleSuffix: 'iPad借用記錄表',
+    appTitleSuffix: 'iPad借用',
     loansAriaLabel: 'iPad外借記錄',
     settingsAriaLabel: '設定',
     langToggleAriaLabel: 'Switch to English',

@@ -1,9 +1,9 @@
-import { boot, db, isEn, toast } from "../../assets/js/common.js?v=20261006k";
+import { boot, db, isEn, toast } from "../../assets/js/common.js?v=20261006l";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { LEGACY_FIREBASE, LEGACY_DOC, IPAD_DOC } from "./ipad-config.js?v=20261006k";
+import { LEGACY_FIREBASE, LEGACY_DOC, IPAD_DOC } from "./ipad-config.js?v=20261006l";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null };
@@ -74,7 +74,7 @@ function showSetup() {
   box.hidden = false;
   box.innerHTML = `
     <div class="card-form">
-      <h1>設定 iPad借用記錄表</h1>
+      <h1>設定 iPad借用</h1>
       <p>平台還未有 iPad 借用資料。你可以把舊的「iPad借用記錄表」（另一個 Firebase 專案）的 iPad 批次、課節、借用記錄、IT組預留及外借記錄一次過匯入；或者使用預設設定，由空白開始。</p>
       <div class="actions actions--start">
         <button class="btn btn--primary" id="setup-import">從舊系統匯入</button>
@@ -109,7 +109,7 @@ boot({
     if (!exists && isAdmin) { showSetup(); return; }
     if (!exists) {
       $("#setup").hidden = false;
-      $("#setup").innerHTML = `<p class="empty">iPad借用記錄表尚未設定，請由管理員開啟一次本頁。</p>`;
+      $("#setup").innerHTML = `<p class="empty">iPad借用尚未設定，請由管理員開啟一次本頁。</p>`;
       return;
     }
     startApp(isAdmin, user);

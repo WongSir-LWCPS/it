@@ -166,7 +166,7 @@ python3 tools/set-version.py
 - 新增或修改介面文字時，請在 `i18n.js` 的 `DICT`（完全相同的句子）或 `PATTERNS`（含數字、日期等變數的句子）加入英文，否則英文版會顯示中文原文。
 - 如某段文字不應翻譯，可在元素加上 `data-no-translate`。
 
-## iPad借用記錄表（systems/ipad/）
+## iPad借用（systems/ipad/）
 
 由原本獨立的「iPad借用記錄表」整合而成，介面及操作與舊版相同，以 iframe 顯示於平台內：
 

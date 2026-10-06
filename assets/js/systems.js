@@ -5,7 +5,7 @@
 export const SYSTEMS = [
   {
     id: "ipad",
-    name: "iPad借用記錄表",
+    name: "iPad借用",
     desc: "查看及登記 iPad 車的借用節數。批次、課節、IT組預留及外借記錄由管理員在表內設定。",
     href: "systems/ipad/index.html",
     adminHref: "systems/ipad/index.html?admin=1",

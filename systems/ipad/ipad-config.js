@@ -1,4 +1,4 @@
-// iPad借用記錄表：設定
+// iPad借用：設定
 // 舊系統（獨立的 Firebase 專案）設定，只用於第一次把舊資料匯入平台。
 export const LEGACY_FIREBASE = {
   apiKey: "AIzaSyCmilDf-GhBHkrEuBkaitAWUfZzIqskNKY",
