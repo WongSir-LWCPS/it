@@ -140,6 +140,15 @@ var I18N = {
     toastLoanAdded: '已新增外借記錄',
     adminOnly: '只限平台管理員使用。如需權限，請聯絡IT組。',
     manageBtn: '管理及審批',
+    tabImport: '匯入舊資料',
+    importTitle: '由舊 iPad借用記錄表匯入',
+    importDesc: '從舊系統（獨立的 Firebase 專案）讀取 iPad 批次、課節、借用記錄、IT組預留及外借記錄，取代平台內現有的 iPad 資料。平台正式推出前，舊系統仍在使用時，可隨時重新匯入以取得最新資料。',
+    importWarn: '注意：匯入會覆蓋平台上所有 iPad 資料，在平台新增的借用記錄會被取代。',
+    importBtn: '由舊系統匯入',
+    importing: '正在匯入…',
+    importConfirm: '匯入會以舊系統的資料覆蓋平台上所有 iPad 資料（包括在平台新增的借用記錄）。確定匯入？',
+    importDonePrefix: '已匯入：', importDoneMid: ' 個 iPad 批次、', importDoneSuffix: ' 項借用記錄。',
+    importFail: '未能匯入：',
     notInitialized: '系統尚未設定，請由管理員開啟一次本頁。',
     confirmDeleteLoan: '確定此 iPad 已歸還，要刪除這筆外借記錄嗎？',
     toastConnLost: '連線中斷，將自動重試：',
@@ -277,6 +286,15 @@ var I18N = {
     toastLoanAdded: 'Loan record added',
     adminOnly: 'Platform administrators only. Please contact the IT Team.',
     manageBtn: 'Manage & Approve',
+    tabImport: 'Import Old Data',
+    importTitle: 'Import from the old iPad Booking system',
+    importDesc: 'Read the iPad batches, periods, bookings, IT reservations and loans from the old system (a separate Firebase project) and replace the iPad data on the platform. While the old system is still in use, you can import again at any time to get the latest data.',
+    importWarn: 'Note: importing overwrites all iPad data on the platform, including bookings made here.',
+    importBtn: 'Import from old system',
+    importing: 'Importing…',
+    importConfirm: 'Importing replaces all iPad data on the platform (including bookings made here) with the old system\'s data. Continue?',
+    importDonePrefix: 'Imported ', importDoneMid: ' iPad batches and ', importDoneSuffix: ' bookings.',
+    importFail: 'Import failed: ',
     notInitialized: 'The system has not been set up yet. An administrator needs to open this page once.',
     confirmDeleteLoan: 'Confirm this iPad has been returned and delete this loan record?',
     toastConnLost: 'Connection lost, retrying automatically: ',
@@ -997,6 +1015,7 @@ function renderSettingsRoot(){
   var root = document.getElementById('settings-root');
   if (!ui.settingsOpen) { root.innerHTML = ''; return; }
   var tabs = [ ['ipad',t('tabIpad')], ['period',t('tabPeriod')], ['reservation',t('tabReservation')], ['clear',t('tabClear')] ];
+  if (env.importLegacy) tabs.push(['import', t('tabImport')]);
   var side = tabs.map(function(t2){
     return '<button class="' + (ui.settingsTab===t2[0]?'active':'') + '" data-act="settings-tab" data-tab="' + t2[0] + '">' + escapeHtml(t2[1]) + '</button>';
   }).join('');
@@ -1005,6 +1024,7 @@ function renderSettingsRoot(){
   else if (ui.settingsTab==='period') content = settingsPeriodHtml();
   else if (ui.settingsTab==='reservation') content = settingsReservationHtml();
   else if (ui.settingsTab==='clear') content = settingsClearHtml();
+  else if (ui.settingsTab==='import') content = settingsImportHtml();
 
   root.innerHTML = '<div class="settings-shell fixed-light">' +
     '<div class="settings-topbar"><div class="brand"><span class="brand-icon">' + GEAR_SVG + '</span>' + escapeHtml(t('settingsCenterTitle')) + '</div>' +
@@ -1177,6 +1197,34 @@ function submitReservation(){
 }
 
 /* ---- Clear records settings ---- */
+/* 由舊系統匯入（平台提供 env.importLegacy） */
+var importState = { busy:false, msg:'', cls:'' };
+function settingsImportHtml(){
+  return '<h3>' + escapeHtml(t('importTitle')) + '</h3><div class="settings-desc">' + escapeHtml(t('importDesc')) + '</div>' +
+    '<div class="import-panel">' +
+      '<p class="text-danger" style="font-weight:600;font-size:13px;">' + escapeHtml(t('importWarn')) + '</p>' +
+      '<button class="btn primary" data-act="do-import"' + (importState.busy ? ' disabled' : '') + '>' +
+        escapeHtml(importState.busy ? t('importing') : t('importBtn')) + '</button>' +
+      (importState.msg ? '<div class="import-msg ' + importState.cls + '">' + escapeHtml(importState.msg) + '</div>' : '') +
+    '</div>';
+}
+function triggerImport(){
+  if (importState.busy || !env.importLegacy) return;
+  askConfirm(t('importConfirm'), function(){
+    importState = { busy:true, msg:'', cls:'' };
+    renderSettingsRoot();
+    env.importLegacy().then(function(r){
+      importState = { busy:false, cls:'ok', msg: t('importDonePrefix') + r.ipads + t('importDoneMid') + r.bookings + t('importDoneSuffix') };
+      draftIpads = null; draftPeriods = null;
+      renderSettingsRoot();
+      showToast(importState.msg);
+    }).catch(function(err){
+      importState = { busy:false, cls:'err', msg: t('importFail') + (err && err.message ? err.message : err) };
+      renderSettingsRoot();
+    });
+  }, true);
+}
+
 function settingsClearHtml(){
   return '<h3>' + escapeHtml(t('clearSettingsTitle')) + '</h3><div class="settings-desc">' + escapeHtml(t('clearSettingsDesc')) + '</div>' +
     '<div class="clear-panel">' +
@@ -1369,6 +1417,7 @@ function bindGlobalEvents(){
         ui.tooltipIpad = (ui.tooltipIpad === chipKey) ? null : chipKey;
         renderShell(); break;
       case 'open-settings': openSettings(); break;
+      case 'do-import': triggerImport(); break;
       case 'close-settings': closeSettings(); break;
       case 'settings-tab': switchSettingsTab(targetEl.getAttribute('data-tab')); break;
       case 'open-slot':

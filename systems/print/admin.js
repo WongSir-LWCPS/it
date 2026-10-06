@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp,
-} from "../../assets/js/common.js?v=20261006h";
+} from "../../assets/js/common.js?v=20261006j";
 import {
   collection, doc, onSnapshot, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { emailEnabled } from "../../assets/js/email.js?v=20261006h";
-import { notifyAdmins, syncNotifyList } from "../../assets/js/notify.js?v=20261006h";
-import { PSTATUS } from "./print-config.js?v=20261006h";
-import { buildPrintEmail } from "./print-email.js?v=20261006h";
+import { emailEnabled } from "../../assets/js/email.js?v=20261006j";
+import { notifyAdmins, syncNotifyList } from "../../assets/js/notify.js?v=20261006j";
+import { PSTATUS } from "./print-config.js?v=20261006j";
+import { buildPrintEmail } from "./print-email.js?v=20261006j";
 
 const $ = (sel) => document.querySelector(sel);
 const applicantEmail = (r) => r.applicantEmail || r.email;

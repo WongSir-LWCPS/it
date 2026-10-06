@@ -600,3 +600,17 @@ textarea.input{resize:vertical;min-height:56px;}
 .toolbar .seg button.active{background:var(--accent);color:#fff;}
 .settings-topbar .icon-btn:hover{background:var(--surface-alt);}
 .settings-topbar{border-bottom:1px solid var(--chrome-border);}
+
+/* 對話框標題列：白底深藍字（原本深色標題列配白字） */
+.modal-head, .fixed-light .modal-head{background:var(--surface);border-bottom:1px solid var(--border);}
+.fixed-light .modal-head h2{color:var(--text);}
+.fixed-light .modal-head .sub{color:var(--text-muted);}
+.fixed-light .modal-head .icon-btn{color:var(--text);}
+.fixed-light .modal-head .icon-btn:hover{background:var(--surface-alt);}
+
+/* 匯入舊資料 */
+.import-panel{max-width:620px;}
+.import-panel .btn{display:inline-flex;align-items:center;gap:6px;}
+.import-msg{margin-top:12px;font-size:13px;color:var(--text-muted);}
+.import-msg.err{color:var(--danger);}
+.import-msg.ok{color:var(--success);}

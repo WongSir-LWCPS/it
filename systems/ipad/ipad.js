@@ -1,9 +1,9 @@
-import { boot, db, isEn, toast } from "../../assets/js/common.js?v=20261006h";
+import { boot, db, isEn, toast } from "../../assets/js/common.js?v=20261006j";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { LEGACY_FIREBASE, LEGACY_DOC, IPAD_DOC } from "./ipad-config.js?v=20261006h";
+import { LEGACY_FIREBASE, LEGACY_DOC, IPAD_DOC } from "./ipad-config.js?v=20261006j";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null };
@@ -38,6 +38,8 @@ function startApp(isAdmin, user) {
     teacherName: teacherShortName(user),
     openAdmin: isAdmin && new URLSearchParams(location.search).has("admin"),
     store: makeStore(),
+    // 管理員可隨時由舊系統重新匯入（平台正式推出前，舊系統仍在使用）
+    importLegacy: isAdmin ? importLegacy : null,
   };
   $("#setup").hidden = true;
   const frame = $("#ipad-frame");
@@ -46,16 +48,25 @@ function startApp(isAdmin, user) {
   frame.src = "app.html" + new URL(import.meta.url).search;
 }
 
+let legacyApp = null;
 /** 從舊系統（獨立 Firebase 專案）讀取資料 */
 async function readLegacy() {
-  const app = initializeApp(LEGACY_FIREBASE, "ipad-legacy");
+  legacyApp ??= initializeApp(LEGACY_FIREBASE, "ipad-legacy");
+  const app = legacyApp;
   const snap = await getDoc(doc(getFirestore(app), ...LEGACY_DOC));
   if (!snap.exists()) throw new Error("舊系統沒有資料");
-  const d = snap.data();
+  const d = snap.data() || {};
   return {
     ipads: d.ipads || [], periods: d.periods || [],
     bookings: d.bookings || {}, reservations: d.reservations || {}, loans: d.loans || {},
   };
+}
+
+/** 以舊系統資料覆蓋平台上的 iPad 資料 */
+async function importLegacy() {
+  const data = await readLegacy();
+  await setDoc(ref(), cleanAll(data));
+  return { ipads: data.ipads.length, bookings: Object.keys(data.bookings).length };
 }
 
 function showSetup() {
@@ -78,10 +89,8 @@ function showSetup() {
     btn.disabled = true;
     msg.textContent = "正在讀取舊系統…";
     try {
-      const data = await readLegacy();
-      const n = Object.keys(data.bookings).length;
-      await setDoc(ref(), data);
-      toast(`已匯入：${data.ipads.length} 個 iPad 批次、${n} 項借用記錄。`, "success");
+      const r = await importLegacy();
+      toast(`已匯入：${r.ipads} 個 iPad 批次、${r.bookings} 項借用記錄。`, "success");
       startApp(true, S.user);
     } catch (err) {
       console.error(err);
