@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=20261006j">
+  <link rel="stylesheet" href="assets/css/style.css?v=20261006k">
   <script>
     // 程式載入失敗時顯示原因，而不是一直停在「載入中」
     (function () {
@@ -34,6 +34,12 @@
       <span>平台設定</span>
     </nav>
     <h1>平台設定</h1>
+
+    <section id="sys-section" class="block" hidden>
+      <h2>系統顯示</h2>
+      <p class="hint">取消勾選的系統不會在平台首頁及側邊選單向老師顯示，老師亦不能直接開啟。管理員仍可看到並進入已隱藏的系統，方便正式推出前測試。</p>
+      <div id="sys-list" class="card-form"></div>
+    </section>
 
     <section id="mail-section" class="block" hidden>
       <h2>電郵通知檢查</h2>
@@ -88,6 +94,6 @@
     </section>
   </main>
 
-  <script type="module" src="assets/js/settings.js?v=20261006j"></script>
+  <script type="module" src="assets/js/settings.js?v=20261006k"></script>
 </body>
 </html>

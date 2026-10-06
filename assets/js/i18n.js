@@ -133,6 +133,14 @@ const DICT = {
   "Copilot借用申請": "Copilot Loan Request",
   "申請借用 Microsoft Copilot，每次最多 14 天，IT組審批後會以電郵通知。": "Borrow Microsoft Copilot for up to 14 days at a time, subject to IT Team approval.",
 
+  // 系統顯示
+  "系統顯示": "System visibility",
+  "取消勾選的系統不會在平台首頁及側邊選單向老師顯示，老師亦不能直接開啟。管理員仍可看到並進入已隱藏的系統，方便正式推出前測試。": "Unticked systems are hidden from teachers on the home page and menu, and teachers cannot open them directly. Administrators can still see and open hidden systems for testing before launch.",
+  "已隱藏": "Hidden",
+  "顯示中": "Visible",
+  "此系統暫未開放": "This system is not available yet",
+  "IT組暫時隱藏了這個系統。如有需要，請聯絡IT組。": "The IT Team has temporarily hidden this system. Please contact the IT Team if you need it.",
+
   // iPad
   "iPad借用記錄表": "iPad Booking",
   "查看及登記 iPad 車的借用節數。批次、課節、IT組預留及外借記錄由管理員在表內設定。": "View and book iPad carts by period. Administrators manage batches, periods, IT reservations and loans inside the table.",
@@ -417,6 +425,8 @@ const PATTERNS = [
   [/^與已批准的「(.+)」（(.+)）時間重疊。$/, (t, w) => `Overlaps the approved “${t}” (${w}).`],
   // 平台設定
   [/^已匯入：(\d+) 個 iPad 批次、(\d+) 項借用記錄。$/, (a, b) => `Imported ${a} iPad batches and ${b} bookings.`],
+  [/^已向老師(顯示|隱藏)「(.+)」。$/, (a, n) => `“${x(n)}” is now ${a === "顯示" ? "visible to" : "hidden from"} teachers.`],
+  [/^(.+)（已隱藏）$/, (n) => `${x(n)} (hidden)`],
   [/^共 (\d+) 位管理員。$/, (n) => `${n} administrators.`],
   [/^目前學年：(.+)（(.+) 至 (.+)）(，尚未儲存)?$/, (n, a, b, u) => `Current school year: ${n} (${a} – ${b})${u ? ", not saved yet" : ""}`],
   [/^(.+) 學年已於 (.+) 完結，請更新為新學年。$/, (n, d) => `School year ${n} ended on ${d}. Please update to the new school year.`],

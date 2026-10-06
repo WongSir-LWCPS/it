@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/style.css?v=20261006j">
+  <link rel="stylesheet" href="assets/css/style.css?v=20261006k">
   <script>
     // 程式載入失敗時顯示原因，而不是一直停在「載入中」
     (function () {
@@ -37,18 +37,18 @@
   </main>
 
   <script type="module">
-    import { boot, esc } from "./assets/js/common.js?v=20261006j";
-    import { SYSTEMS } from "./assets/js/systems.js?v=20261006j";
+    import { boot, esc, visibleSystems } from "./assets/js/common.js?v=20261006k";
+    import { SYSTEMS } from "./assets/js/systems.js?v=20261006k";
 
     boot({
       root: "./", current: "home",
-      onReady: ({ isAdmin }) => {
+      onReady: ({ isAdmin, hiddenSystems }) => {
         document.getElementById("settings-link").hidden = !isAdmin;
-        document.getElementById("systems").innerHTML = SYSTEMS.map((s) => `
-          <li class="system">
+        document.getElementById("systems").innerHTML = visibleSystems(hiddenSystems, isAdmin).map((s) => `
+          <li class="system${hiddenSystems.includes(s.id) ? " is-hidden" : ""}">
             <span class="system-icon" aria-hidden="true">${s.icon || "🧩"}</span>
             <div class="system-body">
-              <h2><a href="${s.href}">${esc(s.name)}</a></h2>
+              <h2><a href="${s.href}">${esc(s.name)}</a>${hiddenSystems.includes(s.id) ? ' <span class="badge badge--muted">已隱藏</span>' : ""}</h2>
               <p>${esc(s.desc)}</p>
             </div>
             <div class="system-actions">

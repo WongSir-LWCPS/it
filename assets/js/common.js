@@ -3,12 +3,12 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261006j";
-import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261006j";
-import { SYSTEMS } from "./systems.js?v=20261006j";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261006k";
+import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261006k";
+import { SYSTEMS } from "./systems.js?v=20261006k";
 
 startI18n();
-export { tr, t, isEn } from "./i18n.js?v=20261006j";
+export { tr, t, isEn } from "./i18n.js?v=20261006k";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -354,7 +354,20 @@ function renderHeader(el, root, user, isAdmin) {
   });
 }
 
-function setupDrawer(root, isAdmin, current) {
+/** 讀取在「平台設定」中隱藏的系統 */
+export async function getHiddenSystems() {
+  try {
+    return (await getDoc(doc(db, "settings", "systems"))).data()?.hidden || [];
+  } catch (e) {
+    console.warn("未能讀取系統顯示設定", e);
+    return [];
+  }
+}
+
+/** 按顯示設定篩選系統：老師看不到已隱藏的系統，管理員則全部可見 */
+export const visibleSystems = (hidden, isAdmin) => SYSTEMS.filter((s) => isAdmin || !hidden.includes(s.id));
+
+function setupDrawer(root, isAdmin, current, hidden = []) {
   const backdrop = document.createElement("div");
   backdrop.className = "drawer-backdrop";
   const drawer = document.createElement("nav");
@@ -372,8 +385,8 @@ function setupDrawer(root, isAdmin, current) {
     </div>
     ${link("index.html", "平台首頁", "home", "🏠")}
     <p class="drawer-group">系統</p>
-    ${SYSTEMS.map((s) => `
-      ${link(s.href, s.name, s.id, s.icon || "🧩")}
+    ${visibleSystems(hidden, isAdmin).map((s) => `
+      ${link(s.href, s.name + (hidden.includes(s.id) ? "（已隱藏）" : ""), s.id, s.icon || "🧩")}
       ${isAdmin && s.adminHref && (current === s.id || current === `${s.id}-admin`)
         ? link(s.adminHref, "管理及審批", `${s.id}-admin`, "", true) : ""}`).join("")}
     ${isAdmin ? `<p class="drawer-group">管理</p>${link("settings.html", "平台設定", "settings", "⚙️")}` : ""}`;
@@ -452,19 +465,28 @@ export function boot({ root = "./", current = "", onReady }) {
       showGate(gate, `${email}：${APP.blockedMessage || "此帳戶不能使用此平台。"}`);
       return;
     }
-    let isAdmin = false;
-    try {
-      isAdmin = (await getDoc(doc(db, "admins", email))).exists();
-    } catch (e) {
-      console.warn("未能檢查管理員身份", e);
-    }
+    const [isAdmin, hiddenSystems] = await Promise.all([
+      getDoc(doc(db, "admins", email)).then((d) => d.exists()).catch((e) => { console.warn("未能檢查管理員身份", e); return false; }),
+      getHiddenSystems(),
+    ]);
     renderHeader(header, root, user, isAdmin);
-    setupDrawer(root, isAdmin, current);
+    setupDrawer(root, isAdmin, current, hiddenSystems);
     gate.hidden = true;
     main.hidden = false;
+    // 已隱藏的系統：老師不能進入（管理員仍可進入測試）
+    const sysId = current.replace(/-admin$/, "");
+    if (!isAdmin && hiddenSystems.includes(sysId) && SYSTEMS.some((x) => x.id === sysId)) {
+      main.innerHTML = `
+        <section class="notice wrap">
+          <h1>此系統暫未開放</h1>
+          <p>IT組暫時隱藏了這個系統。如有需要，請聯絡IT組。</p>
+          <a class="btn btn--primary" href="${root}index.html">返回平台首頁</a>
+        </section>`;
+      return;
+    }
     if (!started) {
       started = true;
-      onReady({ user, isAdmin });
+      onReady({ user, isAdmin, hiddenSystems });
     }
   });
 }

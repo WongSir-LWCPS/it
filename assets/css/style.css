@@ -561,3 +561,10 @@ h3 { font-size: .95rem; }
 /* ---------- iPad借用記錄表（iframe） ---------- */
 .page-ipad #main { padding: 0; }
 .ipad-frame { display: block; width: 100%; height: calc(100vh - 57px); height: calc(100dvh - 57px); border: 0; }
+
+/* 系統顯示設定 */
+.sys-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.sys-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 4px; border-bottom: 1px solid var(--line); }
+.sys-list li:last-child { border-bottom: 0; }
+.sys-icon { width: 24px; text-align: center; }
+.system.is-hidden { opacity: .6; }

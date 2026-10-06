@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, APP, isBlockedEmail, fmtTimestamp, fmtDate, todayId, enhanceDateInputs, downloadCSV,
-} from "./common.js?v=20261006j";
+} from "./common.js?v=20261006k";
 import {
   collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, getDocs, writeBatch,
   serverTimestamp, arrayRemove, addDoc, query, orderBy, limit, where, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { SYSTEMS } from "./systems.js?v=20261006j";
-import { sendEmail } from "./email.js?v=20261006j";
-import { syncNotifyList, wantsNotify } from "./notify.js?v=20261006j";
+import { SYSTEMS } from "./systems.js?v=20261006k";
+import { sendEmail } from "./email.js?v=20261006k";
+import { syncNotifyList, wantsNotify } from "./notify.js?v=20261006k";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { me: "", admins: [] };
@@ -28,6 +28,8 @@ boot({
     $("#admin-section").hidden = false;
     $("#year-section").hidden = false;
     $("#mail-section").hidden = false;
+    $("#sys-section").hidden = false;
+    setupSystems();
     setupYear();
     setupMailCheck();
 
@@ -369,5 +371,42 @@ function watchMailLog(coll) {
       </div>`;
   }, (e) => {
     box.innerHTML = `<p class="load-error">未能讀取電郵紀錄：${esc(e.message)}。請確認已發佈最新的 Firestore 規則。</p>`;
+  });
+}
+
+/* ================= 系統顯示 ================= */
+async function setupSystems() {
+  const box = $("#sys-list");
+  let hidden = [];
+  try { hidden = (await getDoc(doc(db, "settings", "systems"))).data()?.hidden || []; } catch (e) { console.warn(e); }
+  box.innerHTML = `
+    <ul class="sys-list">
+      ${SYSTEMS.map((s) => `
+        <li>
+          <label class="check">
+            <input type="checkbox" data-sys-show="${s.id}" ${hidden.includes(s.id) ? "" : "checked"}>
+            <span class="sys-icon" aria-hidden="true">${s.icon || "🧩"}</span>
+            <span>${esc(s.name)}</span>
+          </label>
+          <span class="badge badge--${hidden.includes(s.id) ? "muted" : "go"}" data-sys-state="${s.id}">${hidden.includes(s.id) ? "已隱藏" : "顯示中"}</span>
+        </li>`).join("")}
+    </ul>`;
+  box.addEventListener("change", async (e) => {
+    const cb = e.target.closest("[data-sys-show]");
+    if (!cb) return;
+    const id = cb.dataset.sysShow;
+    const name = SYSTEMS.find((x) => x.id === id)?.name || id;
+    const next = cb.checked ? hidden.filter((x) => x !== id) : [...new Set([...hidden, id])];
+    try {
+      await setDoc(doc(db, "settings", "systems"), { hidden: next, updatedBy: S.me, updatedAt: serverTimestamp() });
+      hidden = next;
+      const badge = box.querySelector(`[data-sys-state="${id}"]`);
+      badge.textContent = cb.checked ? "顯示中" : "已隱藏";
+      badge.className = `badge badge--${cb.checked ? "go" : "muted"}`;
+      toast(cb.checked ? `已向老師顯示「${name}」。` : `已向老師隱藏「${name}」。`, "success");
+    } catch (err) {
+      cb.checked = !cb.checked;
+      toast("未能更新：" + err.message, "error");
+    }
   });
 }
