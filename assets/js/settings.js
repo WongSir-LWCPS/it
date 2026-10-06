@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, APP, isBlockedEmail, fmtTimestamp, fmtDate, todayId, enhanceDateInputs, downloadCSV,
-} from "./common.js?v=20261006a";
+} from "./common.js?v=20261006b";
 import {
   collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, getDocs, writeBatch,
-  serverTimestamp, arrayRemove, addDoc, query, orderBy, limit,
+  serverTimestamp, arrayRemove, addDoc, query, orderBy, limit, where,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { SYSTEMS } from "./systems.js?v=20261006a";
-import { sendEmail } from "./email.js?v=20261006a";
-import { syncNotifyList, wantsNotify } from "./notify.js?v=20261006a";
+import { SYSTEMS } from "./systems.js?v=20261006b";
+import { sendEmail } from "./email.js?v=20261006b";
+import { syncNotifyList, wantsNotify } from "./notify.js?v=20261006b";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { me: "", admins: [] };
@@ -165,38 +165,51 @@ function showYear(y, saved) {
   const w = $("#year-warn");
   w.hidden = !(todayId() > y.end);
   w.textContent = `${y.name} 學年已於 ${fmtDate(y.end)} 完結，請更新為新學年。`;
-  loadOldData();
+  resetOldData();
 }
 
 /* ---------- 刪除舊學年資料 ---------- */
 const SOURCES = [
   {
-    key: "ktv", label: "樂Kids TV 節目及申請", coll: "ktv_bookings",
+    key: "ktv", label: "樂Kids TV 節目及申請", coll: "ktv_bookings", field: "date",
     old: (r, start) => (r.date || r.sessionId || "") < start,
     row: (r) => ["樂Kids TV", r.date, `${r.start || ""}-${r.end || ""}`, r.topic, r.teacherName, r.teacherEmail, r.status, r.remarks],
   },
   {
-    key: "print", label: "增加彩色列印限額申請", coll: "print_requests",
+    key: "print", label: "增加彩色列印限額申請", coll: "print_requests", field: "date",
     old: (r, start) => (r.date || "") < start,
     row: (r) => ["彩色列印限額", r.date, "", r.remarks, r.applicantName, r.email, r.status, r.reviewNote],
   },
   {
-    key: "copilot", label: "Copilot借用申請", coll: "copilot_requests",
+    key: "copilot", label: "Copilot借用申請", coll: "copilot_requests", field: "endDate",
     old: (r, start) => (r.endDate || "") < start,
     row: (r) => ["Copilot借用", r.startDate, `至 ${r.endDate}`, (r.purposes || []).join("、"), r.applicantName, r.email, r.status, r.reviewNote],
   },
 ];
 
+/** 統計前先顯示按鈕，避免每次打開設定頁都讀取全部資料 */
+function resetOldData() {
+  const box = $("#old-data");
+  box.innerHTML = `
+    <p>統計 ${fmtDate(S.year.start)} 之前的資料數量。</p>
+    <button class="btn btn--small" type="button" id="old-count">統計舊學年資料</button>`;
+  $("#old-count").addEventListener("click", loadOldData);
+}
+
 async function loadOldData() {
   const box = $("#old-data");
   const start = S.year.start;
+  box.innerHTML = `<p class="empty">正在統計…</p>`;
   try {
+    // 只讀取開始日期之前的資料，並同時進行
+    const [lists, ktvSettings] = await Promise.all([
+      Promise.all(SOURCES.map((src) =>
+        getDocs(query(collection(db, src.coll), where(src.field, "<", start)))
+          .then((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }))))),
+      getDoc(doc(db, "ktv_settings", "main")).then((d) => d.data()),
+    ]);
     S.old = {};
-    for (const src of SOURCES) {
-      const snap = await getDocs(collection(db, src.coll));
-      S.old[src.key] = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((r) => src.old(r, start));
-    }
-    const ktvSettings = (await getDoc(doc(db, "ktv_settings", "main"))).data();
+    SOURCES.forEach((src, i) => { S.old[src.key] = lists[i]; });
     S.old.ktvDates = (ktvSettings?.regularDates || []).filter((d) => d < start);
   } catch (e) {
     box.innerHTML = `<p class="load-error">未能統計資料：${esc(e.message)}</p>`;

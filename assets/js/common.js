@@ -3,8 +3,8 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261006a";
-import { SYSTEMS } from "./systems.js?v=20261006a";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261006b";
+import { SYSTEMS } from "./systems.js?v=20261006b";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -363,7 +363,8 @@ function setupDrawer(root, isAdmin, current) {
     <p class="drawer-group">系統</p>
     ${SYSTEMS.map((s) => `
       ${link(s.href, s.name, s.id, s.icon || "🧩")}
-      ${isAdmin && s.adminHref ? link(s.adminHref, "管理及審批", `${s.id}-admin`, "", true) : ""}`).join("")}
+      ${isAdmin && s.adminHref && (current === s.id || current === `${s.id}-admin`)
+        ? link(s.adminHref, "管理及審批", `${s.id}-admin`, "", true) : ""}`).join("")}
     ${isAdmin ? `<p class="drawer-group">管理</p>${link("settings.html", "平台設定", "settings", "⚙️")}` : ""}`;
   document.body.append(backdrop, drawer);
 
