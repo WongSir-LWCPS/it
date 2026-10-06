@@ -139,6 +139,7 @@ var I18N = {
     errIpadAlreadyLoanedPrefix: '此 iPad（', errIpadAlreadyLoanedSuffix: '）目前已在外借中，請先確認是否已歸還',
     toastLoanAdded: '已新增外借記錄',
     adminOnly: '只限平台管理員使用。如需權限，請聯絡IT組。',
+    manageBtn: '管理及審批',
     notInitialized: '系統尚未設定，請由管理員開啟一次本頁。',
     confirmDeleteLoan: '確定此 iPad 已歸還，要刪除這筆外借記錄嗎？',
     toastConnLost: '連線中斷，將自動重試：',
@@ -275,6 +276,7 @@ var I18N = {
     errIpadAlreadyLoanedPrefix: 'This iPad (', errIpadAlreadyLoanedSuffix: ') is currently on loan — please confirm it has been returned first',
     toastLoanAdded: 'Loan record added',
     adminOnly: 'Platform administrators only. Please contact the IT Team.',
+    manageBtn: 'Manage & Approve',
     notInitialized: 'The system has not been set up yet. An administrator needs to open this page once.',
     confirmDeleteLoan: 'Confirm this iPad has been returned and delete this loan record?',
     toastConnLost: 'Connection lost, retrying automatically: ',
@@ -394,11 +396,13 @@ function connectFirestore(){
       var sig = JSON.stringify([data.ipads, data.periods, data.bookings, data.reservations, data.loans]);
       if (sig === lastSnapshotSig) return; /* nothing actually changed — skip re-render */
       lastSnapshotSig = sig;
+      var firstLoad = !STATE.updatedAt;
       STATE.bookings = mapToArray(data.bookings);
       STATE.reservations = mapToArray(data.reservations);
       STATE.loans = mapToArray(data.loans);
       STATE.updatedAt = Date.now();
       renderAll({ keepModal: true });
+      if (firstLoad && env.openAdmin) openSettings();
     }, function(err){
       showToast(t('toastConnLost') + (err && err.message ? err.message : ''));
     });
@@ -626,8 +630,10 @@ function renderAppbar(){
   var otherLangLabel = ui.lang === 'zh' ? 'EN' : '中文';
   return '<div class="appbar">' +
     '<div class="appbar-side left"></div>' +
-    '<div class="appbar-title">' + escapeHtml(schoolNameDisplay()) + ' – ' + escapeHtml(t('appTitleSuffix')) + '</div>' +
-    '<div class="appbar-side right">' + (env.isAdmin ? '<button class="icon-btn" data-act="open-loans" aria-label="' + escapeHtml(t('loansAriaLabel')) + '">' + LOAN_SVG + '</button><button class="icon-btn" data-act="open-settings" aria-label="' + escapeHtml(t('settingsAriaLabel')) + '">' + GEAR_SVG + '</button>' : '') + '</div>' +
+    '<div class="appbar-title">' + escapeHtml(t('appTitleSuffix')) + '</div>' +
+    '<div class="appbar-side right">' + (env.isAdmin ?
+      '<button class="icon-btn" data-act="open-loans" aria-label="' + escapeHtml(t('loansAriaLabel')) + '" title="' + escapeHtml(t('loansAriaLabel')) + '">' + LOAN_SVG + '</button>' +
+      '<button class="btn small manage-btn" data-act="open-settings">' + GEAR_SVG + '<span>' + escapeHtml(t('manageBtn')) + '</span></button>' : '') + '</div>' +
     '</div>';
 }
 function tooltipHtml(ip){
@@ -786,7 +792,7 @@ function openBookingModal(opts){
     selIpads: editing ? group.ipadIds.slice() : (opts.ipadId ? [opts.ipadId] : []),
     className: editing ? group.className : (STATE.classes[0]||''),
     otherClass: editing ? (group.otherClass||'') : '',
-    teacher: editing ? group.teacher : '',
+    teacher: editing ? group.teacher : (env.teacherName || ''),   /* 預設為登入名稱（不含英文名） */
     note: editing ? (group.note||'') : '',
     qty: editing ? group.qty : sumIpadQty(opts.ipadId ? [opts.ipadId] : []),
     color: editing ? group.color : randomColor(),

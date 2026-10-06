@@ -4,6 +4,15 @@
 // ============================================================
 export const SYSTEMS = [
   {
+    id: "ipad",
+    name: "iPad借用記錄表",
+    desc: "查看及登記 iPad 車的借用節數。批次、課節、IT組預留及外借記錄由管理員在表內設定。",
+    href: "systems/ipad/index.html",
+    adminHref: "systems/ipad/index.html?admin=1",
+    icon: "📱",
+    notify: false,   // 不寄電郵通知
+  },
+  {
     id: "ktv",
     name: "樂Kids TV 預約",
     desc: "查看每次樂Kids TV的播放時段，申請預約播放，並跟進審批結果。",
@@ -26,13 +35,6 @@ export const SYSTEMS = [
     href: "systems/copilot/index.html",
     adminHref: "systems/copilot/admin.html",
     icon: "🤖",
-  },
-  {
-    id: "ipad",
-    name: "iPad借用記錄表",
-    desc: "查看及登記 iPad 車的借用節數。批次、課節、IT組預留及外借記錄由管理員在表內設定。",
-    href: "systems/ipad/index.html",
-    icon: "📱",
   },
   // 範例：
   // {

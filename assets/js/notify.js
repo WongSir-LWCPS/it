@@ -1,9 +1,9 @@
 // 管理員電郵通知
 // settings/notify 存放各系統接收通知的管理員：{ emails: [...], ktv: [...], print: [...], copilot: [...] }
 // 名單由「平台設定」按每位管理員的勾選自動整理。
-import { db, mailLayout, APP } from "./common.js?v=20261006f";
-import { SYSTEMS } from "./systems.js?v=20261006f";
-import { sendEmail } from "./email.js?v=20261006f";
+import { db, mailLayout, APP } from "./common.js?v=20261006h";
+import { SYSTEMS } from "./systems.js?v=20261006h";
+import { sendEmail } from "./email.js?v=20261006h";
 import {
   collection, doc, getDoc, getDocs, setDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -26,8 +26,9 @@ export async function getNotifyEmails(sys) {
 export async function syncNotifyList() {
   const admins = (await getDocs(collection(db, "admins"))).docs.map((d) => ({ email: d.id, ...d.data() }));
   const data = { updatedAt: serverTimestamp() };
-  for (const s of SYSTEMS) data[s.id] = admins.filter((a) => wantsNotify(a, s.id)).map((a) => a.email).sort();
-  data.emails = [...new Set(SYSTEMS.flatMap((s) => data[s.id]))].sort();
+  const NOTIFY_SYSTEMS = SYSTEMS.filter((x) => x.notify !== false);
+  for (const s of NOTIFY_SYSTEMS) data[s.id] = admins.filter((a) => wantsNotify(a, s.id)).map((a) => a.email).sort();
+  data.emails = [...new Set(NOTIFY_SYSTEMS.flatMap((s) => data[s.id]))].sort();
   await setDoc(doc(db, "settings", "notify"), data);
   return data;
 }

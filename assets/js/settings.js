@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, APP, isBlockedEmail, fmtTimestamp, fmtDate, todayId, enhanceDateInputs, downloadCSV,
-} from "./common.js?v=20261006f";
+} from "./common.js?v=20261006h";
 import {
   collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, getDocs, writeBatch,
   serverTimestamp, arrayRemove, addDoc, query, orderBy, limit, where, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { SYSTEMS } from "./systems.js?v=20261006f";
-import { sendEmail } from "./email.js?v=20261006f";
-import { syncNotifyList, wantsNotify } from "./notify.js?v=20261006f";
+import { SYSTEMS } from "./systems.js?v=20261006h";
+import { sendEmail } from "./email.js?v=20261006h";
+import { syncNotifyList, wantsNotify } from "./notify.js?v=20261006h";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { me: "", admins: [] };
@@ -69,7 +69,7 @@ function renderAdmins() {
             <tr>
               <td>${esc(a.email)}${a.email === S.me ? ' <span class="badge badge--go">你</span>' : ""}</td>
               <td>${esc(a.name || "")}</td>
-              <td><div class="notify-checks">${SYSTEMS.map((sys) => `
+              <td><div class="notify-checks">${SYSTEMS.filter((x) => x.notify !== false).map((sys) => `
                 <label class="check"><input type="checkbox" data-notify="${esc(a.email)}" data-sys="${sys.id}"
                   ${wantsNotify(a, sys.id) ? "checked" : ""}> ${esc(sys.name)}</label>`).join("")}</div></td>
               <td>${esc(a.addedBy || "（Firebase 設定）")}</td>
@@ -99,7 +99,7 @@ async function addAdmin(e) {
   try {
     await setDoc(doc(db, "admins", email), {
       name: f.name.value.trim(),
-      notifySystems: Object.fromEntries(SYSTEMS.map((x) => [x.id, true])),
+      notifySystems: Object.fromEntries(SYSTEMS.filter((x) => x.notify !== false).map((x) => [x.id, true])),
       addedBy: S.me,
       addedAt: serverTimestamp(),
     });

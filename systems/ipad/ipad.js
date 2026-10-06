@@ -1,11 +1,12 @@
-import { boot, db, isEn, toast } from "../../assets/js/common.js?v=20261006f";
+import { boot, db, isEn, toast } from "../../assets/js/common.js?v=20261006h";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { LEGACY_FIREBASE, LEGACY_DOC, IPAD_DOC } from "./ipad-config.js?v=20261006f";
+import { LEGACY_FIREBASE, LEGACY_DOC, IPAD_DOC } from "./ipad-config.js?v=20261006h";
 
 const $ = (sel) => document.querySelector(sel);
+const S = { user: null };
 const ref = () => doc(db, ...IPAD_DOC);
 
 /** Firestore 不接受 undefined：一般資料先清理，deleteField() 等特殊值保留 */
@@ -24,8 +25,20 @@ function makeStore() {
   };
 }
 
-function startApp(isAdmin) {
-  window.IPAD_ENV = { isAdmin, lang: isEn ? "en" : "zh", store: makeStore() };
+/** 登入名稱去除英文名，例如「黃榮耀Wong Wing Yiu」→「黃榮耀」；全英文名稱則保留原文 */
+function teacherShortName(user) {
+  const name = (user?.displayName || "").trim();
+  return name.replace(/[A-Za-z][A-Za-z.'\- ]*/g, "").trim() || name;
+}
+
+function startApp(isAdmin, user) {
+  window.IPAD_ENV = {
+    isAdmin,
+    lang: isEn ? "en" : "zh",
+    teacherName: teacherShortName(user),
+    openAdmin: isAdmin && new URLSearchParams(location.search).has("admin"),
+    store: makeStore(),
+  };
   $("#setup").hidden = true;
   const frame = $("#ipad-frame");
   frame.hidden = false;
@@ -58,7 +71,7 @@ function showSetup() {
       </div>
       <p class="hint mt-s" id="setup-msg" role="status"></p>
     </div>`;
-  $("#setup-default").addEventListener("click", () => startApp(true));
+  $("#setup-default").addEventListener("click", () => startApp(true, S.user));
   $("#setup-import").addEventListener("click", async (e) => {
     const btn = e.target;
     const msg = $("#setup-msg");
@@ -69,7 +82,7 @@ function showSetup() {
       const n = Object.keys(data.bookings).length;
       await setDoc(ref(), data);
       toast(`已匯入：${data.ipads.length} 個 iPad 批次、${n} 項借用記錄。`, "success");
-      startApp(true);
+      startApp(true, S.user);
     } catch (err) {
       console.error(err);
       msg.textContent = `未能匯入：${err.message}`;
@@ -80,7 +93,8 @@ function showSetup() {
 
 boot({
   root: "../../", current: "ipad",
-  onReady: async ({ isAdmin }) => {
+  onReady: async ({ user, isAdmin }) => {
+    S.user = user;
     let exists = true;
     try { exists = (await getDoc(ref())).exists(); } catch (e) { console.warn(e); }
     if (!exists && isAdmin) { showSetup(); return; }
@@ -89,6 +103,6 @@ boot({
       $("#setup").innerHTML = `<p class="empty">iPad借用記錄表尚未設定，請由管理員開啟一次本頁。</p>`;
       return;
     }
-    startApp(isAdmin);
+    startApp(isAdmin, user);
   },
 });
