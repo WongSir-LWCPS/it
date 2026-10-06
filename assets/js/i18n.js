@@ -133,6 +133,17 @@ const DICT = {
   "Copilot借用申請": "Copilot Loan Request",
   "申請借用 Microsoft Copilot，每次最多 14 天，IT組審批後會以電郵通知。": "Borrow Microsoft Copilot for up to 14 days at a time, subject to IT Team approval.",
 
+  // iPad
+  "iPad借用記錄表": "iPad Booking",
+  "查看及登記 iPad 車的借用節數。批次、課節、IT組預留及外借記錄由管理員在表內設定。": "View and book iPad carts by period. Administrators manage batches, periods, IT reservations and loans inside the table.",
+  "設定 iPad借用記錄表": "Set up iPad Booking",
+  "平台還未有 iPad 借用資料。你可以把舊的「iPad借用記錄表」（另一個 Firebase 專案）的 iPad 批次、課節、借用記錄、IT組預留及外借記錄一次過匯入；或者使用預設設定，由空白開始。": "There is no iPad booking data on the platform yet. Import the iPad batches, periods, bookings, IT reservations and loans from the old iPad Booking system (a separate Firebase project), or start from the default settings.",
+  "從舊系統匯入": "Import from old system",
+  "使用預設設定": "Use default settings",
+  "正在讀取舊系統…": "Reading old system…",
+  "iPad借用記錄表尚未設定，請由管理員開啟一次本頁。": "iPad Booking has not been set up yet. An administrator needs to open this page once.",
+  "iPad 借用記錄": "iPad bookings",
+
   // 樂Kids TV：老師頁面
   "播放時間表": "Broadcast timetable",
   "跳到下一次播放": "Jump to next broadcast",
@@ -405,6 +416,7 @@ const PATTERNS = [
   [/^與「(.+)」（(.+)）時間重疊。$/, (t, w) => `Overlaps “${t}” (${w}).`],
   [/^與已批准的「(.+)」（(.+)）時間重疊。$/, (t, w) => `Overlaps the approved “${t}” (${w}).`],
   // 平台設定
+  [/^已匯入：(\d+) 個 iPad 批次、(\d+) 項借用記錄。$/, (a, b) => `Imported ${a} iPad batches and ${b} bookings.`],
   [/^共 (\d+) 位管理員。$/, (n) => `${n} administrators.`],
   [/^目前學年：(.+)（(.+) 至 (.+)）(，尚未儲存)?$/, (n, a, b, u) => `Current school year: ${n} (${a} – ${b})${u ? ", not saved yet" : ""}`],
   [/^(.+) 學年已於 (.+) 完結，請更新為新學年。$/, (n, d) => `School year ${n} ended on ${d}. Please update to the new school year.`],

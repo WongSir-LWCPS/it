@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-Hant-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>iPad借用記錄表｜IT一站式平台</title>
+  <link rel="icon" href="../../assets/img/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261006f">
+  <script>
+    // 程式載入失敗時顯示原因，而不是一直停在「載入中」
+    (function () {
+      function show(msg) {
+        var el = document.getElementById("loading");
+        if (el) el.innerHTML = "系統未能載入：" + msg + "<br>請按 Ctrl + Shift + R（Mac：Cmd + Shift + R）重新整理。如仍未能解決，請把這段文字告訴IT組。";
+      }
+      window.addEventListener("error", function (e) { show(e.message || "程式錯誤"); });
+      window.addEventListener("unhandledrejection", function (e) { show((e.reason && e.reason.message) || "程式錯誤"); });
+      setTimeout(function () { if (document.getElementById("loading")) show("載入時間過長，請檢查網絡連線"); }, 15000);
+    })();
+  </script>
+</head>
+<body class="page-ipad">
+  <header id="site-header" class="site-header"></header>
+  <p id="loading" class="loading">載入中…</p>
+  <div id="gate" class="gate" hidden></div>
+
+  <main id="main" hidden>
+    <div id="setup" class="wrap wrap--narrow" hidden></div>
+    <iframe id="ipad-frame" class="ipad-frame" title="iPad借用記錄表" hidden></iframe>
+  </main>
+
+  <script type="module" src="ipad.js?v=20261006f"></script>
+</body>
+</html>

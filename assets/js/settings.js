@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, APP, isBlockedEmail, fmtTimestamp, fmtDate, todayId, enhanceDateInputs, downloadCSV,
-} from "./common.js?v=20261006e";
+} from "./common.js?v=20261006f";
 import {
   collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, getDocs, writeBatch,
-  serverTimestamp, arrayRemove, addDoc, query, orderBy, limit, where,
+  serverTimestamp, arrayRemove, addDoc, query, orderBy, limit, where, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { SYSTEMS } from "./systems.js?v=20261006e";
-import { sendEmail } from "./email.js?v=20261006e";
-import { syncNotifyList, wantsNotify } from "./notify.js?v=20261006e";
+import { SYSTEMS } from "./systems.js?v=20261006f";
+import { sendEmail } from "./email.js?v=20261006f";
+import { syncNotifyList, wantsNotify } from "./notify.js?v=20261006f";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { me: "", admins: [] };
@@ -202,15 +202,18 @@ async function loadOldData() {
   box.innerHTML = `<p class="empty">正在統計…</p>`;
   try {
     // 只讀取開始日期之前的資料，並同時進行
-    const [lists, ktvSettings] = await Promise.all([
+    const [lists, ktvSettings, ipadState] = await Promise.all([
       Promise.all(SOURCES.map((src) =>
         getDocs(query(collection(db, src.coll), where(src.field, "<", start)))
           .then((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }))))),
       getDoc(doc(db, "ktv_settings", "main")).then((d) => d.data()),
+      getDoc(doc(db, "ipad", "state")).then((d) => d.data()).catch(() => null),
     ]);
     S.old = {};
     SOURCES.forEach((src, i) => { S.old[src.key] = lists[i]; });
     S.old.ktvDates = (ktvSettings?.regularDates || []).filter((d) => d < start);
+    S.old.ipad = Object.entries(ipadState?.bookings || {})
+      .filter(([, b]) => (b?.date || "") < start).map(([id, b]) => ({ id, ...b }));
   } catch (e) {
     box.innerHTML = `<p class="load-error">未能統計資料：${esc(e.message)}</p>`;
     return;
@@ -218,6 +221,7 @@ async function loadOldData() {
   const rows = [
     ...SOURCES.map((src) => ({ key: src.key, label: src.label, count: S.old[src.key].length })),
     { key: "ktvDates", label: "樂Kids TV 播放日", count: S.old.ktvDates.length },
+    { key: "ipad", label: "iPad 借用記錄", count: S.old.ipad.length },
   ];
   const total = rows.reduce((n, r) => n + r.count, 0);
   if (!total) {
@@ -245,6 +249,8 @@ function backupOld() {
   const rows = [["系統", "日期", "時間／期間", "內容", "申請人", "電郵", "狀態", "備註"]];
   for (const src of SOURCES) S.old[src.key].forEach((r) => rows.push(src.row(r)));
   S.old.ktvDates.forEach((d) => rows.push(["樂Kids TV 播放日", d, "", "", "", "", "", ""]));
+  S.old.ipad.forEach((b) => rows.push(["iPad 借用記錄", b.date, (b.periodIds || [b.periodId]).filter(Boolean).join(" "),
+    b.className === "其他" ? b.otherClass : b.className, b.teacher || "", "", "", b.note || ""]));
   downloadCSV(`IT一站式平台_舊資料備份_${S.year.start}之前.csv`, rows);
 }
 
@@ -270,6 +276,11 @@ async function deleteOld() {
       const batch = writeBatch(db);
       ops.slice(i, i + 400).forEach((op) => op(batch));
       await batch.commit();
+    }
+    if (keys.includes("ipad") && S.old.ipad.length) {
+      const upd = {};
+      S.old.ipad.forEach((b) => { upd[`bookings.${b.id}`] = deleteField(); });
+      await updateDoc(doc(db, "ipad", "state"), upd);
     }
     if (keys.includes("ktvDates") && S.old.ktvDates.length) {
       await updateDoc(doc(db, "ktv_settings", "main"), { regularDates: arrayRemove(...S.old.ktvDates) });

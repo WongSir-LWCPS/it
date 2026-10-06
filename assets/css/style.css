@@ -557,3 +557,7 @@ h3 { font-size: .95rem; }
 .notify-checks { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; white-space: nowrap; }
 
 .lang-btn { min-width: 44px; }
+
+/* ---------- iPad借用記錄表（iframe） ---------- */
+.page-ipad #main { padding: 0; }
+.ipad-frame { display: block; width: 100%; height: calc(100vh - 57px); height: calc(100dvh - 57px); border: 0; }
