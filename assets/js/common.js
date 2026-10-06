@@ -3,8 +3,8 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261005w";
-import { SYSTEMS } from "./systems.js?v=20261005w";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261006a";
+import { SYSTEMS } from "./systems.js?v=20261006a";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);

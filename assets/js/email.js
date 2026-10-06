@@ -1,5 +1,5 @@
 import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { APP, db } from "./common.js?v=20261005w";
+import { APP, db } from "./common.js?v=20261006a";
 
 let emailJsLoading = null;
 
@@ -45,15 +45,14 @@ export async function sendEmail({ to, cc = [], subject, html, text }) {
       throw new Error("EmailJS 設定不完整，請在 firebase-config.js 填寫 serviceId、templateId 及 publicKey");
     }
     const ej = await loadEmailJs();
-    for (const addr of [...toList, ...ccList]) {
-      await ej.send(c.serviceId, c.templateId, {
-        to_email: addr,
-        subject,
-        message_html: html,
-        message: text,
-        reply_to: APP.email.replyTo || "",
-      });
-    }
+    // 所有收件人放在同一封電郵（以逗號分隔），每次只用 1 個 EmailJS 配額
+    await ej.send(c.serviceId, c.templateId, {
+      to_email: [...toList, ...ccList].join(", "),
+      subject,
+      message_html: html,
+      message: text,
+      reply_to: APP.email.replyTo || "",
+    });
     return true;
   }
 
