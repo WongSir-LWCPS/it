@@ -3,12 +3,12 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261006d";
-import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261006d";
-import { SYSTEMS } from "./systems.js?v=20261006d";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261006e";
+import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261006e";
+import { SYSTEMS } from "./systems.js?v=20261006e";
 
 startI18n();
-export { tr, t, isEn } from "./i18n.js?v=20261006d";
+export { tr, t, isEn } from "./i18n.js?v=20261006e";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -328,6 +328,8 @@ export function toast(msg, kind = "info") {
 
 /* ---------- 頁首及側邊選單 ---------- */
 function renderHeader(el, root, user, isAdmin) {
+  const langBtn = `<button class="btn btn--small lang-btn" id="lang-toggle" data-no-translate
+    aria-label="${isEn ? "切換至中文" : "Switch to English"}">${isEn ? "中文" : "EN"}</button>`;
   el.innerHTML = `
     <div class="bar">
       ${user ? `
@@ -338,13 +340,12 @@ function renderHeader(el, root, user, isAdmin) {
         <img class="brand-logo" src="${root}assets/img/school-logo.png" alt="${esc(APP.schoolName)}校徽">
         <span class="brand-text"><strong>IT一站式平台</strong><small>${esc(APP.schoolName)}</small></span>
       </a>
-      <button class="btn btn--small lang-btn" id="lang-toggle" data-no-translate
-        aria-label="${isEn ? "切換至中文" : "Switch to English"}">${isEn ? "中文" : "EN"}</button>
       ${user ? `
         <div class="who">
           <span class="who-name">${esc(user.displayName || user.email)}${isAdmin ? '<span class="role">管理員</span>' : ""}</span>
+          ${langBtn}
           <button class="btn btn--small" id="signout">登出</button>
-        </div>` : ""}
+        </div>` : `<div class="who">${langBtn}</div>`}
     </div>`;
   el.querySelector("#lang-toggle").addEventListener("click", () => setLang(isEn ? "zh" : "en"));
   el.querySelector("#signout")?.addEventListener("click", async () => {
