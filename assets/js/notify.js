@@ -1,9 +1,9 @@
 // 管理員電郵通知
 // settings/notify 存放各系統接收通知的管理員：{ emails: [...], ktv: [...], print: [...], copilot: [...] }
 // 名單由「平台設定」按每位管理員的勾選自動整理。
-import { db, mailLayout, APP } from "./common.js?v=20261006b";
-import { SYSTEMS } from "./systems.js?v=20261006b";
-import { sendEmail } from "./email.js?v=20261006b";
+import { db, mailLayout, APP } from "./common.js?v=20261006d";
+import { SYSTEMS } from "./systems.js?v=20261006d";
+import { sendEmail } from "./email.js?v=20261006d";
 import {
   collection, doc, getDoc, getDocs, setDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";

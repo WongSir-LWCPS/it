@@ -3,8 +3,12 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261006b";
-import { SYSTEMS } from "./systems.js?v=20261006b";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261006d";
+import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261006d";
+import { SYSTEMS } from "./systems.js?v=20261006d";
+
+startI18n();
+export { tr, t, isEn } from "./i18n.js?v=20261006d";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -30,9 +34,10 @@ export function daysUntil(id) {
   const t = new Date(); t.setHours(0, 0, 0, 0);
   return Math.round((parseDateId(id) - t) / 86400000);
 }
-export const weekdayName = (id) => "星期" + WEEK[parseDateId(id).getDay()];
+export const weekdayName = (id) => (isEn ? WEEKDAYS_EN : WEEK.map((w) => "星期" + w))[parseDateId(id).getDay()];
 export function fmtDate(id) {
   const d = parseDateId(id);
+  if (isEn) return `${WEEKDAYS_EN[d.getDay()].slice(0, 3)} ${d.getDate()} ${MONTHS_EN[d.getMonth()]} ${d.getFullYear()}`;
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${weekdayName(id)}）`;
 }
 export function fmtTimestamp(ts) {
@@ -105,7 +110,9 @@ export function parseTimeText(text) {
 export function fmtTime12(v) {
   if (!v) return "";
   const [h, m] = v.split(":").map(Number);
-  return `${h < 12 ? "上午" : "下午"} ${pad(h % 12 === 0 ? 12 : h % 12)}:${pad(m)}`;
+  const h12 = pad(h % 12 === 0 ? 12 : h % 12);
+  if (isEn) return `${h12}:${pad(m)} ${h < 12 ? "AM" : "PM"}`;
+  return `${h < 12 ? "上午" : "下午"} ${h12}:${pad(m)}`;
 }
 
 /**
@@ -331,12 +338,15 @@ function renderHeader(el, root, user, isAdmin) {
         <img class="brand-logo" src="${root}assets/img/school-logo.png" alt="${esc(APP.schoolName)}校徽">
         <span class="brand-text"><strong>IT一站式平台</strong><small>${esc(APP.schoolName)}</small></span>
       </a>
+      <button class="btn btn--small lang-btn" id="lang-toggle" data-no-translate
+        aria-label="${isEn ? "切換至中文" : "Switch to English"}">${isEn ? "中文" : "EN"}</button>
       ${user ? `
         <div class="who">
           <span class="who-name">${esc(user.displayName || user.email)}${isAdmin ? '<span class="role">管理員</span>' : ""}</span>
           <button class="btn btn--small" id="signout">登出</button>
         </div>` : ""}
     </div>`;
+  el.querySelector("#lang-toggle").addEventListener("click", () => setLang(isEn ? "zh" : "en"));
   el.querySelector("#signout")?.addEventListener("click", async () => {
     await signOut(auth);
     location.reload();

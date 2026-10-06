@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, APP, isBlockedEmail, fmtTimestamp, fmtDate, todayId, enhanceDateInputs, downloadCSV,
-} from "./common.js?v=20261006b";
+} from "./common.js?v=20261006d";
 import {
   collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, getDocs, writeBatch,
   serverTimestamp, arrayRemove, addDoc, query, orderBy, limit, where,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { SYSTEMS } from "./systems.js?v=20261006b";
-import { sendEmail } from "./email.js?v=20261006b";
-import { syncNotifyList, wantsNotify } from "./notify.js?v=20261006b";
+import { SYSTEMS } from "./systems.js?v=20261006d";
+import { sendEmail } from "./email.js?v=20261006d";
+import { syncNotifyList, wantsNotify } from "./notify.js?v=20261006d";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { me: "", admins: [] };
@@ -229,7 +229,7 @@ async function loadOldData() {
     <ul class="old-list">
       ${rows.map((r) => `
         <li><label class="check"><input type="checkbox" data-old="${r.key}" ${r.count ? "checked" : "disabled"}>
-          ${esc(r.label)}：<strong>${r.count}</strong> 項</label></li>`).join("")}
+          <span>${esc(r.label)}：${r.count} 項</span></label></li>`).join("")}
     </ul>
     <div class="actions actions--start mt-s">
       <button class="btn" type="button" id="old-backup">下載備份（CSV）</button>

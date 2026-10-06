@@ -1,16 +1,16 @@
 import {
   boot, db, esc, toast, fmtDate, daysUntil, parseDateId, weekdayName,
   enhanceDateInputs, timePicker, fmtTime12,
-} from "../../assets/js/common.js?v=20261006b";
+} from "../../assets/js/common.js?v=20261006d";
 import {
   collection, doc, onSnapshot, writeBatch, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261006b";
-import { buildKtvEmail } from "./ktv-email.js?v=20261006b";
-import { KTV, STATUS } from "./ktv-config.js?v=20261006b";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261006d";
+import { buildKtvEmail } from "./ktv-email.js?v=20261006d";
+import { KTV, STATUS } from "./ktv-config.js?v=20261006d";
 import {
   timeLabel, toMin, lockIdOf, findConflict, buildDays, overlapsKtvWindow, minBookDate, canBook, sortBookings,
-} from "./ktv-common.js?v=20261006b";
+} from "./ktv-common.js?v=20261006d";
 
 const S = {
   user: null, isAdmin: false, regularDates: [], bookings: [], hidePast: true,
@@ -92,7 +92,7 @@ function renderHero(days) {
   const countdown = n === 0 ? "今天播放" : n === 1 ? "明天播放" : `還有 ${n} 天`;
   const lineup = next.slots.map((s) => {
     const b = s.booking;
-    if (b?.status === "approved") return `<li><span class="t">${s.start}</span>${esc(b.topic)}</li>`;
+    if (b?.status === "approved") return `<li><span class="t">${s.start}</span><span data-no-translate>${esc(b.topic)}</span></li>`;
     if (b) return `<li class="dim"><span class="t">${s.start}</span>審批中</li>`;
     return `<li class="dim"><span class="t">${s.start}</span>未有節目</li>`;
   }).join("");
@@ -140,12 +140,12 @@ function bookedCell(b, extra = false) {
   const time = `<span class="slot-time">${timeLabel(b)}${extra ? '<span class="tag tag--extra">其他時段</span>' : ""}</span>`;
   if (b.status === "approved") {
     return `<div class="slot slot--approved">${time}
-      <span class="slot-topic">${esc(b.topic)}</span>
-      <span class="slot-meta">${esc(b.teacherName)}<span class="tag">${esc(b.mode)}</span></span></div>`;
+      <span class="slot-topic" data-no-translate>${esc(b.topic)}</span>
+      <span class="slot-meta"><span data-no-translate>${esc(b.teacherName)}</span><span class="tag">${esc(b.mode)}</span></span></div>`;
   }
   return `<div class="slot slot--pending">${time}
-    <span class="slot-topic">${esc(b.topic)}</span>
-    <span class="slot-meta">${esc(b.teacherName)}，審批中</span></div>`;
+    <span class="slot-topic" data-no-translate>${esc(b.topic)}</span>
+    <span class="slot-meta"><span data-no-translate>${esc(b.teacherName)}</span>，審批中</span></div>`;
 }
 
 function openCell(date, i) {

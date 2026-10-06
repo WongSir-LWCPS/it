@@ -1,17 +1,17 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, daysUntil, parseDateId, toDateId, pad, todayId,
   enhanceDateInputs, timePicker,
-} from "../../assets/js/common.js?v=20261006b";
+} from "../../assets/js/common.js?v=20261006d";
 import {
   collection, doc, onSnapshot, writeBatch, updateDoc, setDoc, getDoc, serverTimestamp, arrayUnion, arrayRemove,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { KTV, STATUS } from "./ktv-config.js?v=20261006b";
+import { KTV, STATUS } from "./ktv-config.js?v=20261006d";
 import {
   timeLabel, toMin, lockIdOf, isActive, regularIndex, findConflict, sortBookings,
-} from "./ktv-common.js?v=20261006b";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261006b";
-import { buildKtvEmail } from "./ktv-email.js?v=20261006b";
-import { emailEnabled } from "../../assets/js/email.js?v=20261006b";
+} from "./ktv-common.js?v=20261006d";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261006d";
+import { buildKtvEmail } from "./ktv-email.js?v=20261006d";
+import { emailEnabled } from "../../assets/js/email.js?v=20261006d";
 
 const S = {
   user: null, regularDates: [], bookings: [], filter: "active", upcoming: false,
@@ -195,7 +195,7 @@ function setupEditDialog() {
   const f = $("#edit-form");
   const dialog = $("#edit-dialog");
   f.slot.innerHTML = KTV.slots.map((s, i) => `<option value="${i}">${s.start} - ${s.end}</option>`).join("");
-  f.mode.innerHTML = KTV.modes.map((m) => `<option>${esc(m)}</option>`).join("");
+  f.mode.innerHTML = KTV.modes.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join("");
   const syncKind = () => {
     const custom = f.querySelector('input[name="kind"]:checked').value === "custom";
     $("#edit-slot-wrap").hidden = custom;
@@ -603,7 +603,7 @@ function setupImport() {
         : XLSX.read(buf, { type: "array" });
       const names = IMP.wb.SheetNames;
       const sel = $("#import-sheet");
-      sel.innerHTML = names.map((n) => `<option>${esc(n)}</option>`).join("");
+      sel.innerHTML = names.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
       $("#import-sheet-wrap").hidden = names.length < 2;
       // 預設選第一個有資料的工作表
       sel.value = names.find((n) => parseRows(sheetRows(n)).items.length) || names[0];
@@ -654,7 +654,7 @@ function buildPreview() {
   const canImport = newDates.length > 0 || accepted.length > 0;
   const bar = canImport
     ? `<div class="import-bar">
-         <p>將加入 <strong>${newDates.length}</strong> 個樂Kids TV播放日及 <strong>${accepted.length}</strong> 個節目${skipped ? `；${skipped} 個會略過` : ""}。</p>
+         <p>將加入 ${newDates.length} 個樂Kids TV播放日及 ${accepted.length} 個節目${skipped ? `；${skipped} 個會略過` : ""}。</p>
          <button class="btn btn--primary" data-import-run>確認匯入</button>
        </div>`
     : `<div class="import-bar import-bar--none">

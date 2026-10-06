@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp,
-} from "../../assets/js/common.js?v=20261006b";
+} from "../../assets/js/common.js?v=20261006d";
 import {
   collection, doc, onSnapshot, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { emailEnabled } from "../../assets/js/email.js?v=20261006b";
-import { notifyAdmins, syncNotifyList } from "../../assets/js/notify.js?v=20261006b";
-import { PSTATUS } from "./print-config.js?v=20261006b";
-import { buildPrintEmail } from "./print-email.js?v=20261006b";
+import { emailEnabled } from "../../assets/js/email.js?v=20261006d";
+import { notifyAdmins, syncNotifyList } from "../../assets/js/notify.js?v=20261006d";
+import { PSTATUS } from "./print-config.js?v=20261006d";
+import { buildPrintEmail } from "./print-email.js?v=20261006d";
 
 const $ = (sel) => document.querySelector(sel);
 const applicantEmail = (r) => r.applicantEmail || r.email;
@@ -69,7 +69,7 @@ function renderPending() {
   const list = S.list.filter((r) => r.status === "pending").sort((a, b) => -byNewest(a, b));
   $("#pending-count").textContent = list.length || "";
   if (!list.length) {
-    box.innerHTML = `<p class="empty">沒有待處理的申請。老師提交的新申請會即時出現在這裏。</p>`;
+    box.innerHTML = `<p class="empty">沒有待審批的申請。老師提交的新申請會即時出現在這裏。</p>`;
     return;
   }
   box.innerHTML = list.map((r) => `

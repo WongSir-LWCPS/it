@@ -1,12 +1,12 @@
 import {
   boot, db, esc, toast, isStaffEmail, fmtDate, fmtTimestamp, todayId, enhanceDateInputs,
-} from "../../assets/js/common.js?v=20261006b";
+} from "../../assets/js/common.js?v=20261006d";
 import {
   collection, doc, addDoc, updateDoc, onSnapshot, query, where, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261006b";
-import { COPILOT, CSTATUS, loanDays, purposeText } from "./copilot-config.js?v=20261006b";
-import { buildCopilotEmail } from "./copilot-email.js?v=20261006b";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261006d";
+import { COPILOT, CSTATUS, loanDays, purposeText } from "./copilot-config.js?v=20261006d";
+import { buildCopilotEmail } from "./copilot-email.js?v=20261006d";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, mine: [] };
@@ -44,7 +44,7 @@ function checkDates(start, end) {
 function setupForm() {
   const f = $("#req-form");
   $("#login-name").textContent = `使用登入名稱：${loginName()}`;
-  f.group.innerHTML = `<option value="">請選擇</option>` + COPILOT.groups.map((g) => `<option>${esc(g)}</option>`).join("");
+  f.group.innerHTML = `<option value="">請選擇</option>` + COPILOT.groups.map((g) => `<option value="${esc(g)}">${esc(g)}</option>`).join("");
   $("#purpose-choices").innerHTML = COPILOT.purposes.map((p) => `
     <label class="choice"><input type="checkbox" name="purpose" value="${esc(p)}"><span>${esc(p)}</span></label>`).join("");
   enhanceDateInputs(f);

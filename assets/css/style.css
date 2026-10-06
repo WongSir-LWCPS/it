@@ -555,3 +555,5 @@ h3 { font-size: .95rem; }
 .old-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; }
 
 .notify-checks { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; white-space: nowrap; }
+
+.lang-btn { min-width: 44px; }
