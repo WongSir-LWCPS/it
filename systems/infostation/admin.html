@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../assets/css/style.css?v=20261006n">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261007a">
   <script>
     // 程式載入失敗時顯示原因，而不是一直停在「載入中」
     (function () {
@@ -40,6 +40,13 @@
       <h1>樂天資訊站 管理及審批</h1>
       <p id="email-status" class="warn" hidden></p>
 
+      <section class="next-box" aria-labelledby="next-title">
+        <h2 id="next-title">下一個預約</h2>
+        <div id="next-main"></div>
+        <h3 class="mt-s">各器材下一個預約</h3>
+        <div id="next-devices" class="next-grid"></div>
+      </section>
+
       <div class="tabs" role="tablist">
         <button role="tab" class="tab" data-tab="pending" aria-selected="true">待審批 <span id="pending-count" class="count"></span></button>
         <button role="tab" class="tab" data-tab="all" aria-selected="false">全部申請</button>
@@ -69,6 +76,6 @@
     </div>
   </main>
 
-  <script type="module" src="admin.js?v=20261006n"></script>
+  <script type="module" src="admin.js?v=20261007a"></script>
 </body>
 </html>

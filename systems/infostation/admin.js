@@ -1,13 +1,15 @@
 import {
-  boot, db, esc, toast, fmtTimestamp, todayId,
-} from "../../assets/js/common.js?v=20261006n";
+  boot, db, esc, toast, fmtTimestamp, todayId, daysUntil, pad,
+} from "../../assets/js/common.js?v=20261007a";
 import {
   collection, doc, onSnapshot, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { emailEnabled } from "../../assets/js/email.js?v=20261006n";
-import { notifyAdmins, syncNotifyList } from "../../assets/js/notify.js?v=20261006n";
-import { ISTATUS, deviceWithPlace, findClashes, isActive, deviceName } from "./infostation-config.js?v=20261006n";
-import { buildInfoEmail, slotText } from "./infostation-email.js?v=20261006n";
+import { emailEnabled } from "../../assets/js/email.js?v=20261007a";
+import { notifyAdmins, syncNotifyList } from "../../assets/js/notify.js?v=20261007a";
+import {
+  INFO, ISTATUS, deviceWithPlace, findClashes, isActive, deviceName, slotStart, slotEnd,
+} from "./infostation-config.js?v=20261007a";
+import { buildInfoEmail, slotText } from "./infostation-email.js?v=20261007a";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, list: [], filter: "active", upcoming: true };
@@ -47,9 +49,12 @@ boot({
 
     onSnapshot(collection(db, "infostation_bookings"), (snap) => {
       S.list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderNext();
       renderPending();
       renderAll();
     }, (e) => toast("未能讀取資料：" + e.message, "error"));
+    // 每分鐘更新「下一個預約」（時段開始或完結時自動轉換）
+    setInterval(renderNext, 60000);
 
     $("#pending-list").addEventListener("click", (e) => {
       const btn = e.target.closest("[data-act]");
@@ -150,4 +155,67 @@ async function decide(id, status, note, btns) {
   const done = { approved: "已批准", rejected: "已設為不批准", cancelled: "已取消預約" }[status];
   const result = await notifyAdmins("infostation", buildInfoEmail(r, status, note, S.user.email));
   toast(`${done}（${result}）`, "success");
+}
+
+/* ---------- 下一個預約（方便IT組預先設置） ---------- */
+const nowStamp = () => {
+  const d = new Date();
+  return `${todayId()}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+/** 未完結的已批准時段，按開始時間排序 */
+function upcomingSlots() {
+  const now = nowStamp();
+  return S.list.filter((b) => b.status === "approved")
+    .flatMap((b) => (b.slots || []).filter((s) => slotEnd(s) > now).map((s) => ({ b, s })))
+    .sort((x, y) => slotStart(x.s).localeCompare(slotStart(y.s)));
+}
+
+function whenText(s) {
+  const now = nowStamp();
+  if (slotStart(s) <= now) return "進行中";
+  const n = daysUntil(s.startDate);
+  return n === 0 ? `今天 ${s.startTime} 開始` : n === 1 ? `明天 ${s.startTime} 開始` : `還有 ${n} 天`;
+}
+
+function renderNext() {
+  const list = upcomingSlots();
+  const main = $("#next-main");
+  if (!list.length) {
+    main.innerHTML = `<p class="empty">沒有已批准而未完結的預約。</p>`;
+  } else {
+    const { s } = list[0];
+    // 同一開始時間的其他預約（例如同時開始的不同器材）一併顯示
+    const same = list.filter((x) => slotStart(x.s) === slotStart(s));
+    main.innerHTML = same.map(({ b: r, s: t }) => `
+      <article class="next-card next-card--main">
+        <div class="next-when">
+          <span class="badge badge--${slotStart(t) <= nowStamp() ? "go" : "wait"}">${whenText(t)}</span>
+          <strong>${slotText(t)}</strong>
+        </div>
+        <h3 data-no-translate>${esc(r.activity)}</h3>
+        <dl class="kv">
+          <dt>器材</dt><dd>${esc(deviceWithPlace(r))}</dd>
+          <dt>顯示資料</dt><dd class="pre" data-no-translate>${esc(r.content)}</dd>
+          <dt>申請人</dt><dd>${esc(r.applicantName)}（${esc(r.applicantEmail || r.email)}）</dd>
+        </dl>
+      </article>`).join("");
+  }
+  const pending = S.list.filter((r) => r.status === "pending").length;
+  if (pending) main.insertAdjacentHTML("beforeend", `<p class="hint">另有 ${pending} 項申請審批中，批准後才會顯示在這裏。</p>`);
+
+  $("#next-devices").innerHTML = INFO.devices.map((d) => {
+    const hit = list.find((x) => (x.b.devices || []).includes(d.id));
+    return `
+      <div class="next-card">
+        <p class="next-device">${esc(d.name)}</p>
+        ${hit ? `
+          <p><span class="badge badge--${slotStart(hit.s) <= nowStamp() ? "go" : "wait"}">${whenText(hit.s)}</span></p>
+          <p class="next-time">${slotText(hit.s)}</p>
+          <p class="next-act" data-no-translate>${esc(hit.b.activity)}</p>
+          ${hit.b.locations?.[d.id] ? `<p class="hint">擺放地點：${esc(hit.b.locations[d.id])}</p>` : ""}
+          <p class="hint pre" data-no-translate>${esc(hit.b.content)}</p>`
+        : `<p class="hint">沒有預約</p>`}
+      </div>`;
+  }).join("");
 }

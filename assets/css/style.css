@@ -570,3 +570,15 @@ h3 { font-size: .95rem; }
 .system.is-hidden { opacity: .6; }
 
 .pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* 樂天資訊站：下一個預約 */
+.next-box { margin: 8px 0 28px; }
+.next-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.next-card p { margin: 0 0 6px; }
+.next-card--main { border-left: 5px solid var(--ink); margin-bottom: 10px; }
+.next-card--main h3 { font-size: 1.15rem; margin: 6px 0 10px; }
+.next-when { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.next-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); }
+.next-device { font-weight: 700; }
+.next-time { font-size: .88rem; }
+.next-act { font-weight: 600; }

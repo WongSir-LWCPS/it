@@ -173,6 +173,12 @@ const DICT = {
   "不能選擇已過去的日期。": "Past dates cannot be chosen.",
   "已設為不批准": "Rejected",
 
+  "下一個預約": "Next booking",
+  "各器材下一個預約": "Next booking by device",
+  "進行中": "In progress",
+  "沒有已批准而未完結的預約。": "No approved upcoming bookings.",
+  "沒有預約": "No bookings",
+
   // 系統顯示
   "系統顯示": "System visibility",
   "取消勾選的系統不會在平台首頁及側邊選單向老師顯示，老師亦不能直接開啟。管理員仍可看到並進入已隱藏的系統，方便正式推出前測試。": "Unticked systems are hidden from teachers on the home page and menu, and teachers cannot open them directly. Administrators can still see and open hidden systems for testing before launch.",
@@ -474,6 +480,10 @@ const PATTERNS = [
   [/^與已批准的「(.+)」（(.+)，(.+)）時間重疊。$/, (a, d, w) => `Overlaps the approved “${a}” (${d.split("、").map(x).join(", ")}, ${w}).`],
   [/^取消「(.+)」的預約？$/, (a) => `Cancel the booking “${a}”?`],
   [/^已取消預約(。|（(.+)）)$/, (_a, n) => `Booking cancelled${n ? ` (${tr(n)})` : "."}`],
+  [/^今天 (\d{2}:\d{2}) 開始$/, (t) => `Starts today at ${t}`],
+  [/^明天 (\d{2}:\d{2}) 開始$/, (t) => `Starts tomorrow at ${t}`],
+  [/^另有 (\d+) 項申請審批中，批准後才會顯示在這裏。$/, (n) => `${n} more request${n === "1" ? " is" : "s are"} pending and will appear here once approved.`],
+  [/^擺放地點：(.+)$/, (l) => `Location: ${l}`],
   [/^共 (\d+) 位管理員。$/, (n) => `${n} administrators.`],
   [/^目前學年：(.+)（(.+) 至 (.+)）(，尚未儲存)?$/, (n, a, b, u) => `Current school year: ${n} (${a} – ${b})${u ? ", not saved yet" : ""}`],
   [/^(.+) 學年已於 (.+) 完結，請更新為新學年。$/, (n, d) => `School year ${n} ended on ${d}. Please update to the new school year.`],
