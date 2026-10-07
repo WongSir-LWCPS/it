@@ -2,17 +2,27 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261007a";
-import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261007a";
-import { SYSTEMS } from "./systems.js?v=20261007a";
+import {
+  getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261007c";
+import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261007c";
+import { SYSTEMS } from "./systems.js?v=20261007c";
 
 startI18n();
-export { tr, t, isEn } from "./i18n.js?v=20261007a";
+export { tr, t, isEn } from "./i18n.js?v=20261007c";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+// 啟用本機快取：再次開啟頁面時可先顯示已下載的資料，之後再與伺服器同步
+export const db = (() => {
+  try {
+    return initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+  } catch (e) {
+    console.warn("未能啟用本機快取", e);
+    return getFirestore(app);
+  }
+})();
 export { APP };
 
 /* ---------- 文字及日期工具 ---------- */

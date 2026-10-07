@@ -1,20 +1,20 @@
 import {
   boot, db, esc, toast, APP, isBlockedEmail, fmtTimestamp, fmtDate, todayId, enhanceDateInputs, downloadCSV,
-} from "./common.js?v=20261007a";
+} from "./common.js?v=20261007c";
 import {
   collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, getDocs, writeBatch,
   serverTimestamp, arrayRemove, addDoc, query, orderBy, limit, where, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { SYSTEMS } from "./systems.js?v=20261007a";
-import { sendEmail } from "./email.js?v=20261007a";
-import { syncNotifyList, wantsNotify } from "./notify.js?v=20261007a";
+import { SYSTEMS } from "./systems.js?v=20261007c";
+import { sendEmail } from "./email.js?v=20261007c";
+import { syncNotifyList, wantsNotify } from "./notify.js?v=20261007c";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { me: "", admins: [] };
 
 boot({
   root: "./", current: "settings",
-  onReady: ({ user, isAdmin }) => {
+  onReady: ({ user, isAdmin, hiddenSystems }) => {
     if (!isAdmin) {
       $("#main").innerHTML = `
         <section class="notice">
@@ -29,13 +29,15 @@ boot({
     $("#year-section").hidden = false;
     $("#mail-section").hidden = false;
     $("#sys-section").hidden = false;
-    setupSystems();
+    setupSystems(hiddenSystems);
     setupYear();
     setupMailCheck();
 
     onSnapshot(collection(db, "admins"), (snap) => {
       S.admins = snap.docs.map((d) => ({ email: d.id, ...d.data() })).sort((a, b) => a.email.localeCompare(b.email));
       renderAdmins();
+      // 用已讀取的名單整理通知名單（只在第一次及名單有改變時）
+      if (!snap.metadata?.fromCache) syncNotifyList(S.admins).catch((e) => console.warn(e));
     }, (e) => toast("未能讀取管理員名單：" + e.message, "error"));
 
     $("#add-admin").addEventListener("submit", addAdmin);
@@ -50,14 +52,12 @@ boot({
       const name = SYSTEMS.find((x) => x.id === sys)?.name || sys;
       try {
         await updateDoc(doc(db, "admins", email), { [`notifySystems.${sys}`]: box.checked });
-        await syncNotifyList();
         toast(`${email} ${box.checked ? "會" : "不會"}收到「${name}」的通知。`, "success");
       } catch (err) {
         box.checked = !box.checked;
         toast("未能更新：" + err.message, "error");
       }
     });
-    syncNotifyList().catch((e) => console.warn(e));
   },
 });
 
@@ -106,7 +106,6 @@ async function addAdmin(e) {
       addedAt: serverTimestamp(),
     });
     f.reset();
-    await syncNotifyList();
     toast(`已加入 ${email} 為管理員。對方重新整理頁面後即可使用管理功能。`, "success");
   } catch (err) {
     warn("未能加入：" + err.message);
@@ -119,7 +118,6 @@ async function removeAdmin(email) {
   if (!confirm(`移除 ${email} 的管理員權限？`)) return;
   try {
     await deleteDoc(doc(db, "admins", email));
-    await syncNotifyList();
     toast(`已移除 ${email}。`, "success");
   } catch (err) {
     toast("未能移除：" + err.message, "error");
@@ -380,10 +378,9 @@ function watchMailLog(coll) {
 }
 
 /* ================= 系統顯示 ================= */
-async function setupSystems() {
+function setupSystems(initialHidden = []) {
   const box = $("#sys-list");
-  let hidden = [];
-  try { hidden = (await getDoc(doc(db, "settings", "systems"))).data()?.hidden || []; } catch (e) { console.warn(e); }
+  let hidden = [...initialHidden];
   box.innerHTML = `
     <ul class="sys-list">
       ${SYSTEMS.map((s) => `

@@ -1,9 +1,9 @@
 // 管理員電郵通知
 // settings/notify 存放各系統接收通知的管理員：{ emails: [...], ktv: [...], print: [...], copilot: [...] }
 // 名單由「平台設定」按每位管理員的勾選自動整理。
-import { db, mailLayout, APP } from "./common.js?v=20261007a";
-import { SYSTEMS } from "./systems.js?v=20261007a";
-import { sendEmail } from "./email.js?v=20261007a";
+import { db, mailLayout, APP } from "./common.js?v=20261007c";
+import { SYSTEMS } from "./systems.js?v=20261007c";
+import { sendEmail } from "./email.js?v=20261007c";
 import {
   collection, doc, getDoc, getDocs, setDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -22,14 +22,20 @@ export async function getNotifyEmails(sys) {
   }
 }
 
-/** （只限管理員）按管理員名單重新整理通知名單 */
-export async function syncNotifyList() {
-  const admins = (await getDocs(collection(db, "admins"))).docs.map((d) => ({ email: d.id, ...d.data() }));
-  const data = { updatedAt: serverTimestamp() };
+/**
+ * （只限管理員）按管理員名單重新整理通知名單。
+ * 可傳入已讀取的管理員名單以免重複讀取；名單沒有改變時不會寫入。
+ */
+export async function syncNotifyList(admins = null) {
+  admins ??= (await getDocs(collection(db, "admins"))).docs.map((d) => ({ email: d.id, ...d.data() }));
   const NOTIFY_SYSTEMS = SYSTEMS.filter((x) => x.notify !== false);
+  const data = {};
   for (const s of NOTIFY_SYSTEMS) data[s.id] = admins.filter((a) => wantsNotify(a, s.id)).map((a) => a.email).sort();
   data.emails = [...new Set(NOTIFY_SYSTEMS.flatMap((s) => data[s.id]))].sort();
-  await setDoc(doc(db, "settings", "notify"), data);
+  const ref = doc(db, "settings", "notify");
+  const current = (await getDoc(ref)).data() || {};
+  const same = Object.keys(data).every((k) => JSON.stringify(current[k] || []) === JSON.stringify(data[k]));
+  if (!same) await setDoc(ref, { ...data, updatedAt: serverTimestamp() });
   return data;
 }
 
