@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>增加彩色列印限額申請｜IT一站式平台</title>
+  <title>樂天資訊站預約｜IT一站式平台</title>
   <link rel="icon" href="../../assets/img/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,16 +31,16 @@
     <nav class="crumbs" aria-label="位置">
       <a href="../../index.html">IT一站式平台</a>
       <span aria-hidden="true">/</span>
-      <span>增加彩色列印限額申請</span>
+      <span>樂天資訊站預約</span>
       <a id="admin-link" class="btn btn--small crumbs-action" href="admin.html" hidden>管理及審批</a>
     </nav>
 
-    <h1>增加彩色列印限額申請</h1>
+    <h1>樂天資訊站預約</h1>
     <p class="hint" id="intro"></p>
 
     <form id="req-form" class="card-form" novalidate>
       <fieldset class="field">
-        <legend>申請人名稱</legend>
+        <legend>申請人</legend>
         <div class="name-choices">
           <label class="check"><input type="radio" name="nameMode" value="login" checked> <span id="login-name"></span></label>
           <label class="check"><input type="radio" name="nameMode" value="other"> 其他（自行輸入）</label>
@@ -51,24 +51,73 @@
         <label class="field"><span>申請人電郵</span><input type="email" name="otherEmail" maxlength="80" placeholder="例如 chantm@lwcps.edu.hk" autocomplete="off"></label>
       </div>
 
+      <fieldset class="field">
+        <legend>預約器材（可選多部）</legend>
+        <div class="choices" id="device-choices"></div>
+      </fieldset>
+      <div id="location-fields"></div>
+
       <label class="field">
-        <span>備註（選填）</span>
-        <textarea name="remarks" rows="2" maxlength="300" placeholder="例如：需要列印全年級彩色工作紙"></textarea>
+        <span>活動名稱</span>
+        <input name="activity" maxlength="80" placeholder="例如：開放日、聖誕聯歡會">
+      </label>
+
+      <fieldset class="field">
+        <legend>日期及時間</legend>
+        <div class="choices choices--tight">
+          <label class="choice"><input type="radio" name="dateMode" value="range" checked><span>單一時段</span></label>
+          <label class="choice"><input type="radio" name="dateMode" value="multi"><span>多個日期</span></label>
+        </div>
+      </fieldset>
+
+      <div id="range-fields">
+        <div class="field-row">
+          <label class="field field--date"><span>開始日期</span><input type="date" name="startDate"></label>
+          <div class="field field--time"><span>開始時間</span><input type="hidden" name="startTime"></div>
+        </div>
+        <div class="field-row">
+          <label class="field field--date"><span>完結日期</span><input type="date" name="endDate"></label>
+          <div class="field field--time"><span>完結時間</span><input type="hidden" name="endTime"></div>
+        </div>
+      </div>
+
+      <div id="multi-fields" hidden>
+        <div class="inline-form">
+          <label class="field field--compact"><span>日期</span><input type="date" name="addDate"></label>
+          <button type="button" class="btn btn--small" id="add-date">加入日期</button>
+        </div>
+        <ul class="chips mt-s" id="date-chips"></ul>
+        <p class="hint" id="date-count"></p>
+        <div class="field-row">
+          <div class="field field--time"><span>每日開始時間</span><input type="hidden" name="multiStart"></div>
+          <div class="field field--time"><span>每日完結時間</span><input type="hidden" name="multiEnd"></div>
+        </div>
+      </div>
+
+      <label class="field">
+        <span>顯示資料</span>
+        <textarea name="content" rows="3" maxlength="1000" placeholder="可填寫要顯示的文字內容，或資料擺放的位置，例如 O:\活動\開放日\海報.pptx"></textarea>
       </label>
 
       <p class="warn" id="req-warn" role="alert" hidden></p>
-      <p class="sheet-foot">申請日期為提交當日。提交後，IT組會收到通知；處理進度可在「我的申請」查看。</p>
+      <p class="sheet-foot">提交後，IT組會收到通知；審批結果可在「我的申請」查看。</p>
       <div class="actions actions--start">
         <button type="submit" class="btn btn--primary" id="req-submit">提交申請</button>
       </div>
     </form>
 
     <section class="block mt">
+      <h2>已預約時段</h2>
+      <p class="hint">以下是未來的預約，選擇時間時請避開同一器材已預約的時段。</p>
+      <div id="schedule"></div>
+    </section>
+
+    <section class="block">
       <h2>我的申請</h2>
       <div id="mine"></div>
     </section>
   </main>
 
-  <script type="module" src="print.js?v=20261006n"></script>
+  <script type="module" src="infostation.js?v=20261006n"></script>
 </body>
 </html>

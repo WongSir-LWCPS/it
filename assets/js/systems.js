@@ -45,4 +45,12 @@ export const SYSTEMS = [
   //   adminHref: "systems/repair/admin.html",
   //   icon: "🛠️",
   // },
+  {
+    id: "infostation",
+    name: "樂天資訊站預約",
+    desc: "預約大堂電視、大堂資訊站及流動樂天資訊站，顯示活動資訊；可選多個日期。",
+    href: "systems/infostation/index.html",
+    adminHref: "systems/infostation/admin.html",
+    icon: "🖥️",
+  },
 ];

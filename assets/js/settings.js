@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, APP, isBlockedEmail, fmtTimestamp, fmtDate, todayId, enhanceDateInputs, downloadCSV,
-} from "./common.js?v=20261006l";
+} from "./common.js?v=20261006n";
 import {
   collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, getDocs, writeBatch,
   serverTimestamp, arrayRemove, addDoc, query, orderBy, limit, where, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { SYSTEMS } from "./systems.js?v=20261006l";
-import { sendEmail } from "./email.js?v=20261006l";
-import { syncNotifyList, wantsNotify } from "./notify.js?v=20261006l";
+import { SYSTEMS } from "./systems.js?v=20261006n";
+import { sendEmail } from "./email.js?v=20261006n";
+import { syncNotifyList, wantsNotify } from "./notify.js?v=20261006n";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { me: "", admins: [] };
@@ -181,6 +181,11 @@ const SOURCES = [
     key: "print", label: "增加彩色列印限額申請", coll: "print_requests", field: "date",
     old: (r, start) => (r.date || "") < start,
     row: (r) => ["彩色列印限額", r.date, "", r.remarks, r.applicantName, r.email, r.status, r.reviewNote],
+  },
+  {
+    key: "infostation", label: "樂天資訊站預約", coll: "infostation_bookings", field: "lastDate",
+    old: (r, start) => (r.lastDate || "") < start,
+    row: (r) => ["樂天資訊站", r.firstDate, `至 ${r.lastDate}`, r.activity, r.applicantName, r.applicantEmail || r.email, r.status, r.content],
   },
   {
     key: "copilot", label: "Copilot借用申請", coll: "copilot_requests", field: "endDate",

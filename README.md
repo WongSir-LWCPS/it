@@ -189,3 +189,16 @@ python3 tools/set-version.py
 
 「平台設定 → 系統顯示」可逐個系統勾選是否向老師顯示（存於 `settings/systems` 的 `hidden` 陣列）。
 已隱藏的系統不會在首頁及側邊選單向老師顯示，老師直接開啟網址會看到「此系統暫未開放」。管理員仍可看到（標示「已隱藏」）及進入，方便測試。
+
+## 樂天資訊站預約（systems/infostation/）
+
+- 器材：大堂電視、大堂資訊站（校務處門口旁）、流動樂天資訊站 1、2（可同時選多部）。選了流動樂天資訊站才須填寫擺放地點。
+- 日期及時間：「單一時段」（開始日期時間至完結日期時間，可跨日）或「多個日期」（加入多個日期，每日相同的開始及完結時間）。
+- 顯示資料：可填寫文字內容，或資料擺放的位置（path）。
+- 提交時會檢查同一器材是否已有預約（審批中或已批准）的重疊時段；老師頁面亦列出所有未來的預約。
+- 管理員：「待審批」批准／不批准（顯示與已批准預約的衝突）；「全部申請」可取消已批准的預約。通知寄給在「平台設定」勾選了此系統的管理員。
+- 器材名稱、時間範圍在 `systems/infostation/infostation-config.js` 修改。
+
+| 集合 | 說明 |
+| --- | --- |
+| `infostation_bookings` | `devices`、`locations`、`activity`、`content`、`slots`（`startDate`、`startTime`、`endDate`、`endTime`）、`firstDate`、`lastDate`、`status` 等 |

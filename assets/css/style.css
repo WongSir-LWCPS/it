@@ -568,3 +568,5 @@ h3 { font-size: .95rem; }
 .sys-list li:last-child { border-bottom: 0; }
 .sys-icon { width: 24px; text-align: center; }
 .system.is-hidden { opacity: .6; }
+
+.pre { white-space: pre-wrap; overflow-wrap: anywhere; }
