@@ -2,27 +2,18 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {
-  getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc,
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261008b";
-import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261008b";
-import { SYSTEMS } from "./systems.js?v=20261008b";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261008c";
+import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261008c";
+import { SYSTEMS } from "./systems.js?v=20261008c";
 
 startI18n();
-export { tr, t, isEn } from "./i18n.js?v=20261008b";
+export { tr, t, isEn } from "./i18n.js?v=20261008c";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-// 啟用本機快取：再次開啟頁面時可先顯示已下載的資料，之後再與伺服器同步
-export const db = (() => {
-  try {
-    return initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
-  } catch (e) {
-    console.warn("未能啟用本機快取", e);
-    return getFirestore(app);
-  }
-})();
+// 註：曾啟用 Firestore 本機快取（persistentLocalCache），但在部分瀏覽器會令讀取停頓、頁面無法載入，已取消。
+export const db = getFirestore(app);
 export { APP };
 
 /* ---------- 文字及日期工具 ---------- */
@@ -364,6 +355,11 @@ function renderHeader(el, root, user, isAdmin) {
   });
 }
 
+/** 限時等候：超過時間即報錯，避免頁面一直空白 */
+export function withTimeout(promise, ms, msg) {
+  return Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error(msg)), ms))]);
+}
+
 /** 讀取在「平台設定」中隱藏的系統 */
 export async function getHiddenSystems() {
   try {
@@ -497,10 +493,10 @@ export function boot({ root = "./", current = "", onReady }) {
       showGate(gate, `${email}：${APP.blockedMessage || "此帳戶不能使用此平台。"}`);
       return;
     }
-    const [isAdmin, hiddenSystems] = await Promise.all([
+    const [isAdmin, hiddenSystems] = await withTimeout(Promise.all([
       getDoc(doc(db, "admins", email)).then((d) => d.exists()).catch((e) => { console.warn("未能檢查管理員身份", e); return false; }),
       getHiddenSystems(),
-    ]);
+    ]), 12000, "連線資料庫逾時，請檢查網絡後重新整理");
     renderHeader(header, root, user, isAdmin);
     setupDrawer(root, isAdmin, current, hiddenSystems);
     gate.hidden = true;
