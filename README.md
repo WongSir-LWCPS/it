@@ -203,3 +203,21 @@ python3 tools/set-version.py
 | 集合 | 說明 |
 | --- | --- |
 | `infostation_bookings` | `devices`、`locations`、`activity`、`content`、`slots`（`startDate`、`startTime`、`endDate`、`endTime`）、`firstDate`、`lastDate`、`status` 等 |
+
+## QEF iPad管理（systems/qef/）—— 第一階段
+
+只限平台管理員（IT組）：首頁及側邊選單不會向老師顯示（`systems.js` 中 `adminOnly: true`），Firestore 規則亦只容許管理員讀寫。
+
+- 統計：總數、借出中、可借出、維修中、遺失、已註銷，以及今年和下年需購買 MDM 的數量。
+- iPad 清單：可按 Label、機序號、學生姓名、STRN、班別搜尋，按狀態、批次、MDM 篩選，並匯出 CSV。
+- 詳細資料：借出（STRN、姓名、班別、學號、日期）、歸還（原因及機身／Pencil／保護套檢查，有問題自動轉為維修中）、更改狀態、編輯資料，以及完整歷史記錄。
+- 新增 iPad：Label 自動續編，批次預設為目前學年。
+- 匯入 Excel：讀取「QEF校產點算」工作表（預設最新年度）。
+- MDM：購買學年起計三個學年已包括 MDM，之後每年需購買（`qef-config.js` 的 `mdmIncludedYears`）。
+
+| 集合 | 說明 |
+| --- | --- |
+| `qef_devices` | 文件 ID = Label（如 i136）：`serial`、`batch`、`mdm`、`pencilLabel`、`pencilSerial`、`status`（loaned／available／repair／lost／retired）、`holder`、`lastHolder`、`check`、`note` |
+| `qef_history` | 每次借出、歸還、更改狀態、編輯、新增、匯入的記錄（不可修改或刪除） |
+
+稍後階段：新學年 STRN 升班、借用申請分配及輪候、年度點算、MDM 購買記錄、年度報告。

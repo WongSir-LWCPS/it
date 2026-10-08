@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-Hant-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QEF iPad管理｜IT一站式平台</title>
+  <link rel="icon" href="../../assets/img/favicon.png">
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261008a">
+  <script>
+    // 程式載入失敗時顯示原因，而不是一直停在「載入中」
+    (function () {
+      function show(msg) {
+        var el = document.getElementById("loading");
+        if (el) el.innerHTML = "系統未能載入：" + msg + "<br>請按 Ctrl + Shift + R（Mac：Cmd + Shift + R）重新整理。如仍未能解決，請把這段文字告訴IT組。";
+      }
+      window.addEventListener("error", function (e) { show(e.message || "程式錯誤"); });
+      window.addEventListener("unhandledrejection", function (e) { show((e.reason && e.reason.message) || "程式錯誤"); });
+      setTimeout(function () { if (document.getElementById("loading")) show("載入時間過長，請檢查網絡連線"); }, 15000);
+    })();
+  </script>
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+  <p id="loading" class="loading">載入中…</p>
+  <div id="gate" class="gate" hidden></div>
+
+  <main id="main" class="wrap" hidden>
+    <nav class="crumbs" aria-label="位置">
+      <a href="../../index.html">IT一站式平台</a>
+      <span aria-hidden="true">/</span>
+      <span>QEF iPad管理</span>
+    </nav>
+    <h1>QEF iPad管理</h1>
+    <p class="hint">只限IT組使用。資料包括學生個人資料（STRN），請勿外傳。</p>
+
+    <div id="stats" class="stat-grid"></div>
+
+    <div class="tabs" role="tablist">
+      <button role="tab" class="tab" data-tab="list" aria-selected="true">iPad 清單</button>
+      <button role="tab" class="tab" data-tab="add" aria-selected="false">新增 iPad</button>
+      <button role="tab" class="tab" data-tab="import" aria-selected="false">匯入 Excel</button>
+    </div>
+
+    <!-- iPad 清單 -->
+    <section id="tab-list" class="panel" role="tabpanel">
+      <div class="filter-bar">
+        <label class="field field--compact field--grow"><span>搜尋</span>
+          <input id="f-q" placeholder="Label、機序號、學生姓名、STRN 或班別" autocomplete="off"></label>
+        <label class="field field--compact"><span>狀態</span><select id="f-status"></select></label>
+        <label class="field field--compact"><span>批次</span><select id="f-batch"></select></label>
+        <label class="field field--compact"><span>MDM</span><select id="f-mdm"></select></label>
+        <button class="btn btn--small" type="button" id="export-csv">匯出 CSV</button>
+      </div>
+      <p class="hint" id="list-count"></p>
+      <div id="device-list"></div>
+    </section>
+
+    <!-- 新增 iPad -->
+    <section id="tab-add" class="panel" role="tabpanel" hidden>
+      <form id="add-form" class="card-form" novalidate>
+        <h2>新增一部 iPad</h2>
+        <div class="field-row">
+          <label class="field"><span>Label No.</span><input name="label" maxlength="20" required></label>
+          <label class="field"><span>機序號</span><input name="serial" maxlength="30" required></label>
+        </div>
+        <div class="field-row">
+          <label class="field"><span>購買批次（學年）</span><input name="batch" maxlength="5" placeholder="例如 26-27" required></label>
+          <label class="field"><span>MDM 系統</span><select name="mdm"></select></label>
+        </div>
+        <div class="field-row">
+          <label class="field"><span>Pencil Label No.（選填）</span><input name="pencilLabel" maxlength="20"></label>
+          <label class="field"><span>Pencil 機序號（選填）</span><input name="pencilSerial" maxlength="30"></label>
+        </div>
+        <label class="field"><span>備註（選填）</span><textarea name="note" rows="2" maxlength="300"></textarea></label>
+        <p class="warn" id="add-warn" role="alert" hidden></p>
+        <div class="actions actions--start"><button class="btn btn--primary" type="submit">新增</button></div>
+      </form>
+    </section>
+
+    <!-- 匯入 Excel -->
+    <section id="tab-import" class="panel" role="tabpanel" hidden>
+      <div class="card-form">
+        <h2>匯入現有的 QEF 校產點算表</h2>
+        <p class="hint">上載「IT物品採購及借用管理.xlsx」，選擇最新年度的「QEF校產點算」工作表。系統會讀取每部 iPad 的 Label、機序號、批次、MDM、Pencil、現時持有者及最近一次點算結果。同一 Label 的 iPad 會以檔案內容更新；檔案沒有的 iPad 不受影響。</p>
+        <div class="field-row">
+          <label class="field"><span>檔案（.xlsx）</span><input type="file" id="import-file" accept=".xlsx,.xls"></label>
+          <label class="field" id="import-sheet-wrap" hidden><span>工作表</span><select id="import-sheet"></select></label>
+        </div>
+      </div>
+      <div id="import-result" class="mt"></div>
+    </section>
+  </main>
+
+  <dialog id="dev-dialog" class="sheet sheet--wide" aria-labelledby="dev-title">
+    <div id="dev-body"></div>
+  </dialog>
+
+  <script type="module" src="qef.js?v=20261008a"></script>
+</body>
+</html>

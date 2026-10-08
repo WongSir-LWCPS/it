@@ -5,12 +5,12 @@ import {
 import {
   getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261007c";
-import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261007c";
-import { SYSTEMS } from "./systems.js?v=20261007c";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261008a";
+import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261008a";
+import { SYSTEMS } from "./systems.js?v=20261008a";
 
 startI18n();
-export { tr, t, isEn } from "./i18n.js?v=20261007c";
+export { tr, t, isEn } from "./i18n.js?v=20261008a";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -375,7 +375,28 @@ export async function getHiddenSystems() {
 }
 
 /** 按顯示設定篩選系統：老師看不到已隱藏的系統，管理員則全部可見 */
-export const visibleSystems = (hidden, isAdmin) => SYSTEMS.filter((s) => isAdmin || !hidden.includes(s.id));
+export const visibleSystems = (hidden, isAdmin) =>
+  SYSTEMS.filter((s) => isAdmin || (!hidden.includes(s.id) && !s.adminOnly));
+
+/* ---------- 讀取 Excel（SheetJS，按需要才載入） ---------- */
+const XLSX_SOURCES = [
+  "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
+  "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",
+];
+export async function loadXlsx() {
+  for (const src of XLSX_SOURCES) {
+    if (window.XLSX) break;
+    await new Promise((resolve) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = () => { s.remove(); resolve(); };
+      document.head.append(s);
+    });
+  }
+  if (!window.XLSX) throw new Error("未能載入 Excel 讀取工具。學校網絡可能封鎖了 cdnjs.cloudflare.com 及 cdn.jsdelivr.net。");
+  return window.XLSX;
+}
 
 function setupDrawer(root, isAdmin, current, hidden = []) {
   const backdrop = document.createElement("div");
@@ -485,7 +506,17 @@ export function boot({ root = "./", current = "", onReady }) {
     main.hidden = false;
     // 已隱藏的系統：老師不能進入（管理員仍可進入測試）
     const sysId = current.replace(/-admin$/, "");
-    if (!isAdmin && hiddenSystems.includes(sysId) && SYSTEMS.some((x) => x.id === sysId)) {
+    const sysDef = SYSTEMS.find((x) => x.id === sysId);
+    if (!isAdmin && sysDef?.adminOnly) {
+      main.innerHTML = `
+        <section class="notice wrap">
+          <h1>只限IT組使用</h1>
+          <p>這個系統只供IT組（平台管理員）使用。</p>
+          <a class="btn btn--primary" href="${root}index.html">返回平台首頁</a>
+        </section>`;
+      return;
+    }
+    if (!isAdmin && hiddenSystems.includes(sysId) && sysDef) {
       main.innerHTML = `
         <section class="notice wrap">
           <h1>此系統暫未開放</h1>

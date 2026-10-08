@@ -53,4 +53,13 @@ export const SYSTEMS = [
     adminHref: "systems/infostation/admin.html",
     icon: "🖥️",
   },
+  {
+    id: "qef",
+    name: "QEF iPad管理",
+    desc: "（只限IT組）管理學校 QEF iPad 的資料、借出及歸還記錄、狀態及 MDM。",
+    href: "systems/qef/index.html",
+    icon: "🗂️",
+    adminOnly: true,  // 只限平台管理員（IT組）
+    notify: false,
+  },
 ];
