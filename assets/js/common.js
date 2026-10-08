@@ -5,12 +5,12 @@ import {
 import {
   getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261008a";
-import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261008a";
-import { SYSTEMS } from "./systems.js?v=20261008a";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261008b";
+import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261008b";
+import { SYSTEMS } from "./systems.js?v=20261008b";
 
 startI18n();
-export { tr, t, isEn } from "./i18n.js?v=20261008a";
+export { tr, t, isEn } from "./i18n.js?v=20261008b";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -479,6 +479,7 @@ export function boot({ root = "./", current = "", onReady }) {
   let started = false;
 
   onAuthStateChanged(auth, async (user) => {
+   try {
     loading?.remove();
     if (!user) {
       main.hidden = true;
@@ -527,7 +528,12 @@ export function boot({ root = "./", current = "", onReady }) {
     }
     if (!started) {
       started = true;
-      onReady({ user, isAdmin, hiddenSystems });
+      await onReady({ user, isAdmin, hiddenSystems });
     }
+   } catch (e) {
+    console.error(e);
+    main.hidden = false;
+    main.insertAdjacentHTML("afterbegin", `<p class="load-error wrap">頁面發生錯誤：${esc(e.message || e)}。請截圖告訴IT組。</p>`);
+   }
   });
 }
