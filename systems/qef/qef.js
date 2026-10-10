@@ -1,12 +1,12 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId, pad, enhanceDateInputs, downloadCSV, loadXlsx,
-} from "../../assets/js/common.js?v=20261008e";
+} from "../../assets/js/common.js?v=20261008f";
 import {
-  collection, doc, onSnapshot, getDoc, getDocs, query, where, writeBatch, serverTimestamp, updateDoc,
+  collection, doc, onSnapshot, getDoc, getDocs, query, where, writeBatch, serverTimestamp, updateDoc, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   QEF, STATUS, mdmStatus, currentYearStart, yearLabel,
-} from "./qef-config.js?v=20261008e";
+} from "./qef-config.js?v=20261008f";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, devices: [], openId: null };
@@ -26,6 +26,7 @@ boot({
     S.user = user;
     setupTabs();
     setupFilters();
+    setupStock();
     setupAdd();
     setupImport();
     onSnapshot(collection(db, "qef_devices"), (snap) => {
@@ -33,6 +34,7 @@ boot({
       renderStats();
       renderFilterOptions();
       renderList();
+      renderStock();
       if (S.openId && $("#dev-dialog").open) renderDetail(S.openId, true);
     }, (e) => {
       $("#device-list").innerHTML = `<p class="load-error">未能讀取資料：${esc(e.message)}。請確認已發佈最新的 Firestore 規則。</p>`;
@@ -317,6 +319,8 @@ function historyItem(r) {
     status: `狀態改為「${esc(STATUS[r.to]?.label || r.to)}」`,
     edit: "修改了 iPad 資料",
     mdm: "更新 MDM 到期學年",
+    stocktake: "完成盤點",
+    unstock: "取消盤點",
     create: "新增 iPad",
     import: "由 Excel 匯入",
   }[r.type] || esc(r.type);
@@ -413,6 +417,160 @@ $("#dev-dialog").addEventListener("submit", async (e) => {
     toast("未能儲存：" + err.message, "error");
   }
 });
+
+/* ---------- 盤點 ---------- */
+const stKey = (yearStart) => `y${yearStart}`;
+const OK = "已檢查正常";
+const isIssue = (r) => r && [r.body, r.pencil, r.case].some((v) => v && v !== OK);
+S.stockDraft = {};   // 未盤點項目中已選擇但未儲存的檢查結果
+
+function stockYear() { return Number($("#st-year").value) || currentYearStart(); }
+
+function setupStock() {
+  const sel = $("#st-year");
+  const y = currentYearStart();
+  sel.innerHTML = [y, y - 1, y - 2, y - 3].map((v) => `<option value="${v}">${yearLabel(v)}</option>`).join("");
+  ["#st-year", "#st-filter", "#st-batch", "#st-q"].forEach((id) => $(id).addEventListener("input", renderStock));
+  $("#st-export").addEventListener("click", exportStock);
+
+  // 快速盤點：輸入或掃描後按 Enter
+  $("#st-scan").addEventListener("keydown", async (e) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const q = e.target.value.trim().toUpperCase();
+    if (!q) return;
+    const d = S.devices.find((x) => x.label.toUpperCase() === q || (x.serial || "").toUpperCase() === q);
+    if (!d) { toast(`找不到 ${q}。`, "error"); e.target.select(); return; }
+    const done = d.stocktakes?.[stKey(stockYear())];
+    if (done) { toast(`${d.label} 已於 ${fmtDate(done.date)} 盤點。`); e.target.value = ""; return; }
+    await saveStock(d, S.stockDraft[d.id] || { body: OK, pencil: OK, case: OK });
+    e.target.value = "";
+    e.target.focus();
+  });
+
+  $("#st-list").addEventListener("change", async (e) => {
+    const row = e.target.closest("[data-st]");
+    if (!row) return;
+    const d = S.devices.find((x) => x.id === row.dataset.st);
+    const vals = Object.fromEntries([...row.querySelectorAll("select[data-part]")].map((x) => [x.dataset.part, x.value]));
+    const done = d.stocktakes?.[stKey(stockYear())];
+    if (e.target.matches("[data-done]")) {
+      if (e.target.checked) await saveStock(d, vals);
+      else if (confirm(`取消 ${d.label} 的盤點記錄？`)) await undoStock(d);
+      else e.target.checked = true;
+    } else if (e.target.matches("select[data-part]")) {
+      if (done) await saveStock(d, vals, true);   // 已盤點：直接更新
+      else S.stockDraft[d.id] = vals;             // 未盤點：暫存
+    }
+  });
+}
+
+async function saveStock(d, vals, update = false) {
+  const y = stockYear();
+  const rec = { date: todayId(), body: vals.body || OK, pencil: vals.pencil || OK, case: vals.case || OK, by: S.user.email };
+  const old = d.stocktakes?.[stKey(y)];
+  if (update && old) rec.date = old.date;
+  const b = writeBatch(db);
+  const upd = { [`stocktakes.${stKey(y)}`]: rec, updatedAt: serverTimestamp(), updatedBy: S.user.email };
+  if (y === currentYearStart()) upd.check = { date: rec.date, body: rec.body, pencil: rec.pencil, case: rec.case };
+  b.update(devRef(d.id), upd);
+  b.set(doc(histColl()), { deviceId: d.id, label: d.label, type: "stocktake", date: rec.date, by: S.user.email, at: serverTimestamp(),
+    note: `${yearLabel(y)}：機身 ${rec.body}，Pencil ${rec.pencil}，保護套 ${rec.case}${update ? "（修改）" : ""}` });
+  try {
+    await b.commit();
+    delete S.stockDraft[d.id];
+    if (!update) toast(`${d.label} 已完成盤點${isIssue(rec) ? "（有問題）" : ""}。`, isIssue(rec) ? "error" : "success");
+  } catch (err) { toast("未能儲存：" + err.message, "error"); }
+}
+
+async function undoStock(d) {
+  const y = stockYear();
+  const b = writeBatch(db);
+  b.update(devRef(d.id), { [`stocktakes.${stKey(y)}`]: deleteField(), updatedAt: serverTimestamp(), updatedBy: S.user.email });
+  b.set(doc(histColl()), { deviceId: d.id, label: d.label, type: "unstock", date: todayId(), by: S.user.email, at: serverTimestamp(), note: yearLabel(y) });
+  try { await b.commit(); toast(`已取消 ${d.label} 的盤點記錄。`); } catch (err) { toast("未能取消：" + err.message, "error"); }
+}
+
+function stockDevices() { return S.devices.filter((d) => d.status !== "retired"); }
+
+function renderStock() {
+  if (!$("#st-list")) return;
+  const y = stockYear();
+  const key = stKey(y);
+  const all = stockDevices();
+  const doneList = all.filter((d) => d.stocktakes?.[key]);
+  const issues = doneList.filter((d) => isIssue(d.stocktakes[key]));
+  const pct = all.length ? Math.round((doneList.length / all.length) * 100) : 0;
+  $("#st-progress").innerHTML = `
+    <div class="progress"><span style="width:${pct}%"></span></div>
+    <p><strong>${doneList.length} / ${all.length}</strong> 已盤點（${pct}%）　未盤點 ${all.length - doneList.length} 部　有問題 ${issues.length} 部</p>`;
+
+  const bsel = $("#st-batch");
+  const cur = bsel.value;
+  const batches = [...new Set(all.map((d) => d.batch).filter(Boolean))].sort();
+  bsel.innerHTML = `<option value="">全部</option>` + batches.map((b) => `<option value="${esc(b)}">${esc(b)}</option>`).join("");
+  bsel.value = batches.includes(cur) ? cur : "";
+
+  const f = $("#st-filter").value;
+  const bt = bsel.value;
+  const q = $("#st-q").value.trim().toLowerCase();
+  const list = all.filter((d) => {
+    const r = d.stocktakes?.[key];
+    if (f === "todo" && r) return false;
+    if (f === "done" && !r) return false;
+    if (f === "issue" && !isIssue(r)) return false;
+    if (bt && d.batch !== bt) return false;
+    if (q) {
+      const h = d.holder || {};
+      if (![d.label, d.serial, h.name, h.cls, `${h.cls || ""}${h.no || ""}`].some((v) => String(v || "").toLowerCase().includes(q))) return false;
+    }
+    return true;
+  });
+  const box = $("#st-list");
+  if (!list.length) {
+    box.innerHTML = `<p class="empty">${f === "todo" && all.length ? "全部 iPad 已完成盤點。" : "沒有符合條件的 iPad。"}</p>`;
+    return;
+  }
+  const sel = (d, part, r) => {
+    const v = r?.[part] || S.stockDraft[d.id]?.[part] || OK;
+    return `<select data-part="${part}" class="${v !== OK ? "is-issue" : ""}">${QEF.checkOptions.map((o) => `<option ${o === v ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+  };
+  box.innerHTML = `
+    <div class="table-scroll">
+      <table class="table stock-table">
+        <thead><tr><th>完成</th><th>Label</th><th>機序號</th><th>狀態</th><th>持有者</th><th>iPad 機身</th><th>Apple Pencil</th><th>保護套</th><th>盤點記錄</th></tr></thead>
+        <tbody>
+          ${list.map((d) => {
+            const r = d.stocktakes?.[key];
+            return `
+            <tr data-st="${esc(d.id)}" class="${r ? (isIssue(r) ? "st-issue" : "st-done") : ""}">
+              <td><input type="checkbox" class="st-check" data-done ${r ? "checked" : ""} aria-label="${esc(d.label)} 完成盤點"></td>
+              <td><strong>${esc(d.label)}</strong>${d.pencilLabel ? `<br><small>${esc(d.pencilLabel)}</small>` : ""}</td>
+              <td class="mono">${esc(d.serial)}</td>
+              <td><span class="badge badge--${STATUS[d.status]?.tone}">${STATUS[d.status]?.label}</span></td>
+              <td>${esc(holderText(d.holder))}</td>
+              <td>${sel(d, "body", r)}</td>
+              <td>${sel(d, "pencil", r)}</td>
+              <td>${sel(d, "case", r)}</td>
+              <td class="nowrap">${r ? `${fmtDate(r.date)}${r.by ? `<br><small>${esc(r.by.split("@")[0])}</small>` : ""}` : ""}</td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function exportStock() {
+  const y = stockYear();
+  const key = stKey(y);
+  const rows = [["Label No.", "機序號", "批次", "Pencil Label No.", "狀態", "持有者", "STRN", "班別", "學號", "點算日期", "iPads機身", "Apple Pencil", "保護套", "盤點人"]];
+  for (const d of stockDevices()) {
+    const r = d.stocktakes?.[key] || {};
+    const h = d.holder || {};
+    rows.push([d.label, d.serial, d.batch, d.pencilLabel, STATUS[d.status]?.label, h.name, h.strn, h.cls, h.no, r.date, r.body, r.pencil, r.case, r.by]);
+  }
+  downloadCSV(`QEF_iPad_盤點_${yearLabel(y)}.csv`, rows);
+}
 
 /* ---------- 新增 iPad ---------- */
 function nextLabel() {
@@ -554,6 +712,19 @@ function sheetYear(name) {
   return m ? Number(m[1]) : null;
 }
 
+/** 各學年工作表的點算結果 → 每部 iPad 的盤點記錄 */
+function buildStocktakes(sheets) {
+  const out = {};
+  for (const { year, list } of sheets) {
+    for (const d of list) {
+      const c = d.check;
+      if (!c || !(c.date || c.body || c.pencil || c.case)) continue;
+      (out[d.id] ||= {})[`y${year}`] = { date: c.date || "", body: c.body || "", pencil: c.pencil || "", case: c.case || "", by: "Excel" };
+    }
+  }
+  return out;
+}
+
 /** 把各學年的借用者合併為每部 iPad 的借用者記錄（同一學生連續學年合併為一行） */
 function buildLogs(sheets) {
   const byDev = {};
@@ -609,10 +780,12 @@ function preview() {
   IMP.rows = list;
   const qefSheets = IMP.wb.SheetNames.filter((n) => /QEF校產/.test(n) && sheetYear(n) != null);
   const main = $("#import-sheet").value;
-  IMP.logs = buildLogs(qefSheets.map((n) => ({
+  const sheetData = qefSheets.map((n) => ({
     year: sheetYear(n),
     list: n === main ? list : (parseSheet(XLSX.utils.sheet_to_json(IMP.wb.Sheets[n], { header: 1, raw: true, defval: "" })) || []),
-  })));
+  }));
+  IMP.logs = buildLogs(sheetData);
+  IMP.stocks = buildStocktakes(sheetData);
   const logCount = Object.values(IMP.logs).reduce((n, a) => n + a.length, 0);
   const by = (key) => list.reduce((m, d) => { m[d[key]] = (m[d[key]] || 0) + 1; return m; }, {});
   const batches = by("batch");
@@ -625,7 +798,7 @@ function preview() {
       <button class="btn btn--primary" data-run-import>確認匯入</button>
     </div>
     <label class="check mt-s"><input type="checkbox" id="import-logs" checked>
-      同時匯入歷年借用者記錄（${qefSheets.length} 張 QEF 校產點算工作表：${qefSheets.map((n) => yearLabel(sheetYear(n))).sort().join("、")}，共 ${logCount} 項）</label>
+      同時匯入歷年借用者及點算記錄（${qefSheets.length} 張 QEF 校產點算工作表：${qefSheets.map((n) => yearLabel(sheetYear(n))).sort().join("、")}，共 ${logCount} 項）</label>
     <div class="forms-grid mt-s">
       <div class="card-form"><h3>各批次數量</h3><ul class="old-list">${Object.entries(batches).sort().map(([k, v]) => `<li>${esc(k || "（未有批次）")}：${v} 部</li>`).join("")}</ul></div>
       <div class="card-form"><h3>狀態</h3><ul class="old-list">${Object.entries(statuses).map(([k, v]) => `<li>${STATUS[k]?.label || k}：${v} 部</li>`).join("")}</ul></div>
@@ -659,6 +832,9 @@ async function runImport(btn) {
           // 保留在平台上登記（source: app）而 Excel 沒有的記錄
           const appLogs = (S.devices.find((x) => x.id === id)?.holderLog || []).filter((x) => x.source === "app");
           data.holderLog = [...(IMP.logs[id] || []), ...appLogs];
+          // 歷年點算結果；已在平台盤點的學年不會被覆蓋
+          const existing = S.devices.find((x) => x.id === id)?.stocktakes || {};
+          data.stocktakes = { ...(IMP.stocks[id] || {}), ...existing };
         }
         void log;
         b.set(devRef(id), { ...data, updatedAt: serverTimestamp(), updatedBy: S.user.email, importedFrom: sheet }, { merge: true });

@@ -27,7 +27,7 @@ export function loanDays(start, end) {
   return Math.round((b - a) / 86400000) + 1;
 }
 
-import { tr, isEn } from "../../assets/js/i18n.js?v=20261008e";
+import { tr, isEn } from "../../assets/js/i18n.js?v=20261008f";
 
 export const purposeText = (r) => (r.purposes || [])
   .map((p) => (p === "其他" && r.otherPurpose ? `${tr("其他")}${isEn ? ": " : "："}${r.otherPurpose}` : tr(p)))
