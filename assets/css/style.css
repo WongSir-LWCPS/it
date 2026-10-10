@@ -617,3 +617,11 @@ h3 { font-size: .95rem; }
 .stock-table tr.st-issue td { background: var(--stop-bg); }
 .stock-table select { padding: 4px 6px; border: 1px solid #C7CEDF; border-radius: 6px; font: inherit; font-size: .85rem; background: var(--surface); }
 .stock-table select.is-issue { border-color: var(--stop); color: var(--stop); }
+
+/* QEF MDM 管理 */
+.mdm-summary { flex: 1 1 100%; }
+.stat-grid--tight { margin: 0; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.mdm-bar { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; padding: 12px 14px; margin: 4px 0 12px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; position: sticky; top: 64px; z-index: 5; }
+.mdm-bar #m-selected { font-weight: 700; align-self: center; min-width: 70px; }
+.mdm-bar input { height: 34px; }
