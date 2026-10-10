@@ -1,12 +1,12 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId, pad, enhanceDateInputs, downloadCSV, loadXlsx,
-} from "../../assets/js/common.js?v=20261008l";
+} from "../../assets/js/common.js?v=20261008m";
 import {
   collection, doc, onSnapshot, getDoc, getDocs, query, where, writeBatch, serverTimestamp, updateDoc, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   QEF, STATUS, mdmStatus, currentYearStart, yearLabel, defaultMdmExpiry, mdmExpiry, yearEnd, addYear,
-} from "./qef-config.js?v=20261008l";
+} from "./qef-config.js?v=20261008m";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, devices: [], openId: null };
@@ -160,15 +160,12 @@ function renderList() {
   box.innerHTML = `
     <div class="table-scroll">
       <table class="table table--click">
-        <thead><tr>${th("list", "label", "Label")}${th("list", "serial", "機序號")}${th("list", "batch", "批次")}${th("list", "mdm", "MDM")}${th("list", "pencil", "Pencil")}${th("list", "status", "狀態")}${th("list", "holder", "持有者")}${th("list", "cls", "班別")}${th("list", "no", "學號")}${th("list", "strn", "STRN")}${th("list", "check", "最近檢查")}</tr></thead>
+        <thead><tr>${th("list", "label", "Label")}${th("list", "serial", "機序號")}${th("list", "batch", "批次")}${th("list", "mdm", "MDM")}${th("list", "pencil", "Pencil")}${th("list", "status", "狀態")}${th("list", "strn", "STRN")}${th("list", "cls", "班別")}${th("list", "no", "學號")}${th("list", "holder", "持有者")}</tr></thead>
         <tbody>
           ${list.map((d) => {
-            const prev = !d.holder ? lastLog(d) : null;
             const q = $("#f-q").value.trim().toLowerCase();
             const pastHit = q && !d.holder?.name?.toLowerCase().includes(q) && !d.holder?.strn?.toLowerCase().includes(q)
               ? (d.holderLog || []).find((x) => `${x.name} ${x.strn}`.toLowerCase().includes(q)) : null;
-            const c = d.check || {};
-            const problem = isIssue(c, d);
             return `
             <tr data-id="${esc(d.id)}" tabindex="0">
               <td class="nowrap"><strong>${esc(d.label)}</strong></td>
@@ -177,12 +174,10 @@ function renderList() {
               <td>${esc(d.mdm || "")}</td>
               <td>${esc(d.pencilLabel || "")}</td>
               <td><span class="badge badge--${STATUS[d.status]?.tone || "muted"}">${STATUS[d.status]?.label || esc(d.status)}</span></td>
-              <td>${d.holder ? esc(d.holder.name) : prev ? `<small class="hint">上一位：${esc(prev.name)}</small>` : ""}
-                ${pastHit ? `<br><small class="badge badge--muted">曾借用：${esc(pastHit.name)}（${esc(pastHit.years.join("、"))}）</small>` : ""}</td>
+              <td class="mono">${esc(d.holder?.strn || "")}</td>
               <td>${esc(d.holder?.cls || "")}</td>
               <td>${esc(d.holder?.no || "")}</td>
-              <td class="mono">${esc(d.holder?.strn || "")}</td>
-              <td class="nowrap">${c.date ? fmtDate(c.date) : ""}${problem ? '<br><span class="badge badge--stop">有問題</span>' : ""}</td>
+              <td>${esc(d.holder?.name || "")}${pastHit ? `${d.holder ? "<br>" : ""}<small class="badge badge--muted">曾借用：${esc(pastHit.name)}（${esc(pastHit.years.join("、"))}）</small>` : ""}</td>
             </tr>`;
           }).join("")}
         </tbody>
