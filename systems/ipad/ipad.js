@@ -1,9 +1,9 @@
-import { boot, db, isEn, toast } from "../../assets/js/common.js?v=20261008f";
+import { boot, db, isEn, toast } from "../../assets/js/common.js?v=20261008g";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { LEGACY_FIREBASE, LEGACY_DOC, IPAD_DOC } from "./ipad-config.js?v=20261008f";
+import { LEGACY_FIREBASE, LEGACY_DOC, IPAD_DOC } from "./ipad-config.js?v=20261008g";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null };

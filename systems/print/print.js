@@ -1,12 +1,12 @@
 import {
   boot, db, esc, toast, isStaffEmail, fmtDate, fmtTimestamp, todayId,
-} from "../../assets/js/common.js?v=20261008f";
+} from "../../assets/js/common.js?v=20261008g";
 import {
   collection, doc, addDoc, updateDoc, onSnapshot, query, where, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261008f";
-import { PRINT, PSTATUS } from "./print-config.js?v=20261008f";
-import { buildPrintEmail } from "./print-email.js?v=20261008f";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261008g";
+import { PRINT, PSTATUS } from "./print-config.js?v=20261008g";
+import { buildPrintEmail } from "./print-email.js?v=20261008g";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, mine: [] };

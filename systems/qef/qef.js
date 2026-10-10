@@ -1,12 +1,12 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId, pad, enhanceDateInputs, downloadCSV, loadXlsx,
-} from "../../assets/js/common.js?v=20261008f";
+} from "../../assets/js/common.js?v=20261008g";
 import {
   collection, doc, onSnapshot, getDoc, getDocs, query, where, writeBatch, serverTimestamp, updateDoc, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   QEF, STATUS, mdmStatus, currentYearStart, yearLabel,
-} from "./qef-config.js?v=20261008f";
+} from "./qef-config.js?v=20261008g";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, devices: [], openId: null };
@@ -137,7 +137,7 @@ function renderList() {
             const pastHit = q && !d.holder?.name?.toLowerCase().includes(q) && !d.holder?.strn?.toLowerCase().includes(q)
               ? (d.holderLog || []).find((x) => `${x.name} ${x.strn}`.toLowerCase().includes(q)) : null;
             const c = d.check || {};
-            const problem = [c.body, c.pencil, c.case].some((v) => v && v !== "已檢查正常");
+            const problem = isIssue(c, d);
             return `
             <tr data-id="${esc(d.id)}" tabindex="0">
               <td class="nowrap"><strong>${esc(d.label)}</strong></td>
@@ -228,11 +228,11 @@ async function renderDetail(id, keep = false) {
         </div>
         <div class="field-row">
           <label class="field"><span>iPad 機身</span>${checkSelect("body")}</label>
-          <label class="field"><span>Apple Pencil</span>${checkSelect("pencil")}</label>
+          <label class="field"><span>Apple Pencil</span>${checkSelect("pencil", hasPencil(d) ? "已檢查正常" : "無")}</label>
           <label class="field"><span>保護套</span>${checkSelect("case")}</label>
         </div>
         <label class="field"><span>備註（選填）</span><input name="note" maxlength="200"></label>
-        <p class="hint">如有任何一項不是「已檢查正常」，iPad 會轉為「維修中」。</p>
+        <p class="hint">如有任何一項不是「已檢查正常」，iPad 會轉為「維修中」（沒有配對 Apple Pencil 的 iPad，Pencil 選「無」不計）。</p>
         <button class="btn btn--primary" type="submit">歸還</button>
       </form>` : ""}
 
@@ -385,7 +385,7 @@ $("#dev-dialog").addEventListener("submit", async (e) => {
     batch.set(doc(histColl()), { ...hist, type: "loan", student, date: student.since });
   } else if (type === "return") {
     const check = { date: v("date") || todayId(), body: v("body"), pencil: v("pencil"), case: v("case") };
-    const problem = [check.body, check.pencil, check.case].some((x) => x !== "已檢查正常");
+    const problem = isIssue(check, d);
     const log = [...(d.holderLog || [])];
     const h = d.holder || {};
     const idx = log.map((x, i) => [x, i]).reverse()
@@ -421,7 +421,12 @@ $("#dev-dialog").addEventListener("submit", async (e) => {
 /* ---------- 盤點 ---------- */
 const stKey = (yearStart) => `y${yearStart}`;
 const OK = "已檢查正常";
-const isIssue = (r) => r && [r.body, r.pencil, r.case].some((v) => v && v !== OK);
+/** 沒有配對 Apple Pencil 的 iPad，Pencil 預設為「無」 */
+const hasPencil = (d) => Boolean(d.pencilLabel || d.pencilSerial);
+const defaultCheck = (d) => ({ body: OK, pencil: hasPencil(d) ? OK : "無", case: OK });
+/** 有問題：任何一項不是「已檢查正常」；沒有 Pencil 的 iPad，Pencil「無」不算問題 */
+const isIssue = (r, d = null) => r && [r.body, r.pencil, r.case].some((v, i) =>
+  v && v !== OK && !(i === 1 && v === "無" && d && !hasPencil(d)));
 S.stockDraft = {};   // 未盤點項目中已選擇但未儲存的檢查結果
 
 function stockYear() { return Number($("#st-year").value) || currentYearStart(); }
@@ -443,7 +448,7 @@ function setupStock() {
     if (!d) { toast(`找不到 ${q}。`, "error"); e.target.select(); return; }
     const done = d.stocktakes?.[stKey(stockYear())];
     if (done) { toast(`${d.label} 已於 ${fmtDate(done.date)} 盤點。`); e.target.value = ""; return; }
-    await saveStock(d, S.stockDraft[d.id] || { body: OK, pencil: OK, case: OK });
+    await saveStock(d, S.stockDraft[d.id] || defaultCheck(d));
     e.target.value = "";
     e.target.focus();
   });
@@ -467,7 +472,8 @@ function setupStock() {
 
 async function saveStock(d, vals, update = false) {
   const y = stockYear();
-  const rec = { date: todayId(), body: vals.body || OK, pencil: vals.pencil || OK, case: vals.case || OK, by: S.user.email };
+  const def = defaultCheck(d);
+  const rec = { date: todayId(), body: vals.body || def.body, pencil: vals.pencil || def.pencil, case: vals.case || def.case, by: S.user.email };
   const old = d.stocktakes?.[stKey(y)];
   if (update && old) rec.date = old.date;
   const b = writeBatch(db);
@@ -479,7 +485,7 @@ async function saveStock(d, vals, update = false) {
   try {
     await b.commit();
     delete S.stockDraft[d.id];
-    if (!update) toast(`${d.label} 已完成盤點${isIssue(rec) ? "（有問題）" : ""}。`, isIssue(rec) ? "error" : "success");
+    if (!update) toast(`${d.label} 已完成盤點${isIssue(rec, d) ? "（有問題）" : ""}。`, isIssue(rec, d) ? "error" : "success");
   } catch (err) { toast("未能儲存：" + err.message, "error"); }
 }
 
@@ -499,7 +505,7 @@ function renderStock() {
   const key = stKey(y);
   const all = stockDevices();
   const doneList = all.filter((d) => d.stocktakes?.[key]);
-  const issues = doneList.filter((d) => isIssue(d.stocktakes[key]));
+  const issues = doneList.filter((d) => isIssue(d.stocktakes[key], d));
   const pct = all.length ? Math.round((doneList.length / all.length) * 100) : 0;
   $("#st-progress").innerHTML = `
     <div class="progress"><span style="width:${pct}%"></span></div>
@@ -518,7 +524,7 @@ function renderStock() {
     const r = d.stocktakes?.[key];
     if (f === "todo" && r) return false;
     if (f === "done" && !r) return false;
-    if (f === "issue" && !isIssue(r)) return false;
+    if (f === "issue" && !isIssue(r, d)) return false;
     if (bt && d.batch !== bt) return false;
     if (q) {
       const h = d.holder || {};
@@ -532,8 +538,9 @@ function renderStock() {
     return;
   }
   const sel = (d, part, r) => {
-    const v = r?.[part] || S.stockDraft[d.id]?.[part] || OK;
-    return `<select data-part="${part}" class="${v !== OK ? "is-issue" : ""}">${QEF.checkOptions.map((o) => `<option ${o === v ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+    const v = r?.[part] || S.stockDraft[d.id]?.[part] || defaultCheck(d)[part];
+    const issue = v !== OK && !(part === "pencil" && v === "無" && !hasPencil(d));
+    return `<select data-part="${part}" class="${issue ? "is-issue" : ""}">${QEF.checkOptions.map((o) => `<option ${o === v ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
   };
   box.innerHTML = `
     <div class="table-scroll">
@@ -543,7 +550,7 @@ function renderStock() {
           ${list.map((d) => {
             const r = d.stocktakes?.[key];
             return `
-            <tr data-st="${esc(d.id)}" class="${r ? (isIssue(r) ? "st-issue" : "st-done") : ""}">
+            <tr data-st="${esc(d.id)}" class="${r ? (isIssue(r, d) ? "st-issue" : "st-done") : ""}">
               <td><input type="checkbox" class="st-check" data-done ${r ? "checked" : ""} aria-label="${esc(d.label)} 完成盤點"></td>
               <td><strong>${esc(d.label)}</strong>${d.pencilLabel ? `<br><small>${esc(d.pencilLabel)}</small>` : ""}</td>
               <td class="mono">${esc(d.serial)}</td>
