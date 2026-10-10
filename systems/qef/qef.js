@@ -1,12 +1,12 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId, pad, enhanceDateInputs, downloadCSV, loadXlsx,
-} from "../../assets/js/common.js?v=20261008c";
+} from "../../assets/js/common.js?v=20261008e";
 import {
-  collection, doc, onSnapshot, getDoc, getDocs, query, where, writeBatch, serverTimestamp,
+  collection, doc, onSnapshot, getDoc, getDocs, query, where, writeBatch, serverTimestamp, updateDoc,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   QEF, STATUS, mdmStatus, currentYearStart, yearLabel,
-} from "./qef-config.js?v=20261008c";
+} from "./qef-config.js?v=20261008e";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, devices: [], openId: null };
@@ -14,6 +14,9 @@ const devRef = (id) => doc(db, "qef_devices", id);
 const histColl = () => collection(db, "qef_history");
 const idOf = (label, serial) => String(label || serial || "").trim().replace(/[\/\s]+/g, "_");
 const natural = (a, b) => String(a.label).localeCompare(String(b.label), "en", { numeric: true });
+/** 最近一位借用者（借用者記錄的最後一項） */
+const lastLog = (d) => (d.holderLog || []).slice(-1)[0] || d.lastHolder || null;
+const thisYear = () => yearLabel(currentYearStart());
 const holderText = (h) => (h ? `${h.name}${h.cls ? `（${h.cls}${h.no ? ` ${h.no}` : ""}）` : ""}` : "");
 
 boot({
@@ -49,8 +52,8 @@ function renderStats() {
   const count = (st) => S.devices.filter((d) => d.status === st).length;
   const inUse = S.devices.filter((d) => !["retired", "lost"].includes(d.status));
   const y = currentYearStart();
-  const mdmNow = inUse.filter((d) => mdmStatus(d.batch, y).paid).length;
-  const mdmNext = inUse.filter((d) => mdmStatus(d.batch, y + 1).paid).length;
+  const mdmNow = inUse.filter((d) => mdmStatus(d, y).state === "expired").length;
+  const mdmNext = inUse.filter((d) => mdmStatus(d, y + 1).state === "expired").length;
   const cards = [
     ["總數（不包括已註銷）", S.devices.length - count("retired")],
     ["借出中", count("loaned")],
@@ -58,7 +61,7 @@ function renderStats() {
     ["維修中", count("repair")],
     ["遺失", count("lost")],
     ["已註銷", count("retired")],
-    [`${yearLabel(y)} 需購買 MDM`, mdmNow],
+    [`${yearLabel(y)} MDM 未續期`, mdmNow],
     [`${yearLabel(y + 1)} 需購買 MDM`, mdmNext],
   ];
   $("#stats").innerHTML = cards.map(([k, v]) => `<div class="stat"><span class="stat-num">${v}</span><span class="stat-label">${esc(k)}</span></div>`).join("");
@@ -68,13 +71,22 @@ function renderStats() {
 function setupFilters() {
   ["#f-q", "#f-status", "#f-batch", "#f-mdm"].forEach((id) => $(id).addEventListener("input", renderList));
   $("#f-status").innerHTML = `<option value="">全部</option>` + Object.entries(STATUS).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join("");
-  $("#f-mdm").innerHTML = `<option value="">全部</option><option value="paid">需每年購買</option><option value="included">已包括</option>`
+  $("#f-mdm").innerHTML = `<option value="">全部</option><option value="expired">MDM 已到期</option><option value="thisYear">今學年完結時到期</option><option value="ok">MDM 有效</option>`
     + QEF.mdmSystems.map((m) => `<option value="sys:${esc(m)}">${esc(m)}</option>`).join("");
   $("#device-list").addEventListener("click", (e) => {
     const row = e.target.closest("[data-id]");
     if (row) renderDetail(row.dataset.id);
   });
   $("#export-csv").addEventListener("click", exportCSV);
+  $("#bulk-mdm").addEventListener("click", async () => {
+    const list = filtered().filter((d) => !["retired", "lost"].includes(d.status));
+    if (!list.length) { toast("沒有可更新的 iPad。", "error"); return; }
+    const ans = prompt(`把目前篩選結果中 ${list.length} 部 iPad（不包括已註銷及遺失）的 MDM 到期學年設為：`, thisYear());
+    if (ans === null) return;
+    const m = ans.trim().match(/^(\d{2})-\d{2}$/);
+    if (!m) { toast("格式應為「26-27」。", "error"); return; }
+    await setMdmUntil(list, 2000 + Number(m[1]));
+  });
 }
 
 function renderFilterOptions() {
@@ -93,12 +105,12 @@ function filtered() {
   return S.devices.filter((d) => {
     if (st && d.status !== st) return false;
     if (bt && d.batch !== bt) return false;
-    if (md === "paid" && !mdmStatus(d.batch).paid) return false;
-    if (md === "included" && mdmStatus(d.batch).paid) return false;
+    if (["expired", "thisYear", "ok"].includes(md) && mdmStatus(d).state !== md) return false;
     if (md.startsWith("sys:") && d.mdm !== md.slice(4)) return false;
     if (!q) return true;
     const h = d.holder || {};
-    return [d.label, d.serial, d.pencilLabel, d.pencilSerial, h.name, h.strn, h.cls, `${h.cls || ""}${h.no || ""}`]
+    const past = (d.holderLog || []).flatMap((x) => [x.name, x.strn]);
+    return [d.label, d.serial, d.pencilLabel, d.pencilSerial, h.name, h.strn, h.cls, `${h.cls || ""}${h.no || ""}`, ...past]
       .some((v) => String(v || "").toLowerCase().includes(q));
   });
 }
@@ -114,10 +126,14 @@ function renderList() {
   box.innerHTML = `
     <div class="table-scroll">
       <table class="table table--click">
-        <thead><tr><th>Label</th><th>機序號</th><th>批次</th><th>MDM</th><th>Pencil</th><th>狀態</th><th>持有者</th><th>STRN</th><th>最近檢查</th></tr></thead>
+        <thead><tr><th>Label</th><th>機序號</th><th>批次</th><th>MDM</th><th>MDM 到期</th><th>Pencil</th><th>狀態</th><th>持有者</th><th>STRN</th><th>最近檢查</th></tr></thead>
         <tbody>
           ${list.map((d) => {
-            const m = mdmStatus(d.batch);
+            const m = mdmStatus(d);
+            const prev = !d.holder ? lastLog(d) : null;
+            const q = $("#f-q").value.trim().toLowerCase();
+            const pastHit = q && !d.holder?.name?.toLowerCase().includes(q) && !d.holder?.strn?.toLowerCase().includes(q)
+              ? (d.holderLog || []).find((x) => `${x.name} ${x.strn}`.toLowerCase().includes(q)) : null;
             const c = d.check || {};
             const problem = [c.body, c.pencil, c.case].some((v) => v && v !== "已檢查正常");
             return `
@@ -125,10 +141,13 @@ function renderList() {
               <td class="nowrap"><strong>${esc(d.label)}</strong></td>
               <td class="mono">${esc(d.serial)}</td>
               <td>${esc(d.batch || "")}</td>
-              <td>${esc(d.mdm || "")}<br><small class="${m.paid ? "hint--error" : ""}">${esc(m.paid ? "需每年購買" : m.text)}</small></td>
+              <td>${esc(d.mdm || "")}</td>
+              <td class="nowrap"><span class="badge badge--${{ expired: "stop", thisYear: "wait", ok: "go" }[m.state] || "muted"}">${esc(m.label)}</span>
+                ${m.state === "expired" ? '<br><small class="hint--error">需續期</small>' : m.state === "thisYear" ? '<br><small>今年到期</small>' : ""}</td>
               <td>${esc(d.pencilLabel || "")}</td>
               <td><span class="badge badge--${STATUS[d.status]?.tone || "muted"}">${STATUS[d.status]?.label || esc(d.status)}</span></td>
-              <td>${esc(holderText(d.holder))}</td>
+              <td>${d.holder ? esc(holderText(d.holder)) : prev ? `<small class="hint">上一位：${esc(prev.name)}</small>` : ""}
+                ${pastHit ? `<br><small class="badge badge--muted">曾借用：${esc(pastHit.name)}（${esc(pastHit.years.join("、"))}）</small>` : ""}</td>
               <td class="mono">${esc(d.holder?.strn || "")}</td>
               <td class="nowrap">${c.date ? fmtDate(c.date) : ""}${problem ? '<br><span class="badge badge--stop">有問題</span>' : ""}</td>
             </tr>`;
@@ -139,12 +158,12 @@ function renderList() {
 }
 
 function exportCSV() {
-  const rows = [["Label No.", "機序號", "批次", "MDM 系統", "MDM 狀態", "Pencil Label No.", "Pencil 機序號", "狀態",
+  const rows = [["Label No.", "機序號", "批次", "MDM 系統", "MDM 到期學年", "Pencil Label No.", "Pencil 機序號", "狀態",
     "持有者", "STRN", "班別", "學號", "點算日期", "iPads機身", "Apple Pencil", "保護套", "備註"]];
   for (const d of filtered()) {
     const h = d.holder || {};
     const c = d.check || {};
-    rows.push([d.label, d.serial, d.batch, d.mdm, mdmStatus(d.batch).text, d.pencilLabel, d.pencilSerial,
+    rows.push([d.label, d.serial, d.batch, d.mdm, mdmStatus(d).label, d.pencilLabel, d.pencilSerial,
       STATUS[d.status]?.label || d.status, h.name, h.strn, h.cls, h.no, c.date, c.body, c.pencil, c.case, d.note]);
   }
   downloadCSV(`QEF_iPad_${todayId()}.csv`, rows);
@@ -159,7 +178,7 @@ async function renderDetail(id, keep = false) {
   if (!d) return;
   S.openId = id;
   const dialog = $("#dev-dialog");
-  const m = mdmStatus(d.batch);
+  const m = mdmStatus(d);
   const c = d.check || {};
   const h = d.holder;
   $("#dev-body").innerHTML = `
@@ -170,13 +189,17 @@ async function renderDetail(id, keep = false) {
     <dl class="kv kv--wide">
       <dt>機序號</dt><dd class="mono">${esc(d.serial)}</dd>
       <dt>批次</dt><dd>${esc(d.batch || "—")}</dd>
-      <dt>MDM</dt><dd>${esc(d.mdm || "—")}，${esc(m.text)}</dd>
+      <dt>MDM</dt><dd>${esc(d.mdm || "—")}</dd>
+      <dt>MDM 到期</dt><dd><span class="badge badge--${{ expired: "stop", thisYear: "wait", ok: "go" }[m.state] || "muted"}">${esc(m.label)}</span> ${esc(m.text)}
+        ${m.until != null ? `<button class="btn btn--small" type="button" data-act="mdm-renew">續期一年（至 ${esc(yearLabel(Math.max(m.until, currentYearStart() - 1) + 1))}）</button>` : ""}</dd>
       <dt>Apple Pencil</dt><dd>${esc(d.pencilLabel || "—")} <span class="mono">${esc(d.pencilSerial || "")}</span></dd>
       <dt>持有者</dt><dd>${h ? `${esc(holderText(h))} <span class="mono">${esc(h.strn || "")}</span>${h.since ? `，${fmtDate(h.since)} 起` : ""}` : "—"}</dd>
-      ${d.lastHolder && !h ? `<dt>上一位持有者</dt><dd>${esc(holderText(d.lastHolder))} <span class="mono">${esc(d.lastHolder.strn || "")}</span></dd>` : ""}
       <dt>最近檢查</dt><dd>${c.date ? `${fmtDate(c.date)}：機身 ${esc(c.body || "—")}，Pencil ${esc(c.pencil || "—")}，保護套 ${esc(c.case || "—")}` : "—"}</dd>
       ${d.note ? `<dt>備註</dt><dd class="pre">${esc(d.note)}</dd>` : ""}
     </dl>
+
+    <h3 class="mt-s">借用者記錄</h3>
+    ${borrowerTable(d)}
 
     ${d.status === "available" ? `
       <form class="card-form dev-form" data-form="loan">
@@ -229,6 +252,7 @@ async function renderDetail(id, keep = false) {
           <label class="field"><span>機序號</span><input name="serial" value="${esc(d.serial || "")}" maxlength="30"></label>
           <label class="field"><span>批次</span><input name="batch" value="${esc(d.batch || "")}" maxlength="5"></label>
           <label class="field"><span>MDM 系統</span><select name="mdm">${QEF.mdmSystems.map((x) => `<option ${x === d.mdm ? "selected" : ""}>${esc(x)}</option>`).join("")}</select></label>
+          <label class="field"><span>MDM 到期學年</span><input name="mdmUntil" value="${esc(m.until != null ? yearLabel(m.until) : "")}" maxlength="5" placeholder="例如 26-27"></label>
         </div>
         <div class="field-row">
           <label class="field"><span>Pencil Label No.</span><input name="pencilLabel" value="${esc(d.pencilLabel || "")}" maxlength="20"></label>
@@ -239,13 +263,37 @@ async function renderDetail(id, keep = false) {
       </form>
     </details>
 
-    <h3 class="mt-s">歷史記錄</h3>
-    <div id="dev-history"><p class="hint">正在讀取…</p></div>`;
+    <details class="mt-s">
+      <summary><strong>操作記錄</strong>（借出、歸還、修改等）</summary>
+      <div id="dev-history" class="mt-s"><p class="hint">正在讀取…</p></div>
+    </details>`;
 
   enhanceDateInputs($("#dev-body"));
   if (!keep || !dialog.open) dialog.showModal();
   loadHistory(id);
 }
+
+/** 借用者記錄：每位學生一行，連續學年合併 */
+function borrowerTable(d) {
+  const log = [...(d.holderLog || [])].reverse();
+  if (!log.length) return `<p class="hint">沒有借用者記錄。匯入 Excel 時選擇「同時匯入歷年借用者」，即可加入以往的記錄。</p>`;
+  return `
+    <div class="table-scroll">
+      <table class="table">
+        <thead><tr><th>借用學年</th><th>學生</th><th>STRN</th><th>班別（學號）</th><th>結果</th></tr></thead>
+        <tbody>${log.map((x) => `
+          <tr class="${x.outcome === "借用中" ? "" : "is-past"}">
+            <td class="nowrap">${esc(yearsText(x.years))}${x.from ? `<br><small>${fmtDate(x.from)} 起</small>` : ""}${x.to ? `<br><small>${fmtDate(x.to)} 歸還</small>` : ""}</td>
+            <td>${esc(x.name)}</td>
+            <td class="mono">${esc(x.strn || "")}</td>
+            <td>${esc(x.cls || "")}${x.no ? `（${esc(x.no)}）` : ""}</td>
+            <td>${x.outcome === "借用中" ? '<span class="badge badge--go">借用中</span>' : esc(x.outcome || "")}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+}
+const yearsText = (ys = []) => (ys.length > 1 ? `${ys[0]} 至 ${ys[ys.length - 1]}` : ys[0] || "");
 
 async function loadHistory(id) {
   try {
@@ -268,6 +316,7 @@ function historyItem(r) {
     return: `${who} ${esc(r.reason || "歸還")}${c ? `（機身 ${esc(c.body)}，Pencil ${esc(c.pencil)}，保護套 ${esc(c.case)}）` : ""}`,
     status: `狀態改為「${esc(STATUS[r.to]?.label || r.to)}」`,
     edit: "修改了 iPad 資料",
+    mdm: "更新 MDM 到期學年",
     create: "新增 iPad",
     import: "由 Excel 匯入",
   }[r.type] || esc(r.type);
@@ -276,9 +325,34 @@ function historyItem(r) {
 }
 
 // 對話框內的表格
-$("#dev-dialog").addEventListener("click", (e) => {
-  if (e.target.closest("[data-close]")) $("#dev-dialog").close();
+$("#dev-dialog").addEventListener("click", async (e) => {
+  if (e.target.closest("[data-close]")) { $("#dev-dialog").close(); return; }
+  if (e.target.closest('[data-act="mdm-renew"]')) {
+    const d = S.devices.find((x) => x.id === S.openId);
+    const m = mdmStatus(d);
+    const next = Math.max(m.until, currentYearStart() - 1) + 1;
+    await setMdmUntil([d], next);
+  }
 });
+
+/** 更新 MDM 到期學年（可多部） */
+async function setMdmUntil(devices, until) {
+  try {
+    for (let i = 0; i < devices.length; i += 200) {
+      const b = writeBatch(db);
+      for (const d of devices.slice(i, i + 200)) {
+        const old = mdmStatus(d).label;
+        b.update(devRef(d.id), { mdmUntil: until, updatedAt: serverTimestamp(), updatedBy: S.user.email });
+        b.set(doc(histColl()), { deviceId: d.id, label: d.label, type: "mdm", date: todayId(), by: S.user.email, at: serverTimestamp(),
+          note: `MDM 到期學年：${old} → ${yearLabel(until)}` });
+      }
+      await b.commit();
+    }
+    toast(`已把 ${devices.length} 部 iPad 的 MDM 到期學年更新為 ${yearLabel(until)}。`, "success");
+  } catch (err) {
+    toast("未能更新：" + err.message, "error");
+  }
+}
 $("#dev-dialog").addEventListener("input", (e) => {
   // 輸入 STRN 時，提示該學生過去的借用記錄
   if (e.target.name !== "strn") return;
@@ -301,12 +375,22 @@ $("#dev-dialog").addEventListener("submit", async (e) => {
   if (type === "loan") {
     const student = { strn: v("strn").toUpperCase(), name: v("name"), cls: v("cls").toUpperCase(), no: v("no"), since: v("date") || todayId() };
     if (!student.strn || !student.name) { toast("請填寫 STRN 及學生姓名。", "error"); return; }
-    batch.update(devRef(d.id), { ...base, status: "loaned", holder: student });
+    const holderLog = [...(d.holderLog || []), { years: [thisYear()], name: student.name, strn: student.strn,
+      cls: student.cls, no: student.no, outcome: "借用中", from: student.since, source: "app" }];
+    batch.update(devRef(d.id), { ...base, status: "loaned", holder: student, holderLog });
     batch.set(doc(histColl()), { ...hist, type: "loan", student, date: student.since });
   } else if (type === "return") {
     const check = { date: v("date") || todayId(), body: v("body"), pencil: v("pencil"), case: v("case") };
     const problem = [check.body, check.pencil, check.case].some((x) => x !== "已檢查正常");
-    batch.update(devRef(d.id), { ...base, status: problem ? "repair" : "available", holder: null, lastHolder: d.holder || null, check });
+    const log = [...(d.holderLog || [])];
+    const h = d.holder || {};
+    const idx = log.map((x, i) => [x, i]).reverse()
+      .find(([x]) => x.outcome === "借用中" && ((h.strn && x.strn === h.strn) || x.name === h.name))?.[1];
+    const entry = idx != null ? { ...log[idx] } : { years: [thisYear()], name: h.name || "", strn: h.strn || "", cls: h.cls || "", no: h.no || "", source: "app" };
+    if (!entry.years.includes(thisYear())) entry.years = [...entry.years, thisYear()];
+    Object.assign(entry, { outcome: v("reason"), to: check.date });
+    if (idx != null) log[idx] = entry; else log.push(entry);
+    batch.update(devRef(d.id), { ...base, status: problem ? "repair" : "available", holder: null, lastHolder: d.holder || null, check, holderLog: log });
     batch.set(doc(histColl()), { ...hist, type: "return", student: d.holder || null, date: check.date, reason: v("reason"), check, note: v("note") });
   } else if (type === "status") {
     batch.update(devRef(d.id), { ...base, status: v("status") });
@@ -314,6 +398,10 @@ $("#dev-dialog").addEventListener("submit", async (e) => {
   } else if (type === "edit") {
     const data = { serial: v("serial"), batch: v("batch"), mdm: v("mdm"), pencilLabel: v("pencilLabel"), pencilSerial: v("pencilSerial"), note: v("note") };
     const changes = Object.entries(data).filter(([k, val]) => (d[k] || "") !== val).map(([k, val]) => `${k}: ${d[k] || "—"} → ${val || "—"}`);
+    const mu = v("mdmUntil").match(/^(\d{2})-\d{2}$/);
+    if (v("mdmUntil") && !mu) { toast("MDM 到期學年格式應為「26-27」。", "error"); return; }
+    const newUntil = mu ? 2000 + Number(mu[1]) : null;
+    if (newUntil !== mdmStatus(d).until) { data.mdmUntil = newUntil; changes.push(`MDM 到期學年: ${mdmStatus(d).label} → ${v("mdmUntil") || "按批次計算"}`); }
     if (!changes.length) { toast("資料沒有改變。"); return; }
     batch.update(devRef(d.id), { ...base, ...data });
     batch.set(doc(histColl()), { ...hist, type: "edit", note: changes.join("；") });
@@ -428,6 +516,20 @@ function parseSheet(rows) {
       notes.push(`狀況：${state}`);
       if (status === "available" && /壞|爆|維修/.test(state)) status = "repair";
     }
+    // 當年的借用者（用於「借用者記錄」）
+    const log = [];
+    if (applicant.name) {
+      let outcome = "";
+      if (/畢業|退學|轉校|放棄/.test(state)) outcome = state;
+      else if (holderRaw && (RETURNED.test(holderRaw) || /注銷|註銷/.test(holderRaw))) outcome = holderRaw;
+      else if (holderRaw === applicant.name) outcome = "借用中";
+      else if (holderRaw) outcome = "轉借";
+      // 仍由申請者持有時，用當年的班別及學號（「現時持有者」旁的欄）
+      const sameHolder = holderRaw === applicant.name;
+      log.push({ ...applicant, cls: (sameHolder && s(r, col.cls2).toUpperCase()) || applicant.cls,
+        no: (sameHolder && s(r, col.no2)) || applicant.no, outcome });
+    }
+    if (status === "loaned" && holder.name !== applicant.name) log.push({ name: holder.name, strn: "", cls: holder.cls, no: holder.no, outcome: "借用中" });
     const extra = s(r, noteCol);
     if (extra) notes.push(extra);
     const date = col.date >= 0 ? toDateId(r[col.date]) : "";
@@ -436,10 +538,43 @@ function parseSheet(rows) {
     out.push({
       id: idOf(label, serial), label, serial: serial.toUpperCase(), batch: bm ? bm[1] : "", mdm: s(r, col.mdm),
       pencilLabel: s(r, col.pLabel), pencilSerial: s(r, col.pSerial).toUpperCase(),
-      status, holder, lastHolder, check, note: notes.join("\n"),
+      status, holder, lastHolder, check, note: notes.join("\n"), log,
     });
   }
   return out;
+}
+
+/** 由工作表名稱推算學年開始年份，例如「2025-2026年度…」→ 2025；「2024-9月_…-2023-9-27」→ 2023 */
+function sheetYear(name) {
+  let m = name.match(/(\d{4})-(\d{4})年度/);
+  if (m) return Number(m[1]);
+  m = name.match(/(\d{4})-(\d{1,2})-(\d{1,2})\s*$/);
+  if (m) return Number(m[2]) >= 9 ? Number(m[1]) : Number(m[1]) - 1;
+  m = name.match(/(\d{4})/);
+  return m ? Number(m[1]) : null;
+}
+
+/** 把各學年的借用者合併為每部 iPad 的借用者記錄（同一學生連續學年合併為一行） */
+function buildLogs(sheets) {
+  const byDev = {};
+  for (const { year, list } of [...sheets].sort((a, b) => a.year - b.year)) {
+    for (const d of list) {
+      for (const e of d.log) {
+        const arr = (byDev[d.id] ||= []);
+        const key = (x) => (x.strn || x.name).toUpperCase();
+        const last = arr[arr.length - 1];
+        if (last && key(last) === key(e)) {
+          if (!last.years.includes(yearLabel(year))) last.years.push(yearLabel(year));
+          Object.assign(last, { cls: e.cls || last.cls, no: e.no || last.no, outcome: e.outcome || last.outcome, strn: last.strn || e.strn });
+        } else {
+          arr.push({ years: [yearLabel(year)], name: e.name, strn: e.strn, cls: e.cls, no: e.no, outcome: e.outcome, source: "excel" });
+        }
+      }
+    }
+  }
+  // 較早的記錄若仍寫「借用中」，代表之後已轉給其他學生
+  for (const arr of Object.values(byDev)) arr.forEach((x, i) => { if (i < arr.length - 1 && x.outcome === "借用中") x.outcome = "—"; });
+  return byDev;
 }
 
 function setupImport() {
@@ -472,6 +607,13 @@ function preview() {
   const box = $("#import-result");
   if (!list?.length) { IMP.rows = null; box.innerHTML = `<p class="load-error">這個工作表找不到「Label No.」標題或 iPad 資料。</p>`; return; }
   IMP.rows = list;
+  const qefSheets = IMP.wb.SheetNames.filter((n) => /QEF校產/.test(n) && sheetYear(n) != null);
+  const main = $("#import-sheet").value;
+  IMP.logs = buildLogs(qefSheets.map((n) => ({
+    year: sheetYear(n),
+    list: n === main ? list : (parseSheet(XLSX.utils.sheet_to_json(IMP.wb.Sheets[n], { header: 1, raw: true, defval: "" })) || []),
+  })));
+  const logCount = Object.values(IMP.logs).reduce((n, a) => n + a.length, 0);
   const by = (key) => list.reduce((m, d) => { m[d[key]] = (m[d[key]] || 0) + 1; return m; }, {});
   const batches = by("batch");
   const statuses = by("status");
@@ -482,6 +624,8 @@ function preview() {
       <p>共 ${list.length} 部 iPad：新增 ${list.length - exist} 部，更新 ${exist} 部。</p>
       <button class="btn btn--primary" data-run-import>確認匯入</button>
     </div>
+    <label class="check mt-s"><input type="checkbox" id="import-logs" checked>
+      同時匯入歷年借用者記錄（${qefSheets.length} 張 QEF 校產點算工作表：${qefSheets.map((n) => yearLabel(sheetYear(n))).sort().join("、")}，共 ${logCount} 項）</label>
     <div class="forms-grid mt-s">
       <div class="card-form"><h3>各批次數量</h3><ul class="old-list">${Object.entries(batches).sort().map(([k, v]) => `<li>${esc(k || "（未有批次）")}：${v} 部</li>`).join("")}</ul></div>
       <div class="card-form"><h3>狀態</h3><ul class="old-list">${Object.entries(statuses).map(([k, v]) => `<li>${STATUS[k]?.label || k}：${v} 部</li>`).join("")}</ul></div>
@@ -510,8 +654,14 @@ async function runImport(btn) {
     for (let i = 0; i < IMP.rows.length; i += 200) {
       const b = writeBatch(db);
       for (const d of IMP.rows.slice(i, i + 200)) {
-        const { id, ...data } = d;
-        b.set(devRef(id), { ...data, updatedAt: serverTimestamp(), updatedBy: S.user.email, importedFrom: sheet });
+        const { id, log, ...data } = d;
+        if ($("#import-logs")?.checked) {
+          // 保留在平台上登記（source: app）而 Excel 沒有的記錄
+          const appLogs = (S.devices.find((x) => x.id === id)?.holderLog || []).filter((x) => x.source === "app");
+          data.holderLog = [...(IMP.logs[id] || []), ...appLogs];
+        }
+        void log;
+        b.set(devRef(id), { ...data, updatedAt: serverTimestamp(), updatedBy: S.user.email, importedFrom: sheet }, { merge: true });
         b.set(doc(histColl()), {
           deviceId: id, label: d.label, type: "import", by: S.user.email, at: serverTimestamp(), date: todayId(),
           student: d.holder || null, note: `${sheet}${d.note ? `：${d.note.replace(/\n/g, "；")}` : ""}`,

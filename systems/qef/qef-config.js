@@ -30,11 +30,22 @@ export function currentYearStart(today = new Date()) {
   return today.getMonth() >= 8 ? today.getFullYear() : today.getFullYear() - 1;
 }
 
-/** MDM 狀態：已包括至哪一年，或需每年購買 */
-export function mdmStatus(batch, yearStart = currentYearStart()) {
+/** 預設 MDM 到期學年（開始年份）：購買學年起計三個學年，例如 21-22 → 2023（即 23-24） */
+export const defaultMdmUntil = (batch) => {
   const y = batchStartYear(batch);
-  if (y == null) return { paid: false, text: "—" };
-  const lastIncluded = y + QEF.mdmIncludedYears - 1;
-  if (yearStart <= lastIncluded) return { paid: false, text: `已包括（至 ${yearLabel(lastIncluded)}）` };
-  return { paid: true, text: `需每年購買（自 ${yearLabel(lastIncluded + 1)} 起）` };
+  return y == null ? null : y + QEF.mdmIncludedYears - 1;
+};
+
+/**
+ * MDM 狀態
+ * until：MDM 有效至哪個學年（開始年份）；可在 iPad 資料中更新（例如每年續期）
+ * state：expired（今年已不包括，需購買）／thisYear（今學年完結時到期）／ok
+ */
+export function mdmStatus(d, yearStart = currentYearStart()) {
+  const until = d.mdmUntil ?? defaultMdmUntil(d.batch);
+  if (until == null) return { until: null, label: "—", state: "unknown", text: "—" };
+  const label = yearLabel(until);
+  const state = until < yearStart ? "expired" : until === yearStart ? "thisYear" : "ok";
+  const text = { expired: `已到期（${label}）`, thisYear: `${label} 學年完結時到期`, ok: `有效至 ${label}` }[state];
+  return { until, label, state, text };
 }

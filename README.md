@@ -213,11 +213,12 @@ python3 tools/set-version.py
 - 詳細資料：借出（STRN、姓名、班別、學號、日期）、歸還（原因及機身／Pencil／保護套檢查，有問題自動轉為維修中）、更改狀態、編輯資料，以及完整歷史記錄。
 - 新增 iPad：Label 自動續編，批次預設為目前學年。
 - 匯入 Excel：讀取「QEF校產點算」工作表（預設最新年度）。
-- MDM：購買學年起計三個學年已包括 MDM，之後每年需購買（`qef-config.js` 的 `mdmIncludedYears`）。
+- MDM 到期學年：預設為購買學年起計第三個學年（例如 21-22 → 23-24，`qef-config.js` 的 `mdmIncludedYears`）。清單以顏色標示已到期／今年到期／有效；詳細資料可「續期一年」，清單可按篩選結果「批量更新 MDM 到期」，亦可在編輯資料中直接修改。
+- 借用者記錄：每部 iPad 列出歷年借用學生（學年、姓名、STRN、班別學號、結果），同一學生連續學年合併為一行。匯入 Excel 時可同時讀取所有「QEF校產點算」工作表建立歷年記錄；之後在平台借出及歸還會自動加入。搜尋亦會找到以往借用者。
 
 | 集合 | 說明 |
 | --- | --- |
-| `qef_devices` | 文件 ID = Label（如 i136）：`serial`、`batch`、`mdm`、`pencilLabel`、`pencilSerial`、`status`（loaned／available／repair／lost／retired）、`holder`、`lastHolder`、`check`、`note` |
+| `qef_devices` | 文件 ID = Label（如 i136）：`serial`、`batch`、`mdm`、`mdmUntil`（MDM 有效至的學年開始年份）、`holderLog`（借用者記錄）、`pencilLabel`、`pencilSerial`、`status`（loaned／available／repair／lost／retired）、`holder`、`lastHolder`、`check`、`note` |
 | `qef_history` | 每次借出、歸還、更改狀態、編輯、新增、匯入的記錄（不可修改或刪除） |
 
 稍後階段：新學年 STRN 升班、借用申請分配及輪候、年度點算、MDM 購買記錄、年度報告。
