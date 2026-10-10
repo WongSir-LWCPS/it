@@ -1,12 +1,12 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId, pad, enhanceDateInputs, downloadCSV, loadXlsx,
-} from "../../assets/js/common.js?v=20261008j";
+} from "../../assets/js/common.js?v=20261008l";
 import {
   collection, doc, onSnapshot, getDoc, getDocs, query, where, writeBatch, serverTimestamp, updateDoc, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
-  QEF, STATUS, mdmStatus, currentYearStart, yearLabel, defaultMdmUntil,
-} from "./qef-config.js?v=20261008j";
+  QEF, STATUS, mdmStatus, currentYearStart, yearLabel, defaultMdmExpiry, mdmExpiry, yearEnd, addYear,
+} from "./qef-config.js?v=20261008l";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, devices: [], openId: null };
@@ -14,6 +14,51 @@ const devRef = (id) => doc(db, "qef_devices", id);
 const histColl = () => collection(db, "qef_history");
 const idOf = (label, serial) => String(label || serial || "").trim().replace(/[\/\s]+/g, "_");
 const natural = (a, b) => String(a.label).localeCompare(String(b.label), "en", { numeric: true });
+/* ---------- 排序（按表頭） ---------- */
+const SORT = {
+  list: { key: "label", dir: 1 },
+  stock: { key: "label", dir: 1 },
+  mdm: { key: "label", dir: 1 },
+};
+const collator = new Intl.Collator("zh-Hant", { numeric: true, sensitivity: "base" });
+function cmp(a, b) {
+  const ea = a == null || a === "";
+  const eb = b == null || b === "";
+  if (ea || eb) return ea && eb ? 0 : ea ? 1 : -1;   // 空白排最後
+  if (typeof a === "number" && typeof b === "number") return a - b;
+  return collator.compare(String(a), String(b));
+}
+/** 各欄的排序值 */
+const ACC = {
+  label: (d) => d.label, serial: (d) => d.serial, batch: (d) => d.batch, mdm: (d) => d.mdm, pencil: (d) => d.pencilLabel,
+  status: (d) => STATUS[d.status]?.label, holder: (d) => d.holder?.name, cls: (d) => d.holder?.cls,
+  no: (d) => (d.holder?.no ? Number(d.holder.no) : null), strn: (d) => d.holder?.strn, check: (d) => d.check?.date,
+  stDone: (d) => (d.stocktakes?.[stKey(stockYear())] ? 1 : 0), stDate: (d) => d.stocktakes?.[stKey(stockYear())]?.date,
+  body: (d) => d.stocktakes?.[stKey(stockYear())]?.body, pencilCheck: (d) => d.stocktakes?.[stKey(stockYear())]?.pencil,
+  mdmCat: (d) => CAT[mdmCategory(d, mdmYear())][0], expiry: (d) => mdmExpiry(d), renewal: (d) => d.mdmLastRenewal?.date,
+};
+function sorted(list, table) {
+  const { key, dir } = SORT[table];
+  const f = ACC[key] || ACC.label;
+  return [...list].sort((a, b) => cmp(f(a), f(b)) * dir || cmp(a.label, b.label));
+}
+/** 可排序的表頭 */
+function th(table, key, label) {
+  const on = SORT[table].key === key;
+  return `<th class="sortable${on ? " is-sorted" : ""}" data-sort-table="${table}" data-sort="${key}"
+    aria-sort="${on ? (SORT[table].dir > 0 ? "ascending" : "descending") : "none"}" tabindex="0">${label}<span class="sort-mark" aria-hidden="true">${on ? (SORT[table].dir > 0 ? "▲" : "▼") : "↕"}</span></th>`;
+}
+const RENDER = { list: () => renderList(), stock: () => renderStock(), mdm: () => renderMdm() };
+function onSortClick(e) {
+  const h = e.target.closest("[data-sort]");
+  if (!h || (e.type === "keydown" && e.key !== "Enter")) return;
+  const st = SORT[h.dataset.sortTable];
+  if (st.key === h.dataset.sort) st.dir *= -1; else { st.key = h.dataset.sort; st.dir = 1; }
+  RENDER[h.dataset.sortTable]();
+}
+document.addEventListener("click", onSortClick);
+document.addEventListener("keydown", onSortClick);
+
 /** 最近一位借用者（借用者記錄的最後一項） */
 const lastLog = (d) => (d.holderLog || []).slice(-1)[0] || d.lastHolder || null;
 const thisYear = () => yearLabel(currentYearStart());
@@ -30,6 +75,7 @@ boot({
     setupMdm();
     setupAdd();
     setupImport();
+    setupUpdate();
     onSnapshot(collection(db, "qef_devices"), (snap) => {
       S.devices = snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort(natural);
       renderStats();
@@ -104,7 +150,7 @@ function filtered() {
 }
 
 function renderList() {
-  const list = filtered();
+  const list = sorted(filtered(), "list");
   $("#list-count").textContent = `顯示 ${list.length} 部（共 ${S.devices.length} 部）`;
   const box = $("#device-list");
   if (!S.devices.length) {
@@ -114,7 +160,7 @@ function renderList() {
   box.innerHTML = `
     <div class="table-scroll">
       <table class="table table--click">
-        <thead><tr><th>Label</th><th>機序號</th><th>批次</th><th>MDM</th><th>Pencil</th><th>狀態</th><th>持有者</th><th>STRN</th><th>最近檢查</th></tr></thead>
+        <thead><tr>${th("list", "label", "Label")}${th("list", "serial", "機序號")}${th("list", "batch", "批次")}${th("list", "mdm", "MDM")}${th("list", "pencil", "Pencil")}${th("list", "status", "狀態")}${th("list", "holder", "持有者")}${th("list", "cls", "班別")}${th("list", "no", "學號")}${th("list", "strn", "STRN")}${th("list", "check", "最近檢查")}</tr></thead>
         <tbody>
           ${list.map((d) => {
             const prev = !d.holder ? lastLog(d) : null;
@@ -131,8 +177,10 @@ function renderList() {
               <td>${esc(d.mdm || "")}</td>
               <td>${esc(d.pencilLabel || "")}</td>
               <td><span class="badge badge--${STATUS[d.status]?.tone || "muted"}">${STATUS[d.status]?.label || esc(d.status)}</span></td>
-              <td>${d.holder ? esc(holderText(d.holder)) : prev ? `<small class="hint">上一位：${esc(prev.name)}</small>` : ""}
+              <td>${d.holder ? esc(d.holder.name) : prev ? `<small class="hint">上一位：${esc(prev.name)}</small>` : ""}
                 ${pastHit ? `<br><small class="badge badge--muted">曾借用：${esc(pastHit.name)}（${esc(pastHit.years.join("、"))}）</small>` : ""}</td>
+              <td>${esc(d.holder?.cls || "")}</td>
+              <td>${esc(d.holder?.no || "")}</td>
               <td class="mono">${esc(d.holder?.strn || "")}</td>
               <td class="nowrap">${c.date ? fmtDate(c.date) : ""}${problem ? '<br><span class="badge badge--stop">有問題</span>' : ""}</td>
             </tr>`;
@@ -143,12 +191,12 @@ function renderList() {
 }
 
 function exportCSV() {
-  const rows = [["Label No.", "機序號", "批次", "MDM 系統", "MDM 到期學年", "Pencil Label No.", "Pencil 機序號", "狀態",
+  const rows = [["Label No.", "機序號", "批次", "MDM 系統", "MDM 到期日", "Pencil Label No.", "Pencil 機序號", "狀態",
     "持有者", "STRN", "班別", "學號", "點算日期", "iPads機身", "Apple Pencil", "備註"]];
   for (const d of filtered()) {
     const h = d.holder || {};
     const c = d.check || {};
-    rows.push([d.label, d.serial, d.batch, d.mdm, mdmStatus(d).label, d.pencilLabel, d.pencilSerial,
+    rows.push([d.label, d.serial, d.batch, d.mdm, mdmExpiry(d) || "", d.pencilLabel, d.pencilSerial,
       STATUS[d.status]?.label || d.status, h.name, h.strn, h.cls, h.no, c.date, c.body, c.pencil, d.note]);
   }
   downloadCSV(`QEF_iPad_${todayId()}.csv`, rows);
@@ -175,8 +223,8 @@ async function renderDetail(id, keep = false) {
       <dt>機序號</dt><dd class="mono">${esc(d.serial)}</dd>
       <dt>批次</dt><dd>${esc(d.batch || "—")}</dd>
       <dt>MDM</dt><dd>${esc(d.mdm || "—")}</dd>
-      <dt>MDM 到期</dt><dd><span class="badge badge--${{ expired: "stop", thisYear: "wait", ok: "go" }[m.state] || "muted"}">${esc(m.label)}</span> ${esc(m.text)}
-        ${m.until != null ? `<button class="btn btn--small" type="button" data-act="mdm-renew">續期一年（至 ${esc(yearLabel(Math.max(m.until, currentYearStart() - 1) + 1))}）</button>` : ""}</dd>
+      <dt>MDM 到期日</dt><dd>${m.expiry ? `<span class="badge badge--${{ expired: "stop", thisYear: "wait", ok: "go" }[m.state]}">${esc(m.text)}</span> ${fmtDate(m.expiry)}
+        <button class="btn btn--small" type="button" data-act="mdm-renew">續期一年（至 ${fmtDate(renewTarget(m.expiry))}）</button>` : "—"}</dd>
       <dt>Apple Pencil</dt><dd>${esc(d.pencilLabel || "—")} <span class="mono">${esc(d.pencilSerial || "")}</span></dd>
       <dt>持有者</dt><dd>${h ? `${esc(holderText(h))} <span class="mono">${esc(h.strn || "")}</span>${h.since ? `，${fmtDate(h.since)} 起` : ""}` : "—"}</dd>
       <dt>最近檢查</dt><dd>${c.date ? `${fmtDate(c.date)}：機身 ${esc(c.body || "—")}，Pencil ${esc(c.pencil || "—")}` : "—"}</dd>
@@ -236,7 +284,7 @@ async function renderDetail(id, keep = false) {
           <label class="field"><span>機序號</span><input name="serial" value="${esc(d.serial || "")}" maxlength="30"></label>
           <label class="field"><span>批次</span><input name="batch" value="${esc(d.batch || "")}" maxlength="5"></label>
           <label class="field"><span>MDM 系統</span><select name="mdm">${QEF.mdmSystems.map((x) => `<option ${x === d.mdm ? "selected" : ""}>${esc(x)}</option>`).join("")}</select></label>
-          <label class="field"><span>MDM 到期學年</span><input name="mdmUntil" value="${esc(m.until != null ? yearLabel(m.until) : "")}" maxlength="5" placeholder="例如 26-27"></label>
+          <label class="field field--date"><span>MDM 到期日</span><input type="date" name="mdmExpiry" value="${esc(m.expiry || "")}"></label>
         </div>
         <div class="field-row">
           <label class="field"><span>Pencil Label No.</span><input name="pencilLabel" value="${esc(d.pencilLabel || "")}" maxlength="20"></label>
@@ -300,11 +348,12 @@ function historyItem(r) {
     return: `${who} ${esc(r.reason || "歸還")}${c ? `（機身 ${esc(c.body)}，Pencil ${esc(c.pencil)}）` : ""}`,
     status: `狀態改為「${esc(STATUS[r.to]?.label || r.to)}」`,
     edit: "修改了 iPad 資料",
-    mdm: "更新 MDM 到期學年",
+    mdm: "更新 MDM 到期日",
     stocktake: "完成盤點",
     unstock: "取消盤點",
     create: "新增 iPad",
     import: "由 Excel 匯入",
+    excel: "以 Excel 更新",
   }[r.type] || esc(r.type);
   return `<li><span class="history-when">${when}</span><span>${what}${r.note ? `<br><small>${esc(r.note)}</small>` : ""}</span>
     <small class="history-by">${esc(r.by || "")}</small></li>`;
@@ -316,32 +365,43 @@ $("#dev-dialog").addEventListener("click", async (e) => {
   if (e.target.closest('[data-act="mdm-renew"]')) {
     const d = S.devices.find((x) => x.id === S.openId);
     const m = mdmStatus(d);
-    const next = Math.max(m.until, currentYearStart() - 1) + 1;
-    await setMdmUntil([d], next);
+    if (!confirm(`把 ${d.label} 的 MDM 到期日由 ${fmtDate(m.expiry)} 延至 ${fmtDate(renewTarget(m.expiry))}？`)) return;
+    await setMdmExpiry([d], renewTarget(m.expiry));
   }
 });
 
-/** 更新 MDM 到期學年（可多部） */
-async function setMdmUntil(devices, until, note = "") {
+/** 續期一年：由到期日延一年；已過期的由上學年完結日起計（即延至本學年完結） */
+const renewTarget = (expiry) => addYear(expiry > yearEnd(currentYearStart() - 1) ? expiry : yearEnd(currentYearStart() - 1));
+
+/** 更新 MDM 到期日（可多部）；restore 為 true 時改回上一次續期前的日期 */
+async function setMdmExpiry(devices, expiry, note = "", restore = false) {
   try {
     for (let i = 0; i < devices.length; i += 200) {
       const b = writeBatch(db);
       for (const d of devices.slice(i, i + 200)) {
-        const old = mdmStatus(d).label;
-        b.update(devRef(d.id), {
-          mdmUntil: until, updatedAt: serverTimestamp(), updatedBy: S.user.email,
-          mdmLastRenewal: { date: todayId(), until, by: S.user.email, note },
-        });
+        const old = mdmExpiry(d);
+        const next = restore ? (d.mdmLastRenewal?.prev ?? null) : expiry;
+        const upd = { updatedAt: serverTimestamp(), updatedBy: S.user.email };
+        if (restore) {
+          upd.mdmExpiry = next || deleteField();
+          upd.mdmLastRenewal = deleteField();
+        } else {
+          upd.mdmExpiry = next;
+          upd.mdmLastRenewal = { date: todayId(), expiry: next, prev: d.mdmExpiry || null, by: S.user.email, note };
+        }
+        upd.mdmUntil = deleteField();   // 舊欄位（學年）不再使用
+        b.update(devRef(d.id), upd);
         b.set(doc(histColl()), { deviceId: d.id, label: d.label, type: "mdm", date: todayId(), by: S.user.email, at: serverTimestamp(),
-          note: `MDM 到期學年：${old} → ${yearLabel(until)}${note ? `（${note}）` : ""}` });
+          note: `MDM 到期日：${old || "—"} → ${(restore ? next || defaultMdmExpiry(d.batch) : next) || "—"}${note ? `（${note}）` : ""}` });
       }
       await b.commit();
     }
-    toast(`已把 ${devices.length} 部 iPad 的 MDM 到期學年更新為 ${yearLabel(until)}。`, "success");
+    toast(restore ? `已取消 ${devices.length} 部 iPad 的續期。` : `已把 ${devices.length} 部 iPad 的 MDM 到期日更新為 ${fmtDate(expiry)}。`, "success");
   } catch (err) {
     toast("未能更新：" + err.message, "error");
   }
 }
+
 $("#dev-dialog").addEventListener("input", (e) => {
   // 輸入 STRN 時，提示該學生過去的借用記錄
   if (e.target.name !== "strn") return;
@@ -387,10 +447,8 @@ $("#dev-dialog").addEventListener("submit", async (e) => {
   } else if (type === "edit") {
     const data = { serial: v("serial"), batch: v("batch"), mdm: v("mdm"), pencilLabel: v("pencilLabel"), pencilSerial: v("pencilSerial"), note: v("note") };
     const changes = Object.entries(data).filter(([k, val]) => (d[k] || "") !== val).map(([k, val]) => `${k}: ${d[k] || "—"} → ${val || "—"}`);
-    const mu = v("mdmUntil").match(/^(\d{2})-\d{2}$/);
-    if (v("mdmUntil") && !mu) { toast("MDM 到期學年格式應為「26-27」。", "error"); return; }
-    const newUntil = mu ? 2000 + Number(mu[1]) : null;
-    if (newUntil !== mdmStatus(d).until) { data.mdmUntil = newUntil; changes.push(`MDM 到期學年: ${mdmStatus(d).label} → ${v("mdmUntil") || "按批次計算"}`); }
+    const newExpiry = v("mdmExpiry");
+    if (newExpiry && newExpiry !== mdmExpiry(d)) { data.mdmExpiry = newExpiry; changes.push(`MDM 到期日: ${mdmExpiry(d) || "—"} → ${newExpiry}`); }
     if (!changes.length) { toast("資料沒有改變。"); return; }
     batch.update(devRef(d.id), { ...base, ...data });
     batch.set(doc(histColl()), { ...hist, type: "edit", note: changes.join("；") });
@@ -505,7 +563,7 @@ function renderStock() {
   const f = $("#st-filter").value;
   const bt = bsel.value;
   const q = $("#st-q").value.trim().toLowerCase();
-  const list = all.filter((d) => {
+  const list = sorted(all.filter((d) => {
     const r = d.stocktakes?.[key];
     if (f === "todo" && r) return false;
     if (f === "done" && !r) return false;
@@ -516,7 +574,7 @@ function renderStock() {
       if (![d.label, d.serial, h.name, h.cls, `${h.cls || ""}${h.no || ""}`].some((v) => String(v || "").toLowerCase().includes(q))) return false;
     }
     return true;
-  });
+  }), "stock");
   const box = $("#st-list");
   if (!list.length) {
     box.innerHTML = `<p class="empty">${f === "todo" && all.length ? "全部 iPad 已完成盤點。" : "沒有符合條件的 iPad。"}</p>`;
@@ -530,7 +588,7 @@ function renderStock() {
   box.innerHTML = `
     <div class="table-scroll">
       <table class="table stock-table">
-        <thead><tr><th>完成</th><th>Label</th><th>機序號</th><th>狀態</th><th>持有者</th><th>iPad 機身</th><th>Apple Pencil</th><th>盤點記錄</th></tr></thead>
+        <thead><tr>${th("stock", "stDone", "完成")}${th("stock", "label", "Label")}${th("stock", "serial", "機序號")}${th("stock", "status", "狀態")}${th("stock", "holder", "持有者")}${th("stock", "cls", "班別")}${th("stock", "no", "學號")}${th("stock", "body", "iPad 機身")}${th("stock", "pencilCheck", "Apple Pencil")}${th("stock", "stDate", "盤點記錄")}</tr></thead>
         <tbody>
           ${list.map((d) => {
             const r = d.stocktakes?.[key];
@@ -540,7 +598,9 @@ function renderStock() {
               <td><strong>${esc(d.label)}</strong>${d.pencilLabel ? `<br><small>${esc(d.pencilLabel)}</small>` : ""}</td>
               <td class="mono">${esc(d.serial)}</td>
               <td><span class="badge badge--${STATUS[d.status]?.tone}">${STATUS[d.status]?.label}</span></td>
-              <td>${esc(holderText(d.holder))}</td>
+              <td>${esc(d.holder?.name || "")}</td>
+              <td>${esc(d.holder?.cls || "")}</td>
+              <td>${esc(d.holder?.no || "")}</td>
               <td>${sel(d, "body", r)}</td>
               <td>${sel(d, "pencil", r)}</td>
               <td class="nowrap">${r ? `${fmtDate(r.date)}${r.by ? `<br><small>${esc(r.by.split("@")[0])}</small>` : ""}` : ""}</td>
@@ -570,9 +630,10 @@ const activeDevices = () => S.devices.filter((d) => !["retired", "lost"].include
 
 /** 某學年的 MDM 類別：included（購買後包括期內）／renewed（已續期）／need（需續期） */
 function mdmCategory(d, y) {
-  const inc = defaultMdmUntil(d.batch);
-  if (inc != null && inc >= y) return "included";
-  return mdmStatus(d, y).until >= y ? "renewed" : "need";
+  const end = yearEnd(y);
+  const inc = defaultMdmExpiry(d.batch);
+  if (inc != null && inc >= end && !d.mdmExpiry) return "included";
+  return (mdmExpiry(d) || "") >= end ? (inc != null && inc >= end ? "included" : "renewed") : "need";
 }
 const CAT = { need: ["需續期", "stop"], renewed: ["已續期", "go"], included: ["包括期內", "muted"] };
 
@@ -580,14 +641,14 @@ function setupMdm() {
   const y = currentYearStart();
   $("#m-year").innerHTML = [y - 1, y, y + 1, y + 2].map((v) => `<option value="${v}" ${v === y ? "selected" : ""}>${yearLabel(v)}</option>`).join("");
   $("#m-sys").innerHTML = `<option value="">全部</option>` + QEF.mdmSystems.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join("");
-  $("#m-until").value = yearLabel(y);
-  $("#m-year").addEventListener("input", () => { $("#m-until").value = yearLabel(mdmYear()); S.mdmSel.clear(); renderMdm(); });
+  $("#m-until").value = `${y + 1}-08-31`;
+  $("#m-year").addEventListener("input", () => { $("#m-until").value = `${mdmYear() + 1}-08-31`; S.mdmSel.clear(); renderMdm(); });
   ["#m-filter", "#m-batch", "#m-sys", "#m-q"].forEach((id) => $(id).addEventListener("input", () => { S.mdmSel.clear(); renderMdm(); }));
   $("#m-export").addEventListener("click", () => {
     const y2 = mdmYear();
-    const rows = [["Label No.", "機序號", "批次", "MDM 系統", "狀態", `${yearLabel(y2)} MDM`, "MDM 到期學年", "最近續期日期", "續期備註"]];
+    const rows = [["Label No.", "機序號", "批次", "MDM 系統", "狀態", `${yearLabel(y2)} MDM`, "MDM 到期日", "最近續期日期", "續期備註"]];
     for (const d of mdmFiltered()) {
-      rows.push([d.label, d.serial, d.batch, d.mdm, STATUS[d.status]?.label, CAT[mdmCategory(d, y2)][0], mdmStatus(d).label,
+      rows.push([d.label, d.serial, d.batch, d.mdm, STATUS[d.status]?.label, CAT[mdmCategory(d, y2)][0], mdmExpiry(d) || "",
         d.mdmLastRenewal?.date || "", d.mdmLastRenewal?.note || ""]);
     }
     downloadCSV(`QEF_iPad_MDM_${yearLabel(y2)}.csv`, rows);
@@ -605,11 +666,11 @@ function setupMdm() {
   $("#m-renew").addEventListener("click", async () => {
     const list = S.devices.filter((d) => S.mdmSel.has(d.id));
     if (!list.length) { toast("請先選擇 iPad。", "error"); return; }
-    const m = $("#m-until").value.trim().match(/^(\d{2})-\d{2}$/);
-    if (!m) { toast("續期後到期學年格式應為「26-27」。", "error"); return; }
-    const until = 2000 + Number(m[1]);
-    if (!confirm(`把已選的 ${list.length} 部 iPad 標示為已續期，MDM 到期學年設為 ${yearLabel(until)}？`)) return;
-    await setMdmUntil(list, until, $("#m-note").value.trim());
+    const expiry = $("#m-until").value;
+    if (!expiry) { toast("請填寫續期後到期日。", "error"); return; }
+    if (expiry < yearEnd(mdmYear()) && !confirm(`到期日 ${fmtDate(expiry)} 早於 ${yearLabel(mdmYear())} 學年完結（${fmtDate(yearEnd(mdmYear()))}），這些 iPad 仍會列為「需續期」。繼續？`)) return;
+    if (!confirm(`把已選的 ${list.length} 部 iPad 標示為已續期，MDM 到期日設為 ${fmtDate(expiry)}？`)) return;
+    await setMdmExpiry(list, expiry, $("#m-note").value.trim());
     S.mdmSel.clear();
     renderMdm();
   });
@@ -617,8 +678,8 @@ function setupMdm() {
     const y2 = mdmYear();
     const list = S.devices.filter((d) => S.mdmSel.has(d.id) && mdmCategory(d, y2) === "renewed");
     if (!list.length) { toast("已選的 iPad 中沒有「已續期」的項目。", "error"); return; }
-    if (!confirm(`取消已選 ${list.length} 部 iPad 的 ${yearLabel(y2)} 續期？MDM 到期學年會改回 ${yearLabel(y2 - 1)}。`)) return;
-    await setMdmUntil(list, y2 - 1, "取消續期");
+    if (!confirm(`取消已選 ${list.length} 部 iPad 最近一次的續期？MDM 到期日會改回續期前的日期。`)) return;
+    await setMdmExpiry(list, null, "取消續期", true);
     S.mdmSel.clear();
     renderMdm();
   });
@@ -652,14 +713,12 @@ function renderMdm() {
   const renewed = cnt("renewed");
   const due = need + renewed;
   const pct = due ? Math.round((renewed / due) * 100) : 100;
-  const nextNew = act.filter((d) => defaultMdmUntil(d.batch) === y).length;   // 下學年開始需付費的 iPad
   $("#m-summary").innerHTML = `
     <div class="stat-grid stat-grid--tight">
       <div class="stat"><span class="stat-num">${due}</span><span class="stat-label">${yearLabel(y)} 需要 MDM 續期</span></div>
       <div class="stat"><span class="stat-num">${renewed}</span><span class="stat-label">已續期</span></div>
       <div class="stat"><span class="stat-num" style="color:var(--stop)">${need}</span><span class="stat-label">未續期</span></div>
       <div class="stat"><span class="stat-num">${cnt("included")}</span><span class="stat-label">包括期內（毋須續期）</span></div>
-      <div class="stat"><span class="stat-num">${due + nextNew}</span><span class="stat-label">${yearLabel(y + 1)} 預計需續期（另加 ${nextNew} 部包括期完結）</span></div>
     </div>
     <div class="progress mt-s"><span style="width:${pct}%"></span></div>
     <p class="hint">${yearLabel(y)} 續期進度：${renewed} / ${due}（${pct}%）</p>`;
@@ -670,7 +729,7 @@ function renderMdm() {
   bsel.innerHTML = `<option value="">全部</option>` + batches.map((b) => `<option value="${esc(b)}">${esc(b)}</option>`).join("");
   bsel.value = batches.includes(cur) ? cur : "";
 
-  const list = mdmFiltered();
+  const list = sorted(mdmFiltered(), "mdm");
   const box = $("#m-list");
   if (!list.length) {
     box.innerHTML = `<p class="empty">沒有符合條件的 iPad。</p>`;
@@ -682,7 +741,7 @@ function renderMdm() {
       <table class="table">
         <thead><tr>
           <th><input type="checkbox" id="m-all" class="st-check" aria-label="全選"></th>
-          <th>Label</th><th>機序號</th><th>批次</th><th>MDM 系統</th><th>狀態</th><th>${yearLabel(y)} MDM</th><th>MDM 到期學年</th><th>最近續期</th>
+          ${th("mdm", "label", "Label")}${th("mdm", "serial", "機序號")}${th("mdm", "batch", "批次")}${th("mdm", "mdm", "MDM 系統")}${th("mdm", "status", "狀態")}${th("mdm", "mdmCat", `${yearLabel(y)} MDM`)}${th("mdm", "expiry", "MDM 到期日")}${th("mdm", "renewal", "最近續期")}
         </tr></thead>
         <tbody>
           ${list.map((d) => {
@@ -697,7 +756,7 @@ function renderMdm() {
               <td>${esc(d.mdm || "")}</td>
               <td><span class="badge badge--${STATUS[d.status]?.tone}">${STATUS[d.status]?.label}</span></td>
               <td><span class="badge badge--${CAT[c][1]}">${CAT[c][0]}</span></td>
-              <td class="nowrap">${esc(mdmStatus(d).label)}</td>
+              <td class="nowrap">${mdmExpiry(d) ? fmtDate(mdmExpiry(d)) : "—"}</td>
               <td>${r ? `${fmtDate(r.date)}${r.note ? `<br><small>${esc(r.note)}</small>` : ""}` : ""}</td>
             </tr>`;
           }).join("")}
@@ -705,6 +764,215 @@ function renderMdm() {
       </table>
     </div>`;
   updateMdmBar();
+}
+
+/* ---------- Excel 更新 ---------- */
+const U_COLS = ["Label No.", "機序號", "批次", "MDM 系統", "MDM 到期日", "Pencil Label No.", "Pencil 機序號", "狀態",
+  "持有者", "STRN", "班別", "學號", "備註"];
+const STATUS_BY_LABEL = Object.fromEntries(Object.entries(STATUS).map(([k, v]) => [v.label, k]));
+const U = { plan: null };
+
+function setupUpdate() {
+  $("#u-template").addEventListener("click", () => {
+    const rows = [U_COLS];
+    for (const d of sorted(S.devices, "list")) {
+      const h = d.holder || {};
+      rows.push([d.label, d.serial, d.batch, d.mdm, mdmExpiry(d) || "", d.pencilLabel, d.pencilSerial,
+        STATUS[d.status]?.label || d.status, h.name, h.strn, h.cls, h.no, d.note]);
+    }
+    downloadCSV(`QEF_iPad_更新範本_${todayId()}.csv`, rows);
+  });
+  $("#u-file").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    $("#u-result").innerHTML = `<p class="empty">正在讀取 ${esc(file.name)}…</p>`;
+    try {
+      XLSX = await loadXlsx();
+      const buf = await file.arrayBuffer();
+      let wb;
+      if (/\.csv$/i.test(file.name)) {
+        let text;
+        try { text = new TextDecoder("utf-8", { fatal: true }).decode(buf); } catch { text = new TextDecoder("big5").decode(buf); }
+        wb = XLSX.read(text, { type: "string", raw: true });
+      } else {
+        wb = XLSX.read(buf, { type: "array" });
+      }
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      U.plan = planUpdate(XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: "" }));
+      renderUpdatePlan();
+    } catch (err) {
+      console.error(err);
+      $("#u-result").innerHTML = `<p class="load-error">未能讀取檔案：${esc(err.message)}</p>`;
+    }
+  });
+  $("#u-result").addEventListener("click", (e) => { if (e.target.closest("[data-u-run]")) runUpdate(e.target.closest("[data-u-run]")); });
+}
+
+/** 比較檔案與現有資料，列出每部 iPad 的改動 */
+function planUpdate(rows) {
+  const hi = rows.findIndex((r) => r.some((c) => String(c).trim() === "Label No."));
+  if (hi < 0) throw new Error("找不到「Label No.」標題，請使用更新範本。");
+  const head = rows[hi].map((c) => String(c ?? "").trim());
+  const col = Object.fromEntries(U_COLS.map((n) => [n, head.indexOf(n)]));
+  const cell = (r, n) => (col[n] >= 0 && r[col[n]] != null ? String(r[col[n]]).trim() : "");
+  const has = (n) => col[n] >= 0;
+  const items = [];
+  const errors = [];
+  const seen = new Set();
+
+  for (const [i, r] of rows.slice(hi + 1).entries()) {
+    const label = cell(r, "Label No.");
+    if (!label) continue;
+    const rowNo = hi + i + 2;
+    const id = idOf(label);
+    if (seen.has(id)) { errors.push(`第 ${rowNo} 行：${label} 重複。`); continue; }
+    seen.add(id);
+    const d = S.devices.find((x) => x.id === id);
+    const changes = {};
+    const notes = [];
+    const set = (field, name, val, cur) => {
+      if (val === "" || val === (cur ?? "")) return;
+      changes[field] = val;
+      notes.push(`${name}：${cur || "—"} → ${val}`);
+    };
+    set("serial", "機序號", cell(r, "機序號").toUpperCase(), d?.serial);
+    const bt = cell(r, "批次").match(/^(\d{2}-\d{2})/);
+    if (bt) set("batch", "批次", bt[1], d?.batch);
+    set("mdm", "MDM 系統", cell(r, "MDM 系統"), d?.mdm);
+    if (has("MDM 到期日") && cell(r, "MDM 到期日")) {
+      const ex = toDateId(r[col["MDM 到期日"]]);
+      if (!ex) errors.push(`第 ${rowNo} 行：${label} 的 MDM 到期日看不懂（請填 2027-08-31）。`);
+      else set("mdmExpiry", "MDM 到期日", ex, d ? mdmExpiry(d) : "");
+    }
+    set("pencilLabel", "Pencil Label", cell(r, "Pencil Label No."), d?.pencilLabel);
+    set("pencilSerial", "Pencil 機序號", cell(r, "Pencil 機序號").toUpperCase(), d?.pencilSerial);
+    set("note", "備註", cell(r, "備註"), d?.note);
+    let status = null;
+    if (cell(r, "狀態")) {
+      status = STATUS_BY_LABEL[cell(r, "狀態")];
+      if (!status) errors.push(`第 ${rowNo} 行：${label} 的狀態「${cell(r, "狀態")}」看不懂。`);
+    }
+
+    // 持有者
+    let action = null;
+    let student = null;
+    if (has("持有者")) {
+      const name = cell(r, "持有者");
+      const strn = cell(r, "STRN").toUpperCase();
+      const cls = cell(r, "班別").toUpperCase();
+      const no = cell(r, "學號");
+      const h = d?.holder;
+      if (!name) {
+        if (h) { action = "return"; notes.push(`歸還：${holderText(h)}`); }
+      } else {
+        student = { name, strn, cls, no };
+        const same = h && ((strn && h.strn && h.strn === strn) || (!strn || !h.strn) && h.name === name);
+        if (same) {
+          const diff = ["name", "strn", "cls", "no"].filter((k) => student[k] && student[k] !== (h[k] || ""));
+          if (diff.length) {
+            action = "student";
+            notes.push(`學生資料：${holderText(h)} ${h.strn || ""} → ${holderText({ ...h, ...Object.fromEntries(diff.map((k) => [k, student[k]])) })} ${student.strn || h.strn || ""}`);
+          }
+        } else {
+          action = h ? "transfer" : "loan";
+          notes.push(h ? `轉借：${holderText(h)} → ${holderText(student)}` : `借出給 ${holderText(student)}`);
+        }
+      }
+    }
+    if (status && status !== d?.status && !(action === "loan" || action === "transfer") && !(action === "return" && status === "available")) {
+      notes.push(`狀態：${STATUS[d?.status]?.label || "—"} → ${STATUS[status].label}`);
+    }
+    if (!d && !changes.serial) { errors.push(`第 ${rowNo} 行：新 iPad ${label} 須填寫機序號。`); continue; }
+    if (!notes.length && d) continue;   // 沒有改動
+    items.push({ id, label, d, changes, status, action, student, notes, isNew: !d });
+  }
+  return { items, errors };
+}
+
+function renderUpdatePlan() {
+  const { items, errors } = U.plan;
+  const box = $("#u-result");
+  const tag = (it) => it.isNew ? "新增" : { loan: "借出", transfer: "轉借", return: "歸還", student: "更新學生資料" }[it.action] || "更新";
+  box.innerHTML = `
+    ${errors.length ? `<div class="load-error"><strong>以下 ${errors.length} 行未能處理：</strong><br>${errors.map(esc).join("<br>")}</div>` : ""}
+    ${items.length ? `
+      <div class="import-bar mt-s">
+        <p>將更新 ${items.length} 部 iPad（新增 ${items.filter((x) => x.isNew).length} 部）。其餘沒有改動的 iPad 不受影響。</p>
+        <button class="btn btn--primary" data-u-run>確認更新</button>
+      </div>
+      <div class="table-scroll mt-s">
+        <table class="table">
+          <thead><tr><th>Label</th><th>類別</th><th>改動</th></tr></thead>
+          <tbody>${items.map((it) => `
+            <tr><td><strong>${esc(it.label)}</strong></td><td><span class="badge badge--${it.isNew ? "go" : "wait"}">${tag(it)}</span></td>
+            <td>${it.notes.map(esc).join("<br>")}</td></tr>`).join("")}
+          </tbody>
+        </table>
+      </div>` : `<p class="empty mt-s">檔案中的資料與系統相同，沒有需要更新的項目。</p>`}`;
+}
+
+async function runUpdate(btn) {
+  const items = U.plan?.items || [];
+  if (!items.length) return;
+  if (!confirm(`確認更新 ${items.length} 部 iPad？`)) return;
+  btn.disabled = true;
+  btn.textContent = "更新中…";
+  const year = thisYear();
+  const today = todayId();
+  try {
+    for (let i = 0; i < items.length; i += 150) {
+      const b = writeBatch(db);
+      for (const it of items.slice(i, i + 150)) {
+        const d = it.d || {};
+        const upd = { ...it.changes, updatedAt: serverTimestamp(), updatedBy: S.user.email };
+        let log = [...(d.holderLog || [])];
+        const closeOpen = (outcome) => {
+          const idx = log.map((x, k) => [x, k]).reverse().find(([x]) => x.outcome === "借用中")?.[1];
+          if (idx != null) log[idx] = { ...log[idx], outcome, to: today, years: log[idx].years.includes(year) ? log[idx].years : [...log[idx].years, year] };
+        };
+        if (it.action === "return") {
+          closeOpen("已歸還");
+          Object.assign(upd, { holder: null, lastHolder: d.holder || null, status: it.status || "available", holderLog: log });
+        } else if (it.action === "loan" || it.action === "transfer") {
+          if (it.action === "transfer") closeOpen("轉借");
+          const st = { ...it.student, since: today };
+          log.push({ years: [year], name: st.name, strn: st.strn, cls: st.cls, no: st.no, outcome: "借用中", from: today, source: "app" });
+          Object.assign(upd, { holder: st, status: "loaned", holderLog: log });
+        } else if (it.action === "student") {
+          const nh = { ...d.holder, ...Object.fromEntries(Object.entries(it.student).filter(([, v]) => v)) };
+          const idx = log.map((x, k) => [x, k]).reverse().find(([x]) => x.outcome === "借用中")?.[1];
+          if (idx != null) {
+            const e = log[idx];
+            log[idx] = { ...e, name: nh.name, strn: nh.strn || e.strn, cls: nh.cls, no: nh.no, years: e.years.includes(year) ? e.years : [...e.years, year] };
+          }
+          Object.assign(upd, { holder: nh, holderLog: log });
+          if (it.status) upd.status = it.status;
+        } else if (it.status) {
+          upd.status = it.status;
+        }
+        if (it.isNew) {
+          Object.assign(upd, { label: it.label, status: upd.status || "available", holder: upd.holder ?? null, createdAt: serverTimestamp() });
+          if (!upd.mdm) upd.mdm = QEF.mdmSystems[0];
+          b.set(devRef(it.id), upd);
+        } else {
+          b.update(devRef(it.id), upd);
+        }
+        b.set(doc(histColl()), {
+          deviceId: it.id, label: it.label, type: "excel", date: today, by: S.user.email, at: serverTimestamp(),
+          student: upd.holder || null, note: it.notes.join("；"),
+        });
+      }
+      await b.commit();
+    }
+    U.plan = null;
+    $("#u-result").innerHTML = `<p class="empty">已更新 ${items.length} 部 iPad。</p>`;
+    $("#u-file").value = "";
+    toast(`已更新 ${items.length} 部 iPad。`, "success");
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = "確認更新";
+    toast("未能更新：" + err.message, "error");
+  }
 }
 
 /* ---------- 新增 iPad ---------- */
@@ -757,8 +1025,11 @@ const RETURNED = /歸還|取機|放棄|畢業|退學|轉校|框中|在校/;
 function toDateId(v) {
   if (v instanceof Date) return `${v.getFullYear()}-${pad(v.getMonth() + 1)}-${pad(v.getDate())}`;
   if (typeof v === "number" && v > 30000) { const p = XLSX.SSF.parse_date_code(v); return `${p.y}-${pad(p.m)}-${pad(p.d)}`; }
-  const m = String(v || "").match(/(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})/);
-  return m ? `${m[1]}-${pad(m[2])}-${pad(m[3])}` : "";
+  const t = String(v || "").trim();
+  let m = t.match(/(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})/);
+  if (m) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
+  m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);   // 日/月/年
+  return m ? `${m[3]}-${pad(m[2])}-${pad(m[1])}` : "";
 }
 
 /** 讀取 QEF 校產點算工作表 */

@@ -30,22 +30,32 @@ export function currentYearStart(today = new Date()) {
   return today.getMonth() >= 8 ? today.getFullYear() : today.getFullYear() - 1;
 }
 
-/** 預設 MDM 到期學年（開始年份）：購買學年起計三個學年，例如 21-22 → 2023（即 23-24） */
-export const defaultMdmUntil = (batch) => {
+/** 學年完結日，例如 2026 → 「2027-08-31」 */
+export const yearEnd = (yearStart) => `${yearStart + 1}-08-31`;
+
+/** 預設 MDM 到期日：購買學年起計第三個學年完結，例如 21-22 → 2024-08-31 */
+export const defaultMdmExpiry = (batch) => {
   const y = batchStartYear(batch);
-  return y == null ? null : y + QEF.mdmIncludedYears - 1;
+  return y == null ? null : yearEnd(y + QEF.mdmIncludedYears - 1);
 };
 
+/** MDM 到期日（已設定的日期；舊資料的 mdmUntil 學年會轉為該學年完結日；否則按批次計算） */
+export const mdmExpiry = (d) => d.mdmExpiry || (d.mdmUntil != null ? yearEnd(d.mdmUntil) : defaultMdmExpiry(d.batch));
+
 /**
- * MDM 狀態
- * until：MDM 有效至哪個學年（開始年份）；可在 iPad 資料中更新（例如每年續期）
- * state：expired（今年已不包括，需購買）／thisYear（今學年完結時到期）／ok
+ * MDM 狀態（以今天及本學年計算）
+ * state：expired（已過期）／thisYear（本學年內到期，需續期）／ok
  */
-export function mdmStatus(d, yearStart = currentYearStart()) {
-  const until = d.mdmUntil ?? defaultMdmUntil(d.batch);
-  if (until == null) return { until: null, label: "—", state: "unknown", text: "—" };
-  const label = yearLabel(until);
-  const state = until < yearStart ? "expired" : until === yearStart ? "thisYear" : "ok";
-  const text = { expired: `已到期（${label}）`, thisYear: `${label} 學年完結時到期`, ok: `有效至 ${label}` }[state];
-  return { until, label, state, text };
+export function mdmStatus(d, yearStart = currentYearStart(), today = new Date().toISOString().slice(0, 10)) {
+  const expiry = mdmExpiry(d);
+  if (!expiry) return { expiry: null, state: "unknown", text: "—" };
+  const state = expiry < today ? "expired" : expiry < yearEnd(yearStart) ? "thisYear" : "ok";
+  const text = { expired: "已過期", thisYear: "本學年內到期", ok: "有效" }[state];
+  return { expiry, state, text };
 }
+
+/** 某一年加一年，例如 2026-08-31 → 2027-08-31 */
+export const addYear = (date) => {
+  const [y, m, d] = date.split("-").map(Number);
+  return `${y + 1}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+};

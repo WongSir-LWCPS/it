@@ -214,12 +214,14 @@ python3 tools/set-version.py
 - 盤點：每學年初使用。選擇盤點學年後，逐行選擇機身及 Apple Pencil 的結果（保護套不用檢查；沒有配對 Pencil 的 iPad 預設為「無」），再剔選「完成」；亦可在「快速盤點」輸入或掃描 Label／機序號後按 Enter，即以「已檢查正常」完成。進度列顯示已盤點、未盤點及有問題數量，可篩選未盤點／已盤點／有問題，並匯出盤點結果。記錄存於 `stocktakes.y<學年開始年份>`；匯入 Excel 時會一併加入以往各年度的點算結果。
 - 新增 iPad：Label 自動續編，批次預設為目前學年。
 - 匯入 Excel：讀取「QEF校產點算」工作表（預設最新年度）。
-- MDM 管理（分頁）：選擇學年，顯示該年需要續期、已續期、未續期、包括期內的數量及續期進度，並預計下學年需續期的數量。清單可按需續期／已續期／包括期內、批次、MDM 系統篩選；剔選 iPad（可全選）後輸入「續期後到期學年」及備註（如訂單編號），按「標示為已續期」即批量更新，亦可「取消續期」。MDM 到期學年預設為購買學年起計第三個學年（`qef-config.js` 的 `mdmIncludedYears`）。詳細資料亦可「續期一年」或在編輯資料中修改。
+- MDM 管理（分頁）：選擇學年，顯示該年需要續期、已續期、未續期、包括期內的數量及續期進度。清單可按需續期／已續期／包括期內、批次、MDM 系統篩選；剔選 iPad（可全選）後輸入「續期後到期日」及備註（如訂單編號），按「標示為已續期」即批量更新；「取消續期」會改回續期前的到期日。MDM 到期日預設為購買學年起計第三個學年的 8 月 31 日（`qef-config.js` 的 `mdmIncludedYears`），到期日早於所選學年完結的 iPad 列為需續期。詳細資料亦可「續期一年」或在編輯資料中修改。
+- 排序：iPad 清單、盤點、MDM 管理的表頭均可按一下排序，再按一下反序。
+- Excel 更新（分頁）：下載更新範本（現有資料），在 Excel 修改後上載，預覽每部 iPad 的改動後確認。以 Label 對應；留空不更改；持有者留空＝歸還，更改持有者＝歸還及借出（自動更新借用者記錄），只改班別／學號／STRN＝更新學生資料（例如升班）；新 Label 會新增 iPad。
 - 借用者記錄：每部 iPad 列出歷年借用學生（學年、姓名、STRN、班別學號、結果），同一學生連續學年合併為一行。匯入 Excel 時可同時讀取所有「QEF校產點算」工作表建立歷年記錄；之後在平台借出及歸還會自動加入。搜尋亦會找到以往借用者。
 
 | 集合 | 說明 |
 | --- | --- |
-| `qef_devices` | 文件 ID = Label（如 i136）：`serial`、`batch`、`mdm`、`mdmUntil`（MDM 有效至的學年開始年份）、`holderLog`（借用者記錄）、`pencilLabel`、`pencilSerial`、`status`（loaned／available／repair／lost／retired）、`holder`、`lastHolder`、`check`、`note` |
+| `qef_devices` | 文件 ID = Label（如 i136）：`serial`、`batch`、`mdm`、`mdmExpiry`（MDM 到期日）、`mdmLastRenewal`、`holderLog`（借用者記錄）、`pencilLabel`、`pencilSerial`、`status`（loaned／available／repair／lost／retired）、`holder`、`lastHolder`、`check`、`note` |
 | `qef_history` | 每次借出、歸還、更改狀態、編輯、新增、匯入的記錄（不可修改或刪除） |
 
 稍後階段：新學年 STRN 升班、借用申請分配及輪候、年度點算、MDM 購買記錄、年度報告。

@@ -625,3 +625,10 @@ h3 { font-size: .95rem; }
   background: var(--surface); border: 1px solid var(--line); border-radius: 12px; position: sticky; top: 64px; z-index: 5; }
 .mdm-bar #m-selected { font-weight: 700; align-self: center; min-width: 70px; }
 .mdm-bar input { height: 34px; }
+
+/* 可排序的表頭 */
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--ink); }
+th.sortable.is-sorted { color: var(--ink); }
+.sort-mark { margin-left: 4px; font-size: .7em; opacity: .45; }
+th.is-sorted .sort-mark { opacity: 1; }

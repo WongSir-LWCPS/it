@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../assets/css/style.css?v=20261008j">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261008l">
   <script>
     // 程式載入或執行失敗時，在頁面上顯示原因（而不是空白頁）
     (function () {
@@ -65,7 +65,8 @@
       <button role="tab" class="tab" data-tab="stock" aria-selected="false">盤點</button>
       <button role="tab" class="tab" data-tab="mdm" aria-selected="false">MDM 管理</button>
       <button role="tab" class="tab" data-tab="add" aria-selected="false">新增 iPad</button>
-      <button role="tab" class="tab" data-tab="import" aria-selected="false">匯入 Excel</button>
+      <button role="tab" class="tab" data-tab="update" aria-selected="false">Excel 更新</button>
+      <button role="tab" class="tab" data-tab="import" aria-selected="false">匯入點算表</button>
     </div>
 
     <!-- iPad 清單 -->
@@ -112,7 +113,7 @@
         <label class="field field--compact"><span>學年</span><select id="m-year"></select></label>
         <div id="m-summary" class="mdm-summary"></div>
       </div>
-      <p class="hint">購買學年起計三個學年已包括 MDM，之後每年需要續期。已註銷及遺失的 iPad 不計算在內。</p>
+      <p class="hint">購買學年起計三個學年已包括 MDM（預設到期日為第三個學年的 8 月 31 日），之後每年需要續期。到期日早於所選學年完結（8 月 31 日）的 iPad 列為「需續期」。已註銷及遺失的 iPad 不計算在內。</p>
       <div class="filter-bar">
         <label class="field field--compact"><span>顯示</span>
           <select id="m-filter">
@@ -128,7 +129,7 @@
       </div>
       <div class="mdm-bar" id="m-bar">
         <span id="m-selected">已選 0 部</span>
-        <label class="field field--compact"><span>續期後到期學年</span><input id="m-until" maxlength="5" size="6"></label>
+        <label class="field field--compact"><span>續期後到期日</span><input type="date" id="m-until"></label>
         <label class="field field--compact field--grow"><span>備註（選填，例如訂單或發票編號）</span><input id="m-note" maxlength="100"></label>
         <button class="btn btn--primary btn--small" type="button" id="m-renew">標示為已續期</button>
         <button class="btn btn--small" type="button" id="m-undo">取消續期</button>
@@ -158,6 +159,26 @@
       </form>
     </section>
 
+    <!-- Excel 更新 -->
+    <section id="tab-update" class="panel" role="tabpanel" hidden>
+      <div class="card-form">
+        <h2>以 Excel 更新 iPad 及借用者資料</h2>
+        <p class="hint">
+          1. 下載更新範本（包含現時所有 iPad 的資料），以 Excel 開啟並修改。<br>
+          2. 上載修改後的檔案（.xlsx 或 .csv），系統會列出每部 iPad 的改動，確認後才更新。<br>
+          ・以「Label No.」對應 iPad；範本沒有的 Label 會新增為新 iPad（須填寫機序號）。<br>
+          ・留空的儲存格不會更改原有資料；「持有者」留空代表 iPad 已歸還。<br>
+          ・更改「持有者」會自動登記歸還及借出，並更新借用者記錄；只更改班別、學號或 STRN 則視為更新學生資料（例如升班）。<br>
+          ・「MDM 到期日」請填寫日期，例如 2027-08-31。「狀態」可填：借出中、可借出、維修中、遺失、已註銷。
+        </p>
+        <div class="actions actions--start">
+          <button class="btn" type="button" id="u-template">下載更新範本（CSV）</button>
+        </div>
+        <label class="field mt-s"><span>上載修改後的檔案</span><input type="file" id="u-file" accept=".xlsx,.xls,.csv"></label>
+      </div>
+      <div id="u-result" class="mt"></div>
+    </section>
+
     <!-- 匯入 Excel -->
     <section id="tab-import" class="panel" role="tabpanel" hidden>
       <div class="card-form">
@@ -176,6 +197,6 @@
     <div id="dev-body"></div>
   </dialog>
 
-  <script type="module" src="qef.js?v=20261008j"></script>
+  <script type="module" src="qef.js?v=20261008l"></script>
 </body>
 </html>
