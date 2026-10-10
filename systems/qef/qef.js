@@ -1,12 +1,12 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId, pad, enhanceDateInputs, downloadCSV, loadXlsx,
-} from "../../assets/js/common.js?v=20261008m";
+} from "../../assets/js/common.js?v=20261008n";
 import {
   collection, doc, onSnapshot, getDoc, getDocs, query, where, writeBatch, serverTimestamp, updateDoc, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   QEF, STATUS, mdmStatus, currentYearStart, yearLabel, defaultMdmExpiry, mdmExpiry, yearEnd, addYear,
-} from "./qef-config.js?v=20261008m";
+} from "./qef-config.js?v=20261008n";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, devices: [], openId: null };
@@ -160,7 +160,7 @@ function renderList() {
   box.innerHTML = `
     <div class="table-scroll">
       <table class="table table--click">
-        <thead><tr>${th("list", "label", "Label")}${th("list", "serial", "機序號")}${th("list", "batch", "批次")}${th("list", "mdm", "MDM")}${th("list", "pencil", "Pencil")}${th("list", "status", "狀態")}${th("list", "strn", "STRN")}${th("list", "cls", "班別")}${th("list", "no", "學號")}${th("list", "holder", "持有者")}</tr></thead>
+        <thead><tr>${th("list", "label", "Label")}${th("list", "serial", "機序號")}${th("list", "batch", "批次")}${th("list", "mdm", "MDM")}${th("list", "pencil", "Pencil")}${th("list", "strn", "STRN")}${th("list", "cls", "班別")}${th("list", "no", "學號")}${th("list", "holder", "持有者")}${th("list", "status", "狀態")}</tr></thead>
         <tbody>
           ${list.map((d) => {
             const q = $("#f-q").value.trim().toLowerCase();
@@ -173,11 +173,11 @@ function renderList() {
               <td>${esc(d.batch || "")}</td>
               <td>${esc(d.mdm || "")}</td>
               <td>${esc(d.pencilLabel || "")}</td>
-              <td><span class="badge badge--${STATUS[d.status]?.tone || "muted"}">${STATUS[d.status]?.label || esc(d.status)}</span></td>
               <td class="mono">${esc(d.holder?.strn || "")}</td>
               <td>${esc(d.holder?.cls || "")}</td>
               <td>${esc(d.holder?.no || "")}</td>
               <td>${esc(d.holder?.name || "")}${pastHit ? `${d.holder ? "<br>" : ""}<small class="badge badge--muted">曾借用：${esc(pastHit.name)}（${esc(pastHit.years.join("、"))}）</small>` : ""}</td>
+              <td><span class="badge badge--${STATUS[d.status]?.tone || "muted"}">${STATUS[d.status]?.label || esc(d.status)}</span></td>
             </tr>`;
           }).join("")}
         </tbody>
@@ -648,6 +648,15 @@ function setupMdm() {
     }
     downloadCSV(`QEF_iPad_MDM_${yearLabel(y2)}.csv`, rows);
   });
+  $("#m-summary").addEventListener("click", (e) => {
+    const row = e.target.closest("[data-batch]");
+    if (!row) return;
+    $("#m-batch").value = row.dataset.batch;
+    $("#m-filter").value = "";   // 顯示該批次全部 iPad（包括未到期）
+    S.mdmSel.clear();
+    renderMdm();
+    $("#m-list").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
   $("#m-list").addEventListener("change", (e) => {
     if (e.target.matches("#m-all")) {
       const ids = mdmFiltered().map((d) => d.id);
@@ -678,6 +687,37 @@ function setupMdm() {
     S.mdmSel.clear();
     renderMdm();
   });
+}
+
+/** 各批次 MDM 狀況（包括未到期的批次）；按一下該行即只顯示該批次 */
+function batchOverview(act, y) {
+  const batches = [...new Set(act.map((d) => d.batch).filter(Boolean))].sort();
+  const rows = batches.map((b) => {
+    const list = act.filter((d) => d.batch === b);
+    const inc = defaultMdmExpiry(b);
+    const c = (k) => list.filter((d) => mdmCategory(d, y) === k).length;
+    return { b, n: list.length, inc, included: c("included"), renewed: c("renewed"), need: c("need") };
+  });
+  return `
+    <h3 class="mt-s">各批次 MDM 狀況（${yearLabel(y)}）</h3>
+    <div class="table-scroll">
+      <table class="table table--click batch-table">
+        <thead><tr><th>批次</th><th>iPad 數量</th><th>購買時包括 MDM 至</th><th>${yearLabel(y)} 狀況</th><th>包括期內</th><th>已續期</th><th>未續期</th></tr></thead>
+        <tbody>${rows.map((r) => `
+          <tr data-batch="${esc(r.b)}" tabindex="0" title="只顯示 ${esc(r.b)} 批次">
+            <td><strong>${esc(r.b)}</strong></td>
+            <td>${r.n}</td>
+            <td class="nowrap">${r.inc ? fmtDate(r.inc) : "—"}</td>
+            <td>${r.need + r.renewed === 0
+              ? `<span class="badge badge--go">未到期</span>`
+              : r.need ? `<span class="badge badge--stop">需續期</span>` : `<span class="badge badge--go">已全部續期</span>`}</td>
+            <td>${r.included || ""}</td>
+            <td>${r.renewed || ""}</td>
+            <td>${r.need ? `<strong class="hint--error">${r.need}</strong>` : ""}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
 }
 
 function mdmFiltered() {
@@ -716,7 +756,8 @@ function renderMdm() {
       <div class="stat"><span class="stat-num">${cnt("included")}</span><span class="stat-label">包括期內（毋須續期）</span></div>
     </div>
     <div class="progress mt-s"><span style="width:${pct}%"></span></div>
-    <p class="hint">${yearLabel(y)} 續期進度：${renewed} / ${due}（${pct}%）</p>`;
+    <p class="hint">${yearLabel(y)} 續期進度：${renewed} / ${due}（${pct}%）</p>
+    ${batchOverview(act, y)}`;
 
   const bsel = $("#m-batch");
   const cur = bsel.value;

@@ -632,3 +632,4 @@ th.sortable:hover { color: var(--ink); }
 th.sortable.is-sorted { color: var(--ink); }
 .sort-mark { margin-left: 4px; font-size: .7em; opacity: .45; }
 th.is-sorted .sort-mark { opacity: 1; }
+.batch-table td { white-space: nowrap; }
