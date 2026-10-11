@@ -1,12 +1,12 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId, pad, enhanceDateInputs, downloadCSV, loadXlsx,
-} from "../../assets/js/common.js?v=20261008n";
+} from "../../assets/js/common.js?v=20261008o";
 import {
   collection, doc, onSnapshot, getDoc, getDocs, query, where, writeBatch, serverTimestamp, updateDoc, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
-  QEF, STATUS, mdmStatus, currentYearStart, yearLabel, defaultMdmExpiry, mdmExpiry, yearEnd, addYear,
-} from "./qef-config.js?v=20261008n";
+  QEF, STATUS, statusText, mdmStatus, currentYearStart, yearLabel, defaultMdmExpiry, mdmExpiry, yearEnd, addYear,
+} from "./qef-config.js?v=20261008o";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, devices: [], openId: null };
@@ -31,7 +31,7 @@ function cmp(a, b) {
 /** 各欄的排序值 */
 const ACC = {
   label: (d) => d.label, serial: (d) => d.serial, batch: (d) => d.batch, mdm: (d) => d.mdm, pencil: (d) => d.pencilLabel,
-  status: (d) => STATUS[d.status]?.label, holder: (d) => d.holder?.name, cls: (d) => d.holder?.cls,
+  status: (d) => statusText(d), holder: (d) => d.holder?.name, cls: (d) => d.holder?.cls,
   no: (d) => (d.holder?.no ? Number(d.holder.no) : null), strn: (d) => d.holder?.strn, check: (d) => d.check?.date,
   stDone: (d) => (d.stocktakes?.[stKey(stockYear())] ? 1 : 0), stDate: (d) => d.stocktakes?.[stKey(stockYear())]?.date,
   body: (d) => d.stocktakes?.[stKey(stockYear())]?.body, pencilCheck: (d) => d.stocktakes?.[stKey(stockYear())]?.pencil,
@@ -101,12 +101,13 @@ function setupTabs() {
 function renderStats() {
   const count = (st) => S.devices.filter((d) => d.status === st).length;
   const cards = [
-    ["總數（不包括已註銷）", S.devices.length - count("retired")],
+    ["總數（不包括已注銷）", S.devices.length - count("retired")],
     ["借出中", count("loaned")],
     ["可借出", count("available")],
     ["維修中", count("repair")],
     ["遺失", count("lost")],
-    ["已註銷", count("retired")],
+    ["待注銷", count("pendingWriteOff")],
+    ["已注銷", count("retired")],
   ];
   $("#stats").innerHTML = cards.map(([k, v]) => `<div class="stat"><span class="stat-num">${v}</span><span class="stat-label">${esc(k)}</span></div>`).join("");
 }
@@ -177,7 +178,7 @@ function renderList() {
               <td>${esc(d.holder?.cls || "")}</td>
               <td>${esc(d.holder?.no || "")}</td>
               <td>${esc(d.holder?.name || "")}${pastHit ? `${d.holder ? "<br>" : ""}<small class="badge badge--muted">曾借用：${esc(pastHit.name)}（${esc(pastHit.years.join("、"))}）</small>` : ""}</td>
-              <td><span class="badge badge--${STATUS[d.status]?.tone || "muted"}">${STATUS[d.status]?.label || esc(d.status)}</span></td>
+              <td><span class="badge badge--${STATUS[d.status]?.tone || "muted"}">${esc(statusText(d))}</span></td>
             </tr>`;
           }).join("")}
         </tbody>
@@ -192,7 +193,7 @@ function exportCSV() {
     const h = d.holder || {};
     const c = d.check || {};
     rows.push([d.label, d.serial, d.batch, d.mdm, mdmExpiry(d) || "", d.pencilLabel, d.pencilSerial,
-      STATUS[d.status]?.label || d.status, h.name, h.strn, h.cls, h.no, c.date, c.body, c.pencil, d.note]);
+      statusText(d), h.name, h.strn, h.cls, h.no, c.date, c.body, c.pencil, d.note]);
   }
   downloadCSV(`QEF_iPad_${todayId()}.csv`, rows);
 }
@@ -211,7 +212,7 @@ async function renderDetail(id, keep = false) {
   const h = d.holder;
   $("#dev-body").innerHTML = `
     <div class="dev-head">
-      <h2 id="dev-title">${esc(d.label)} <span class="badge badge--${STATUS[d.status]?.tone}">${STATUS[d.status]?.label || esc(d.status)}</span></h2>
+      <h2 id="dev-title">${esc(d.label)} <span class="badge badge--${STATUS[d.status]?.tone}">${esc(statusText(d))}</span></h2>
       <button class="btn btn--small" type="button" data-close>關閉</button>
     </div>
     <dl class="kv kv--wide">
@@ -267,7 +268,8 @@ async function renderDetail(id, keep = false) {
         <div class="field-row">
           <label class="field"><span>新狀態</span><select name="status">${Object.entries(STATUS).filter(([k]) => k !== "loaned" && k !== d.status)
             .map(([k, v]) => `<option value="${k}">${v.label}</option>`).join("")}</select></label>
-          <label class="field field--grow"><span>原因／備註</span><input name="note" maxlength="200" placeholder="例如：送修、爆 mon、已註銷"></label>
+          <label class="field"><span>注銷學年（待注銷／已注銷適用）</span><input name="writeOffYear" maxlength="5" value="${esc(d.writeOffYear || thisYear())}"></label>
+          <label class="field field--grow"><span>原因／備註</span><input name="note" maxlength="200" placeholder="例如：送修、爆 mon、待注銷原因"></label>
         </div>
         <button class="btn" type="submit">更改狀態</button>
       </form>` : ""}
@@ -437,8 +439,15 @@ $("#dev-dialog").addEventListener("submit", async (e) => {
     batch.update(devRef(d.id), { ...base, status: problem ? "repair" : "available", holder: null, lastHolder: d.holder || null, check, holderLog: log });
     batch.set(doc(histColl()), { ...hist, type: "return", student: d.holder || null, date: check.date, reason: v("reason"), check, note: v("note") });
   } else if (type === "status") {
-    batch.update(devRef(d.id), { ...base, status: v("status") });
-    batch.set(doc(histColl()), { ...hist, type: "status", from: d.status, to: v("status"), date: todayId(), note: v("note") });
+    const st = v("status");
+    const upd = { ...base, status: st };
+    if (st === "pendingWriteOff" || st === "retired") {
+      if (!/^\d{2}-\d{2}$/.test(v("writeOffYear"))) { toast("注銷學年格式應為「26-27」。", "error"); return; }
+      upd.writeOffYear = v("writeOffYear");
+    }
+    batch.update(devRef(d.id), upd);
+    batch.set(doc(histColl()), { ...hist, type: "status", from: d.status, to: st, date: todayId(),
+      note: [upd.writeOffYear ? `注銷學年 ${upd.writeOffYear}` : "", v("note")].filter(Boolean).join("；") });
   } else if (type === "edit") {
     const data = { serial: v("serial"), batch: v("batch"), mdm: v("mdm"), pencilLabel: v("pencilLabel"), pencilSerial: v("pencilSerial"), note: v("note") };
     const changes = Object.entries(data).filter(([k, val]) => (d[k] || "") !== val).map(([k, val]) => `${k}: ${d[k] || "—"} → ${val || "—"}`);
@@ -592,7 +601,7 @@ function renderStock() {
               <td><input type="checkbox" class="st-check" data-done ${r ? "checked" : ""} aria-label="${esc(d.label)} 完成盤點"></td>
               <td><strong>${esc(d.label)}</strong>${d.pencilLabel ? `<br><small>${esc(d.pencilLabel)}</small>` : ""}</td>
               <td class="mono">${esc(d.serial)}</td>
-              <td><span class="badge badge--${STATUS[d.status]?.tone}">${STATUS[d.status]?.label}</span></td>
+              <td><span class="badge badge--${STATUS[d.status]?.tone}">${esc(statusText(d))}</span></td>
               <td>${esc(d.holder?.name || "")}</td>
               <td>${esc(d.holder?.cls || "")}</td>
               <td>${esc(d.holder?.no || "")}</td>
@@ -613,7 +622,7 @@ function exportStock() {
   for (const d of stockDevices()) {
     const r = d.stocktakes?.[key] || {};
     const h = d.holder || {};
-    rows.push([d.label, d.serial, d.batch, d.pencilLabel, STATUS[d.status]?.label, h.name, h.strn, h.cls, h.no, r.date, r.body, r.pencil, r.by]);
+    rows.push([d.label, d.serial, d.batch, d.pencilLabel, statusText(d), h.name, h.strn, h.cls, h.no, r.date, r.body, r.pencil, r.by]);
   }
   downloadCSV(`QEF_iPad_盤點_${yearLabel(y)}.csv`, rows);
 }
@@ -621,7 +630,7 @@ function exportStock() {
 /* ---------- MDM 管理 ---------- */
 S.mdmSel = new Set();
 const mdmYear = () => Number($("#m-year").value) || currentYearStart();
-const activeDevices = () => S.devices.filter((d) => !["retired", "lost"].includes(d.status));
+const activeDevices = () => S.devices.filter((d) => !["retired", "lost", "pendingWriteOff"].includes(d.status));
 
 /** 某學年的 MDM 類別：included（購買後包括期內）／renewed（已續期）／need（需續期） */
 function mdmCategory(d, y) {
@@ -643,7 +652,7 @@ function setupMdm() {
     const y2 = mdmYear();
     const rows = [["Label No.", "機序號", "批次", "MDM 系統", "狀態", `${yearLabel(y2)} MDM`, "MDM 到期日", "最近續期日期", "續期備註"]];
     for (const d of mdmFiltered()) {
-      rows.push([d.label, d.serial, d.batch, d.mdm, STATUS[d.status]?.label, CAT[mdmCategory(d, y2)][0], mdmExpiry(d) || "",
+      rows.push([d.label, d.serial, d.batch, d.mdm, statusText(d), CAT[mdmCategory(d, y2)][0], mdmExpiry(d) || "",
         d.mdmLastRenewal?.date || "", d.mdmLastRenewal?.note || ""]);
     }
     downloadCSV(`QEF_iPad_MDM_${yearLabel(y2)}.csv`, rows);
@@ -790,7 +799,7 @@ function renderMdm() {
               <td class="mono">${esc(d.serial)}</td>
               <td>${esc(d.batch || "")}</td>
               <td>${esc(d.mdm || "")}</td>
-              <td><span class="badge badge--${STATUS[d.status]?.tone}">${STATUS[d.status]?.label}</span></td>
+              <td><span class="badge badge--${STATUS[d.status]?.tone}">${esc(statusText(d))}</span></td>
               <td><span class="badge badge--${CAT[c][1]}">${CAT[c][0]}</span></td>
               <td class="nowrap">${mdmExpiry(d) ? fmtDate(mdmExpiry(d)) : "—"}</td>
               <td>${r ? `${fmtDate(r.date)}${r.note ? `<br><small>${esc(r.note)}</small>` : ""}` : ""}</td>
@@ -805,7 +814,7 @@ function renderMdm() {
 /* ---------- Excel 更新 ---------- */
 const U_COLS = ["Label No.", "機序號", "批次", "MDM 系統", "MDM 到期日", "Pencil Label No.", "Pencil 機序號", "狀態",
   "持有者", "STRN", "班別", "學號", "備註"];
-const STATUS_BY_LABEL = Object.fromEntries(Object.entries(STATUS).map(([k, v]) => [v.label, k]));
+const STATUS_BY_LABEL = { ...Object.fromEntries(Object.entries(STATUS).map(([k, v]) => [v.label, k])), 已註銷: "retired", 待註銷: "pendingWriteOff" };
 const U = { plan: null };
 
 function setupUpdate() {
@@ -814,7 +823,7 @@ function setupUpdate() {
     for (const d of sorted(S.devices, "list")) {
       const h = d.holder || {};
       rows.push([d.label, d.serial, d.batch, d.mdm, mdmExpiry(d) || "", d.pencilLabel, d.pencilSerial,
-        STATUS[d.status]?.label || d.status, h.name, h.strn, h.cls, h.no, d.note]);
+        statusText(d), h.name, h.strn, h.cls, h.no, d.note]);
     }
     downloadCSV(`QEF_iPad_更新範本_${todayId()}.csv`, rows);
   });
@@ -885,7 +894,15 @@ function planUpdate(rows) {
     set("note", "備註", cell(r, "備註"), d?.note);
     let status = null;
     if (cell(r, "狀態")) {
-      status = STATUS_BY_LABEL[cell(r, "狀態")];
+      // 可寫「待注銷」或「待注銷（26-27）」
+      const sm = cell(r, "狀態").match(/^(.+?)(?:[（(](\d{2}-\d{2})[）)])?$/);
+      status = STATUS_BY_LABEL[sm?.[1]?.trim()];
+      if (sm?.[2] && (status === "pendingWriteOff" || status === "retired") && sm[2] !== d?.writeOffYear) {
+        changes.writeOffYear = sm[2];
+        notes.push(`注銷學年：${d?.writeOffYear || "—"} → ${sm[2]}`);
+      } else if ((status === "pendingWriteOff" || status === "retired") && !d?.writeOffYear) {
+        changes.writeOffYear = thisYear();
+      }
       if (!status) errors.push(`第 ${rowNo} 行：${label} 的狀態「${cell(r, "狀態")}」看不懂。`);
     }
 
@@ -1097,7 +1114,14 @@ function parseSheet(rows) {
     let holder = null;
     let lastHolder = null;
     const notes = [];
-    if (/注銷|註銷/.test(holderRaw)) { status = "retired"; notes.push(holderRaw); }
+    let writeOffYear = null;
+    if (/注銷|註銷/.test(holderRaw)) {
+      // 例如「26-27注銷」：本學年或之後的為「待注銷」，之前學年的為「已注銷」
+      const wy = holderRaw.match(/(\d{2})-(\d{2})/);
+      writeOffYear = wy ? `${wy[1]}-${wy[2]}` : null;
+      status = wy && 2000 + Number(wy[1]) >= currentYearStart() ? "pendingWriteOff" : "retired";
+      notes.push(holderRaw);
+    }
     else if (!holderRaw || RETURNED.test(holderRaw)) {
       status = "available";
       if (applicant.name) lastHolder = applicant;
@@ -1139,7 +1163,7 @@ function parseSheet(rows) {
     out.push({
       id: idOf(label, serial), label, serial: serial.toUpperCase(), batch: bm ? bm[1] : "", mdm: s(r, col.mdm),
       pencilLabel: s(r, col.pLabel), pencilSerial: s(r, col.pSerial).toUpperCase(),
-      status, holder, lastHolder, check, note: notes.join("\n"), log,
+      status, holder, lastHolder, check, note: notes.join("\n"), log, ...(writeOffYear ? { writeOffYear } : {}),
     });
   }
   return out;
@@ -1252,7 +1276,7 @@ function preview() {
         <thead><tr><th>Label</th><th>機序號</th><th>批次</th><th>MDM</th><th>狀態</th><th>持有者</th><th>備註</th></tr></thead>
         <tbody>${list.map((d) => `
           <tr><td>${esc(d.label)}</td><td class="mono">${esc(d.serial)}</td><td>${esc(d.batch)}</td><td>${esc(d.mdm)}</td>
-          <td><span class="badge badge--${STATUS[d.status].tone}">${STATUS[d.status].label}</span></td>
+          <td><span class="badge badge--${STATUS[d.status].tone}">${esc(statusText(d))}</span></td>
           <td>${esc(holderText(d.holder))} <span class="mono">${esc(d.holder?.strn || "")}</span></td>
           <td class="pre"><small>${esc(d.note)}</small></td></tr>`).join("")}
         </tbody>

@@ -221,7 +221,7 @@ python3 tools/set-version.py
 
 | 集合 | 說明 |
 | --- | --- |
-| `qef_devices` | 文件 ID = Label（如 i136）：`serial`、`batch`、`mdm`、`mdmExpiry`（MDM 到期日）、`mdmLastRenewal`、`holderLog`（借用者記錄）、`pencilLabel`、`pencilSerial`、`status`（loaned／available／repair／lost／retired）、`holder`、`lastHolder`、`check`、`note` |
+| `qef_devices` | 文件 ID = Label（如 i136）：`serial`、`batch`、`mdm`、`mdmExpiry`（MDM 到期日）、`mdmLastRenewal`、`holderLog`（借用者記錄）、`pencilLabel`、`pencilSerial`、`status`（loaned／available／repair／lost／pendingWriteOff 待注銷／retired 已注銷）、`writeOffYear`（注銷學年）、`holder`、`lastHolder`、`check`、`note` |
 | `qef_history` | 每次借出、歸還、更改狀態、編輯、新增、匯入的記錄（不可修改或刪除） |
 
 稍後階段：新學年 STRN 升班、借用申請分配及輪候、年度點算、MDM 購買記錄、年度報告。

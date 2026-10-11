@@ -14,7 +14,14 @@ export const STATUS = {
   available: { label: "可借出",   tone: "wait" },
   repair:    { label: "維修中",   tone: "stop" },
   lost:      { label: "遺失",     tone: "stop" },
-  retired:   { label: "已註銷",   tone: "muted" },
+  pendingWriteOff: { label: "待注銷", tone: "wait" },
+  retired:   { label: "已注銷",   tone: "muted" },
+};
+
+/** 狀態文字；待注銷／已注銷會加上學年，例如「待注銷（26-27）」 */
+export const statusText = (d) => {
+  const base = STATUS[d.status]?.label || d.status;
+  return (d.status === "pendingWriteOff" || d.status === "retired") && d.writeOffYear ? `${base}（${d.writeOffYear}）` : base;
 };
 
 /** 「21-22」→ 2021 */
