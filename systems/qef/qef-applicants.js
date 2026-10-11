@@ -1,9 +1,9 @@
 // QEF iPad管理：申請記錄（各年申請人名單、檢查新申請者是否三年內已申請）
-import { db, esc, toast, downloadCSV, loadXlsx } from "../../assets/js/common.js?v=20261008q";
+import { db, esc, toast, downloadCSV, loadXlsx } from "../../assets/js/common.js?v=20261008s";
 import {
   collection, doc, onSnapshot, writeBatch, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { currentYearStart, yearLabel } from "./qef-config.js?v=20261008q";
+import { currentYearStart, yearLabel } from "./qef-config.js?v=20261008s";
 
 const $ = (sel) => document.querySelector(sel);
 const WINDOW = 3;   // 檢查最近幾個學年

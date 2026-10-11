@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId, pad, enhanceDateInputs, downloadCSV, loadXlsx,
-} from "../../assets/js/common.js?v=20261008q";
+} from "../../assets/js/common.js?v=20261008s";
 import {
   collection, doc, onSnapshot, getDoc, getDocs, query, where, writeBatch, serverTimestamp, updateDoc, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { setupApplicants } from "./qef-applicants.js?v=20261008q";
+import { setupApplicants } from "./qef-applicants.js?v=20261008s";
 import {
   QEF, STATUS, statusText, mdmStatus, currentYearStart, yearLabel, defaultMdmExpiry, mdmExpiry, yearEnd, addYear,
-} from "./qef-config.js?v=20261008q";
+} from "./qef-config.js?v=20261008s";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, devices: [], openId: null };
@@ -59,6 +59,27 @@ function onSortClick(e) {
 }
 document.addEventListener("click", onSortClick);
 document.addEventListener("keydown", onSortClick);
+
+/**
+ * 合併借用者記錄中連續相同的學生：姓名相同，而 STRN 相同或其中一方未有 STRN。
+ * 例如 23-24 未有 STRN 的「潘俊麟」與 24-25 的「潘俊麟 S8569160」合併為一行。
+ */
+function mergeLog(log) {
+  const out = [];
+  for (const e of log) {
+    const last = out[out.length - 1];
+    if (last && last.name === e.name && (!last.strn || !e.strn || last.strn === e.strn)) {
+      out[out.length - 1] = {
+        ...last, ...Object.fromEntries(Object.entries(e).filter(([, v]) => v !== "" && v != null)),
+        years: [...new Set([...(last.years || []), ...(e.years || [])])].sort(),
+        strn: e.strn || last.strn, from: last.from || e.from,
+      };
+    } else {
+      out.push({ ...e });
+    }
+  }
+  return out;
+}
 
 /** 最近一位借用者（借用者記錄的最後一項） */
 const lastLog = (d) => (d.holderLog || []).slice(-1)[0] || d.lastHolder || null;
@@ -276,6 +297,20 @@ async function renderDetail(id, keep = false) {
         <button class="btn" type="submit">更改狀態</button>
       </form>` : ""}
 
+    ${h ? `
+    <details class="card-form dev-form">
+      <summary><strong>修改持有者資料</strong>（更正姓名、STRN、班別或學號，不會當作轉借）</summary>
+      <form data-form="holder" class="mt-s">
+        <div class="field-row">
+          <label class="field"><span>STRN</span><input name="strn" value="${esc(h.strn || "")}" maxlength="12"></label>
+          <label class="field"><span>學生姓名</span><input name="name" value="${esc(h.name || "")}" maxlength="40" required></label>
+          <label class="field"><span>班別</span><input name="cls" value="${esc(h.cls || "")}" maxlength="4"></label>
+          <label class="field"><span>學號</span><input name="no" value="${esc(h.no || "")}" maxlength="3"></label>
+        </div>
+        <button class="btn" type="submit">儲存持有者資料</button>
+      </form>
+    </details>` : ""}
+
     <details class="card-form dev-form">
       <summary><strong>編輯 iPad 資料</strong></summary>
       <form data-form="edit" class="mt-s">
@@ -349,6 +384,7 @@ function historyItem(r) {
     edit: "修改了 iPad 資料",
     mdm: "更新 MDM 到期日",
     stocktake: "完成盤點",
+    holderEdit: "更正持有者資料",
     unstock: "取消盤點",
     create: "新增 iPad",
     import: "由 Excel 匯入",
@@ -406,6 +442,7 @@ $("#dev-dialog").addEventListener("input", (e) => {
   if (e.target.name !== "strn") return;
   const strn = e.target.value.trim().toUpperCase();
   const hint = $("[data-student-hint]");
+  if (!hint) return;   // 只有借出表格有提示
   const holding = S.devices.find((d) => d.holder?.strn?.toUpperCase() === strn);
   hint.textContent = strn && holding ? `注意：這位學生現正借用 ${holding.label}。` : "";
 });
@@ -450,6 +487,18 @@ $("#dev-dialog").addEventListener("submit", async (e) => {
     batch.update(devRef(d.id), upd);
     batch.set(doc(histColl()), { ...hist, type: "status", from: d.status, to: st, date: todayId(),
       note: [upd.writeOffYear ? `注銷學年 ${upd.writeOffYear}` : "", v("note")].filter(Boolean).join("；") });
+  } else if (type === "holder") {
+    const nh = { ...d.holder, strn: v("strn").toUpperCase(), name: v("name"), cls: v("cls").toUpperCase(), no: v("no") };
+    if (!nh.name) { toast("請填寫學生姓名。", "error"); return; }
+    const diff = ["strn", "name", "cls", "no"].filter((k) => (nh[k] || "") !== (d.holder[k] || ""));
+    if (!diff.length) { toast("資料沒有改變。"); return; }
+    // 更正目前借用者記錄（最後一項「借用中」）
+    const log = [...(d.holderLog || [])];
+    const idx = log.map((x, k) => [x, k]).reverse().find(([x]) => x.outcome === "借用中")?.[1];
+    if (idx != null) log[idx] = { ...log[idx], strn: nh.strn, name: nh.name, cls: nh.cls, no: nh.no };
+    batch.update(devRef(d.id), { ...base, holder: nh, holderLog: mergeLog(log) });
+    batch.set(doc(histColl()), { ...hist, type: "holderEdit", student: nh, date: todayId(),
+      note: `更正持有者資料：${holderText(d.holder)} ${d.holder.strn || ""} → ${holderText(nh)} ${nh.strn || ""}` });
   } else if (type === "edit") {
     const data = { serial: v("serial"), batch: v("batch"), mdm: v("mdm"), pencilLabel: v("pencilLabel"), pencilSerial: v("pencilSerial"), note: v("note") };
     const changes = Object.entries(data).filter(([k, val]) => (d[k] || "") !== val).map(([k, val]) => `${k}: ${d[k] || "—"} → ${val || "—"}`);
@@ -461,7 +510,7 @@ $("#dev-dialog").addEventListener("submit", async (e) => {
   }
   try {
     await batch.commit();
-    toast({ loan: "已借出。", return: "已登記歸還。", status: "已更改狀態。", edit: "已儲存資料。" }[type], "success");
+    toast({ loan: "已借出。", return: "已登記歸還。", status: "已更改狀態。", edit: "已儲存資料。", holder: "已更正持有者資料。" }[type], "success");
   } catch (err) {
     toast("未能儲存：" + err.message, "error");
   }
@@ -1214,6 +1263,7 @@ function buildLogs(sheets) {
   }
   // 較早的記錄若仍寫「借用中」，代表之後已轉給其他學生
   for (const arr of Object.values(byDev)) arr.forEach((x, i) => { if (i < arr.length - 1 && x.outcome === "借用中") x.outcome = "—"; });
+  for (const k of Object.keys(byDev)) byDev[k] = mergeLog(byDev[k]);
   return byDev;
 }
 
