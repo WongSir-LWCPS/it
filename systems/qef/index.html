@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../assets/css/style.css?v=20261008v">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261008w">
   <script>
     // 程式載入或執行失敗時，在頁面上顯示原因（而不是空白頁）
     (function () {
@@ -155,10 +155,9 @@
       <div id="a-summary" class="mt-s"></div>
 
       <div class="card-form mt-s">
-        <h3>教育局借用情況回覆</h3>
-        <p class="hint">每年教育局會要求學校回覆名單上每位申請人的借用情況。選擇回覆學年後，可在下表逐一選擇狀態（會即時儲存），或按「按 iPad 借用情況建議」自動填寫未選擇的項目，最後匯出回覆檔案。</p>
+        <h3 id="a-r-title">教育局借用情況回覆</h3>
+        <p class="hint">每年先在頁面最底匯入教育局的名單，名單上的申請人即為今年需要回覆的學生。可在下表逐一選擇狀態（會即時儲存），或按「按 iPad 借用情況建議」自動填寫未選擇的項目，最後匯出回覆檔案。</p>
         <div class="filter-bar">
-          <label class="field field--compact"><span>回覆學年</span><select id="a-r-year"></select></label>
           <button class="btn btn--small" type="button" id="a-suggest">按 iPad 借用情況建議（只填未選擇的）</button>
           <button class="btn btn--small btn--primary" type="button" id="a-r-export">匯出回覆（CSV）</button>
         </div>
@@ -176,8 +175,8 @@
       <div id="a-list"></div>
 
       <div class="card-form mt">
-        <h2>匯入教育局申請者名單</h2>
-        <p class="hint">上載教育局提供的申請者名單（欄位：STRN、姓名、申請年份及年級，例如「P1 (2021/22)」）。同一 STRN 同一申請學年只會保留一份記錄，重複匯入不會產生重複記錄，亦不會影響已填寫的回覆狀態。</p>
+        <h2>匯入今年教育局名單</h2>
+        <p class="hint">上載教育局今年發出的名單（欄位：STRN、Student Name／姓名、Class Level (Application Year)／申請年份及年級，例如「P1 (2021/22)」），只讀取第一張工作表。名單上的申請人會列為今年需要回覆的學生。同一 STRN 同一申請學年只會保留一份記錄，重複匯入不會產生重複記錄，亦不會清除已填寫的回覆。</p>
         <label class="field"><span>檔案（.xlsx／.csv）</span><input type="file" id="a-import-file" accept=".xlsx,.xls,.csv"></label>
         <div id="a-import-result"></div>
       </div>
@@ -231,6 +230,6 @@
     <div id="dev-body"></div>
   </dialog>
 
-  <script type="module" src="qef.js?v=20261008v"></script>
+  <script type="module" src="qef.js?v=20261008w"></script>
 </body>
 </html>

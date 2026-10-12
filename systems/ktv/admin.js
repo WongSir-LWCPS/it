@@ -1,17 +1,17 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, daysUntil, parseDateId, toDateId, pad, todayId,
   enhanceDateInputs, timePicker,
-} from "../../assets/js/common.js?v=20261008v";
+} from "../../assets/js/common.js?v=20261008w";
 import {
   collection, doc, onSnapshot, writeBatch, updateDoc, setDoc, getDoc, serverTimestamp, arrayUnion, arrayRemove,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { KTV, STATUS } from "./ktv-config.js?v=20261008v";
+import { KTV, STATUS } from "./ktv-config.js?v=20261008w";
 import {
   timeLabel, toMin, lockIdOf, isActive, regularIndex, findConflict, sortBookings,
-} from "./ktv-common.js?v=20261008v";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261008v";
-import { buildKtvEmail } from "./ktv-email.js?v=20261008v";
-import { emailEnabled } from "../../assets/js/email.js?v=20261008v";
+} from "./ktv-common.js?v=20261008w";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261008w";
+import { buildKtvEmail } from "./ktv-email.js?v=20261008w";
+import { emailEnabled } from "../../assets/js/email.js?v=20261008w";
 
 const S = {
   user: null, regularDates: [], bookings: [], filter: "active", upcoming: false,

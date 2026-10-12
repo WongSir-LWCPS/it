@@ -2,11 +2,11 @@
 // - 各年申請人名單（教育局申請者名單／借用情況文件）
 // - 每學年向教育局回覆的借用情況（A／B／C／D）
 // - 檢查新申請者是否三年內已申請
-import { db, esc, toast, downloadCSV, loadXlsx } from "../../assets/js/common.js?v=20261008v";
+import { db, esc, toast, downloadCSV, loadXlsx } from "../../assets/js/common.js?v=20261008w";
 import {
   collection, doc, onSnapshot, writeBatch, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { currentYearStart, yearLabel } from "./qef-config.js?v=20261008v";
+import { currentYearStart, yearLabel } from "./qef-config.js?v=20261008w";
 
 const $ = (sel) => document.querySelector(sel);
 const WINDOW = 3;   // 檢查最近幾個學年
@@ -40,12 +40,12 @@ export function setupApplicants(ctx) {
   $("#a-window-n").textContent = WINDOW;
   const y = currentYearStart();
   $("#a-year").innerHTML = [y + 1, y, y - 1].map((v) => `<option value="${v}" ${v === y ? "selected" : ""}>${yearLabel(v)}</option>`).join("");
+  $("#a-r-title").textContent = `教育局借用情況回覆（${yearLabel(replyYear())}）`;
   $("#a-legend").innerHTML = Object.entries(REPLY).map(([k, v]) =>
     `<li><span class="badge badge--${TONE[k]}">${k}</span> ${esc(REPLY_ZH[k])}：<small>${esc(v)}</small></li>`).join("");
   // 第一次打開分頁才讀取，節省讀取量
   document.querySelector('.tab[data-tab="apply"]').addEventListener("click", load, { once: true });
   ["#a-f-year", "#a-f-level", "#a-f-status", "#a-q"].forEach((id) => $(id).addEventListener("input", renderList));
-  $("#a-r-year").addEventListener("input", () => { renderFilters(); renderReplySummary(); renderList(); });
   $("#a-export").addEventListener("click", exportList);
   $("#a-r-export").addEventListener("click", exportReply);
   $("#a-suggest").addEventListener("click", suggest);
@@ -71,7 +71,6 @@ function load() {
     A.list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     A.loaded = true;
     renderSummary();
-    renderReplyYears();
     renderFilters();
     renderReplySummary();
     renderList();
@@ -79,20 +78,10 @@ function load() {
 }
 
 /* ---------- 回覆學年 ---------- */
-/** 有回覆記錄的學年（包括今年待回覆） */
-const reportYears = () => [...new Set(A.list.flatMap((r) => Object.keys(r.statuses || {}).map((k) => Number(k.slice(1)))))].sort((a, b) => b - a);
-const replyYear = () => Number($("#a-r-year").value) || reportYears()[0] || currentYearStart();
+/** 回覆學年固定為本學年：每年匯入教育局名單後回覆，不用回覆舊年份 */
+const replyYear = () => currentYearStart();
 /** 某學年名單上的申請人 */
 const listedIn = (y) => A.list.filter((r) => r.statuses?.[yk(y)]);
-
-function renderReplyYears() {
-  const sel = $("#a-r-year");
-  const cur = sel.value;
-  const ys = reportYears();
-  if (!ys.includes(currentYearStart())) ys.unshift(currentYearStart());
-  sel.innerHTML = ys.map((y) => `<option value="${y}">${yearLabel(y)}</option>`).join("");
-  sel.value = ys.map(String).includes(cur) ? cur : String(ys.includes(currentYearStart()) ? currentYearStart() : ys[0]);
-}
 
 function renderReplySummary() {
   const y = replyYear();
@@ -102,7 +91,7 @@ function renderReplySummary() {
     <p>${yearLabel(y)} 名單共 <strong>${list.length}</strong> 人：
       ${Object.keys(REPLY).map((k) => `<span class="badge badge--${TONE[k]}">${k}</span> ${n(k)}`).join("　")}
       　<span class="badge badge--stop">未回覆</span> <strong>${n("")}</strong></p>`
-    : `<p class="hint">${yearLabel(y)} 未有教育局名單。請先匯入當年的借用情況文件。</p>`;
+    : `<p class="hint">${yearLabel(y)} 未有教育局名單。請先在頁面最底匯入今年教育局的名單。</p>`;
 }
 
 /* ---------- 名單 ---------- */
@@ -375,13 +364,14 @@ async function readSheets(file) {
   return wb.SheetNames.map((name) => ({ name, rows: XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: false, defval: "" }) }));
 }
 
-/** 讀取申請者名單（欄位：STRN、姓名、申請年份及年級） */
+/** 讀取教育局名單（欄位：No.、STRN、姓名、申請年份及年級）；名單上的申請人即為本學年需回覆的名單 */
 function parseSheetRows(name, rows, bad) {
   const hi = rows.findIndex((r) => r.some((c) => /STRN/i.test(String(c))));
   if (hi < 0) return [];
   const h = rows[hi].map((c) => String(c).trim());
   const ci = {
     strn: h.findIndex((c) => /STRN/i.test(c)),
+    no: h.findIndex((c) => /^No\.?$/i.test(c)),
     name: h.findIndex((c) => /姓名|Name/i.test(c)),
     ly: h.findIndex((c) => /年份|年級|Class Level|Application Year/i.test(c)),
   };
@@ -391,7 +381,7 @@ function parseSheetRows(name, rows, bad) {
     if (!strn) return;
     const { level, yearStart } = parseLevelYear(r[ci.ly]);
     if (!yearStart) { bad.push(`${name} 第 ${hi + i + 2} 行（${strn}）：看不懂「${r[ci.ly]}」`); return; }
-    out.push({ id: `${strn}_${yearStart}`, strn, name: String(r[ci.name] ?? "").trim(), level, yearStart });
+    out.push({ id: `${strn}_${yearStart}`, strn, name: String(r[ci.name] ?? "").trim(), level, yearStart, no: Number(r[ci.no]) || out.length + 1 });
   });
   return out;
 }
@@ -409,7 +399,7 @@ async function importFile(e) {
     // 按申請人合併：同一 STRN＋申請學年一份記錄，各學年狀態分開
     const map = new Map();
     for (const r of rows) {
-      const cur = map.get(r.id) || { id: r.id, strn: r.strn, name: r.name, level: r.level, yearStart: r.yearStart };
+      const cur = map.get(r.id) || { id: r.id, strn: r.strn, name: r.name, level: r.level, yearStart: r.yearStart, no: r.no };
       if (!cur.name && r.name) cur.name = r.name;
       map.set(r.id, cur);
     }
@@ -419,7 +409,7 @@ async function importFile(e) {
     box.innerHTML = `
       ${bad.length ? `<p class="load-error">${bad.map(esc).join("<br>")}</p>` : ""}
       <div class="import-bar mt-s">
-        <p>共 ${A.plan.length} 位申請人（新增 ${A.plan.filter((x) => !exist.has(x.id)).length} 位）。</p>
+        <p>共 ${A.plan.length} 位申請人（新增 ${A.plan.filter((x) => !exist.has(x.id)).length} 位），會成為 ${yearLabel(replyYear())} 需回覆的名單。</p>
         <button class="btn btn--primary" data-a-run>確認匯入</button>
       </div>`;
   } catch (err) {
@@ -437,8 +427,12 @@ async function runImport(btn) {
       const b = writeBatch(db);
       for (const r of A.plan.slice(i, i + 300)) {
         const existing = A.list.find((x) => x.id === r.id);
+        // 列入本學年回覆名單；已填寫的回覆狀態不會被清除
+        const key = yk(replyYear());
+        const old = existing?.statuses?.[key];
         b.set(doc(db, "qef_applicants", r.id), {
           strn: r.strn, name: r.name || existing?.name || "", level: r.level, yearStart: r.yearStart,
+          statuses: { [key]: { code: old?.code || "", text: old?.text || "", no: r.no } },
           source: "edb", updatedAt: serverTimestamp(),
         }, { merge: true });
       }
