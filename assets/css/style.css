@@ -633,3 +633,11 @@ th.sortable.is-sorted { color: var(--ink); }
 .sort-mark { margin-left: 4px; font-size: .7em; opacity: .45; }
 th.is-sorted .sort-mark { opacity: 1; }
 .batch-table td { white-space: nowrap; }
+
+/* QEF 申請記錄：回覆狀態 */
+.legend-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; font-size: .82rem; }
+.reply-select { padding: 3px 6px; border-radius: 6px; border: 1px solid #C7CEDF; font: inherit; font-size: .82rem; background: var(--surface); }
+.reply-select.reply-none { border-color: var(--stop); color: var(--stop); }
+.reply-select.reply-A { background: var(--go-bg); }
+.reply-select.reply-C { background: var(--wait-bg); }
+.reply-select.reply-D { background: var(--stop-bg); }

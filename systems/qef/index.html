@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../assets/css/style.css?v=20261008t">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261008u">
   <script>
     // 程式載入或執行失敗時，在頁面上顯示原因（而不是空白頁）
     (function () {
@@ -151,11 +151,24 @@
       </div>
       <div id="a-check-result" class="mt-s"></div>
 
-      <h2 class="mt">各年申請人名單</h2>
+      <h2 class="mt">各年申請人名單及借用情況</h2>
       <div id="a-summary" class="mt-s"></div>
+
+      <div class="card-form mt-s">
+        <h3>教育局借用情況回覆</h3>
+        <p class="hint">每年教育局會要求學校回覆名單上每位申請人的借用情況。選擇回覆學年後，可在下表逐一選擇狀態（會即時儲存），或按「按 iPad 借用情況建議」自動填寫未選擇的項目，最後匯出回覆檔案。</p>
+        <div class="filter-bar">
+          <label class="field field--compact"><span>回覆學年</span><select id="a-r-year"></select></label>
+          <button class="btn btn--small" type="button" id="a-suggest">按 iPad 借用情況建議（只填未選擇的）</button>
+          <button class="btn btn--small btn--primary" type="button" id="a-r-export">匯出回覆（CSV）</button>
+        </div>
+        <div id="a-r-summary"></div>
+        <ul class="legend-list" id="a-legend"></ul>
+      </div>
       <div class="filter-bar">
         <label class="field field--compact"><span>申請學年</span><select id="a-f-year"></select></label>
         <label class="field field--compact"><span>年級</span><select id="a-f-level"></select></label>
+        <label class="field field--compact"><span>回覆狀態</span><select id="a-f-status"></select></label>
         <label class="field field--compact field--grow"><span>搜尋</span><input id="a-q" placeholder="STRN 或姓名" autocomplete="off"></label>
         <button class="btn btn--small" type="button" id="a-export">匯出 CSV</button>
       </div>
@@ -163,8 +176,11 @@
       <div id="a-list"></div>
 
       <div class="card-form mt">
-        <h2>匯入教育局申請者名單</h2>
-        <p class="hint">上載教育局提供的 Excel（欄位：STRN、姓名、申請年份及年級，例如「P1 (2021/22)」）。同一 STRN 同一學年的記錄只會保留一份；重複匯入不會產生重複記錄。</p>
+        <h2>匯入教育局文件</h2>
+        <p class="hint">可上載兩種檔案：<br>
+          ・申請者名單（欄位：STRN、姓名、申請年份及年級，例如「P1 (2021/22)」）。<br>
+          ・借用情況文件（例如 QEF_Status.xlsx）：每張工作表以學年命名（例如「2025-2026」），欄位包括 STRN、Student Name、Class Level (Application Year)、Status。系統會匯入每位申請人及各學年的回覆狀態；狀態留空的學年（例如今年待回覆）會列為「未回覆」。<br>
+          同一 STRN 同一申請學年只會保留一份記錄，重複匯入不會產生重複記錄；已在平台填寫的回覆狀態不會被空白覆蓋。</p>
         <label class="field"><span>檔案（.xlsx／.csv）</span><input type="file" id="a-import-file" accept=".xlsx,.xls,.csv"></label>
         <div id="a-import-result"></div>
       </div>
@@ -218,6 +234,6 @@
     <div id="dev-body"></div>
   </dialog>
 
-  <script type="module" src="qef.js?v=20261008t"></script>
+  <script type="module" src="qef.js?v=20261008u"></script>
 </body>
 </html>

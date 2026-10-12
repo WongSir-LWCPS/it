@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId, pad, enhanceDateInputs, downloadCSV, loadXlsx,
-} from "../../assets/js/common.js?v=20261008t";
+} from "../../assets/js/common.js?v=20261008u";
 import {
   collection, doc, onSnapshot, getDoc, getDocs, query, where, writeBatch, serverTimestamp, updateDoc, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { setupApplicants } from "./qef-applicants.js?v=20261008t";
+import { setupApplicants } from "./qef-applicants.js?v=20261008u";
 import {
   QEF, STATUS, statusText, mdmStatus, currentYearStart, yearLabel, defaultMdmExpiry, mdmExpiry, yearEnd, addYear,
-} from "./qef-config.js?v=20261008t";
+} from "./qef-config.js?v=20261008u";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, devices: [], openId: null };
@@ -97,7 +97,7 @@ boot({
     setupMdm();
     setupAdd();
     setupUpdate();
-    setupApplicants({ getDevices: () => S.devices });
+    setupApplicants({ getDevices: () => S.devices, userEmail: () => S.user.email });
     onSnapshot(collection(db, "qef_devices"), (snap) => {
       S.devices = snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort(natural);
       renderStats();

@@ -1,15 +1,15 @@
 import {
   boot, db, esc, toast, fmtTimestamp, todayId, daysUntil, pad,
-} from "../../assets/js/common.js?v=20261008t";
+} from "../../assets/js/common.js?v=20261008u";
 import {
   collection, doc, onSnapshot, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { emailEnabled } from "../../assets/js/email.js?v=20261008t";
-import { notifyAdmins, syncNotifyList } from "../../assets/js/notify.js?v=20261008t";
+import { emailEnabled } from "../../assets/js/email.js?v=20261008u";
+import { notifyAdmins, syncNotifyList } from "../../assets/js/notify.js?v=20261008u";
 import {
   INFO, ISTATUS, deviceWithPlace, findClashes, isActive, deviceName, slotStart, slotEnd,
-} from "./infostation-config.js?v=20261008t";
-import { buildInfoEmail, slotText } from "./infostation-email.js?v=20261008t";
+} from "./infostation-config.js?v=20261008u";
+import { buildInfoEmail, slotText } from "./infostation-email.js?v=20261008u";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, list: [], filter: "active", upcoming: true };

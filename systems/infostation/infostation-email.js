@@ -1,6 +1,6 @@
-import { fmtDate, isEn } from "../../assets/js/common.js?v=20261008t";
-import { adminMail } from "../../assets/js/notify.js?v=20261008t";
-import { INFO, deviceWithPlace } from "./infostation-config.js?v=20261008t";
+import { fmtDate, isEn } from "../../assets/js/common.js?v=20261008u";
+import { adminMail } from "../../assets/js/notify.js?v=20261008u";
+import { INFO, deviceWithPlace } from "./infostation-config.js?v=20261008u";
 
 export function slotText(s) {
   return s.startDate === s.endDate

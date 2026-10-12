@@ -212,7 +212,7 @@ python3 tools/set-version.py
 - iPad 清單：可按 Label、機序號、學生姓名、STRN、班別搜尋，按狀態、批次、MDM 篩選，並匯出 CSV。
 - 詳細資料：借出（STRN、姓名、班別、學號、日期）、歸還（原因及機身／Pencil／保護套檢查，有問題自動轉為維修中）、更改狀態、編輯資料，以及完整歷史記錄。
 - 盤點：每學年初使用。選擇盤點學年後，逐行選擇機身及 Apple Pencil 的結果（保護套不用檢查；沒有配對 Pencil 的 iPad 預設為「無」），再剔選「完成」；亦可在「快速盤點」輸入或掃描 Label／機序號後按 Enter，即以「已檢查正常」完成。進度列顯示已盤點、未盤點及有問題數量，可篩選未盤點／已盤點／有問題，並匯出盤點結果。記錄存於 `stocktakes.y<學年開始年份>`。
-- 申請記錄（分頁，`qef-applicants.js`）：匯入教育局提供的申請者名單（STRN、姓名、申請年份及年級，如「P1 (2021/22)」），按學年及年級顯示各年申請人，並列出該學生現時或以往借用的 QEF iPad。「檢查新申請者」可貼上 STRN（支援 S805490(A) 等格式）或上載名單，選擇申請學年後檢查之前 3 個學年內是否曾申請（紅色標示），亦會顯示 3 年前的申請及沒有記錄的學生。
+- 申請記錄（分頁，`qef-applicants.js`）：可匯入教育局借用情況文件（例如 QEF_Status.xlsx，每張工作表以學年命名，含 Status 欄），建立歷年申請人及各學年回覆狀態（A 繼續借用／B 仍在校但已歸還／C 已歸還可再借出／D 已歸還需更換）。「教育局借用情況回覆」選擇回覆學年後，可逐一選擇狀態（即時儲存）、按 iPad 借用情況自動建議（現正借用→A；已歸還→C；歸還的 iPad 現時維修中／待注銷→D；其餘沿用上年 C／D／B），再匯出教育局格式的 CSV。亦可匯入教育局提供的申請者名單（STRN、姓名、申請年份及年級，如「P1 (2021/22)」），按學年及年級顯示各年申請人，並列出該學生現時或以往借用的 QEF iPad。「檢查新申請者」可貼上 STRN（支援 S805490(A) 等格式）或上載名單，選擇申請學年後檢查之前 3 個學年內是否曾申請（紅色標示），亦會顯示 3 年前的申請及沒有記錄的學生。
 - 新增 iPad：Label 自動續編，批次預設為目前學年。
 - MDM 管理（分頁）：選擇學年，顯示該年需要續期、已續期、未續期、包括期內的數量及續期進度，以及「各批次 MDM 狀況」（每批數量、購買時包括 MDM 至、未到期／需續期、各類數量；按一下即只顯示該批次）。清單可按需續期／已續期／包括期內、批次、MDM 系統篩選；剔選 iPad（可全選）後輸入「續期後到期日」及備註（如訂單編號），按「標示為已續期」即批量更新；「取消續期」會改回續期前的到期日。MDM 到期日預設為購買學年起計第三個學年的 8 月 31 日（`qef-config.js` 的 `mdmIncludedYears`），到期日早於所選學年完結的 iPad 列為需續期。詳細資料亦可「續期一年」或在編輯資料中修改。
 - 排序：iPad 清單、盤點、MDM 管理的表頭均可按一下排序，再按一下反序。
@@ -222,7 +222,7 @@ python3 tools/set-version.py
 | 集合 | 說明 |
 | --- | --- |
 | `qef_devices` | 文件 ID = Label（如 i136）：`serial`、`batch`、`mdm`、`mdmExpiry`（MDM 到期日）、`mdmLastRenewal`、`holderLog`（借用者記錄）、`pencilLabel`、`pencilSerial`、`status`（loaned／available／repair／lost／pendingWriteOff 待注銷／retired 已注銷）、`writeOffYear`（注銷學年）、`holder`、`lastHolder`、`check`、`note` |
-| `qef_applicants` | 文件 ID = STRN_學年開始年份：`strn`、`name`、`level`、`yearStart` |
+| `qef_applicants` | 文件 ID = STRN_申請學年開始年份：`strn`、`name`、`level`、`yearStart`、`statuses`（`y2025: { code, text, no }` 等各學年回覆） |
 | `qef_history` | 每次借出、歸還、更改狀態、編輯、新增、匯入的記錄（不可修改或刪除） |
 
 稍後階段：新學年 STRN 升班、借用申請分配及輪候、年度點算、MDM 購買記錄、年度報告。
