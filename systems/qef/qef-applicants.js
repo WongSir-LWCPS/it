@@ -2,11 +2,11 @@
 // - 各年申請人名單（教育局申請者名單／借用情況文件）
 // - 每學年向教育局回覆的借用情況（A／B／C／D）
 // - 檢查新申請者是否三年內已申請
-import { db, esc, toast, downloadCSV, loadXlsx } from "../../assets/js/common.js?v=20261008u";
+import { db, esc, toast, downloadCSV, loadXlsx } from "../../assets/js/common.js?v=20261008v";
 import {
   collection, doc, onSnapshot, writeBatch, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { currentYearStart, yearLabel } from "./qef-config.js?v=20261008u";
+import { currentYearStart, yearLabel } from "./qef-config.js?v=20261008v";
 
 const $ = (sel) => document.querySelector(sel);
 const WINDOW = 3;   // 檢查最近幾個學年
@@ -159,13 +159,11 @@ function renderList() {
     return;
   }
   const ry = replyYear();
-  const years = reportYears().filter((y) => y !== ry).sort((a, b) => a - b);   // 以往學年的回覆
   const th = (k, label) => `<th class="sortable${A.sort.key === k ? " is-sorted" : ""}" data-a-sort="${k}">${label}<span class="sort-mark" aria-hidden="true">${A.sort.key === k ? (A.sort.dir > 0 ? "▲" : "▼") : "↕"}</span></th>`;
   $("#a-list").innerHTML = `
     <div class="table-scroll">
       <table class="table">
         <thead><tr>${th("year", "申請學年")}${th("level", "年級")}${th("strn", "STRN")}${th("name", "姓名")}
-          ${years.map((y) => `<th class="nowrap">${yearLabel(y)}</th>`).join("")}
           ${th("reply", `${yearLabel(ry)} 回覆`)}<th>QEF iPad</th></tr></thead>
         <tbody>${list.map((r) => {
           const cur = r.statuses?.[yk(ry)];
@@ -175,7 +173,6 @@ function renderList() {
             <td>${esc(r.level || "")}</td>
             <td class="mono">${esc(r.strn)}</td>
             <td>${esc(r.name || "")}</td>
-            ${years.map((y) => `<td>${badge(r.statuses?.[yk(y)])}</td>`).join("")}
             <td>${cur ? `<select data-reply="${esc(r.id)}" class="reply-select ${cur.code ? `reply-${cur.code}` : "reply-none"}">
                 <option value="">未回覆</option>
                 ${Object.keys(REPLY).map((k) => `<option value="${k}" ${cur.code === k ? "selected" : ""}>${k} ${REPLY_ZH[k]}</option>`).join("")}
@@ -186,12 +183,6 @@ function renderList() {
         </tbody>
       </table>
     </div>`;
-}
-
-function badge(s) {
-  if (!s) return "";
-  if (!s.code) return `<span class="badge badge--muted" title="未回覆">—</span>`;
-  return `<span class="badge badge--${TONE[s.code] || "muted"}" title="${esc(s.text || REPLY[s.code] || "")}">${esc(s.code)}</span>`;
 }
 
 /** 以 STRN 找出該學生借用過的 QEF iPad */
@@ -292,9 +283,8 @@ function exportReply() {
 }
 
 function exportList() {
-  const years = reportYears().sort((a, b) => a - b);
-  const rows = [["STRN", "姓名", "申請年份及年級", ...years.map((y) => `${yearLabel(y)} 回覆`)]];
-  for (const r of filtered()) rows.push([r.strn, r.name, appText(r), ...years.map((y) => r.statuses?.[yk(y)]?.code ?? "")]);
+  const rows = [["STRN", "姓名", "申請年份及年級"]];
+  for (const r of filtered()) rows.push([r.strn, r.name, appText(r)]);
   downloadCSV("QEF_申請人名單.csv", rows);
 }
 
@@ -385,32 +375,23 @@ async function readSheets(file) {
   return wb.SheetNames.map((name) => ({ name, rows: XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: false, defval: "" }) }));
 }
 
-/** 讀取一張工作表：申請者名單，或附有 Status 的借用情況（工作表名稱為學年） */
+/** 讀取申請者名單（欄位：STRN、姓名、申請年份及年級） */
 function parseSheetRows(name, rows, bad) {
   const hi = rows.findIndex((r) => r.some((c) => /STRN/i.test(String(c))));
   if (hi < 0) return [];
   const h = rows[hi].map((c) => String(c).trim());
   const ci = {
-    no: h.findIndex((c) => /^No\.?$/i.test(c)),
     strn: h.findIndex((c) => /STRN/i.test(c)),
     name: h.findIndex((c) => /姓名|Name/i.test(c)),
     ly: h.findIndex((c) => /年份|年級|Class Level|Application Year/i.test(c)),
-    status: h.findIndex((c) => /^Status$|狀態|情況/i.test(c)),
   };
-  const ym = name.match(/(20\d{2})\s*[-/]\s*(20\d{2}|\d{2})/);
-  const reportYear = ci.status >= 0 && ym ? Number(ym[1]) : null;
   const out = [];
   rows.slice(hi + 1).forEach((r, i) => {
     const strn = normStrn(r[ci.strn]);
     if (!strn) return;
     const { level, yearStart } = parseLevelYear(r[ci.ly]);
     if (!yearStart) { bad.push(`${name} 第 ${hi + i + 2} 行（${strn}）：看不懂「${r[ci.ly]}」`); return; }
-    const text = ci.status >= 0 ? String(r[ci.status] ?? "").trim() : "";
-    const code = (text.match(/^([A-D])\s*-/) || [])[1] || "";
-    out.push({
-      id: `${strn}_${yearStart}`, strn, name: String(r[ci.name] ?? "").trim(), level, yearStart,
-      reportYear, status: reportYear ? { code, text, no: Number(r[ci.no]) || i + 1 } : null,
-    });
+    out.push({ id: `${strn}_${yearStart}`, strn, name: String(r[ci.name] ?? "").trim(), level, yearStart });
   });
   return out;
 }
@@ -423,38 +404,24 @@ async function importFile(e) {
   try {
     const sheets = await readSheets(file);
     const bad = [];
-    const rows = sheets.flatMap((s) => parseSheetRows(s.name, s.rows, bad));
+    const rows = parseSheetRows(sheets[0].name, sheets[0].rows, bad);   // 只讀取第一張工作表
     if (!rows.length) throw new Error("找不到 STRN 欄或任何申請人。");
     // 按申請人合併：同一 STRN＋申請學年一份記錄，各學年狀態分開
     const map = new Map();
     for (const r of rows) {
-      const cur = map.get(r.id) || { id: r.id, strn: r.strn, name: r.name, level: r.level, yearStart: r.yearStart, statuses: {} };
+      const cur = map.get(r.id) || { id: r.id, strn: r.strn, name: r.name, level: r.level, yearStart: r.yearStart };
       if (!cur.name && r.name) cur.name = r.name;
-      if (r.reportYear) cur.statuses[yk(r.reportYear)] = r.status;
       map.set(r.id, cur);
     }
     if (!A.loaded) load();
     const exist = new Set(A.list.map((r) => r.id));
     A.plan = [...map.values()];
-    const reports = [...new Set(rows.map((r) => r.reportYear).filter(Boolean))].sort();
-    const perReport = reports.map((y) => {
-      const list = rows.filter((r) => r.reportYear === y);
-      const c = (k) => list.filter((r) => r.status.code === k).length;
-      return `<tr><td>${yearLabel(y)}</td><td>${list.length}</td>${["A", "B", "C", "D", ""].map((k) => `<td>${c(k) || ""}</td>`).join("")}</tr>`;
-    }).join("");
     box.innerHTML = `
       ${bad.length ? `<p class="load-error">${bad.map(esc).join("<br>")}</p>` : ""}
       <div class="import-bar mt-s">
-        <p>共 ${A.plan.length} 位申請人（新增 ${A.plan.filter((x) => !exist.has(x.id)).length} 位）${reports.length ? `，${reports.length} 個學年的借用情況` : ""}。</p>
+        <p>共 ${A.plan.length} 位申請人（新增 ${A.plan.filter((x) => !exist.has(x.id)).length} 位）。</p>
         <button class="btn btn--primary" data-a-run>確認匯入</button>
-      </div>
-      ${reports.length ? `
-      <div class="table-scroll mt-s">
-        <table class="table">
-          <thead><tr><th>學年</th><th>名單人數</th><th>A</th><th>B</th><th>C</th><th>D</th><th>未回覆</th></tr></thead>
-          <tbody>${perReport}</tbody>
-        </table>
-      </div>` : ""}`;
+      </div>`;
   } catch (err) {
     box.innerHTML = `<p class="load-error">未能讀取檔案：${esc(err.message)}</p>`;
   }
@@ -470,15 +437,9 @@ async function runImport(btn) {
       const b = writeBatch(db);
       for (const r of A.plan.slice(i, i + 300)) {
         const existing = A.list.find((x) => x.id === r.id);
-        const statuses = { ...(existing?.statuses || {}) };
-        for (const [k, s] of Object.entries(r.statuses)) {
-          // 檔案中空白的狀態（例如今年待回覆）不會覆蓋已在平台填寫的回覆
-          const old = statuses[k];
-          statuses[k] = s.code || !old?.code ? { ...(old || {}), ...s } : { ...old, no: s.no };
-        }
         b.set(doc(db, "qef_applicants", r.id), {
           strn: r.strn, name: r.name || existing?.name || "", level: r.level, yearStart: r.yearStart,
-          statuses, source: "edb", updatedAt: serverTimestamp(),
+          source: "edb", updatedAt: serverTimestamp(),
         }, { merge: true });
       }
       await b.commit();

@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, APP, isBlockedEmail, fmtTimestamp, fmtDate, todayId, enhanceDateInputs, downloadCSV,
-} from "./common.js?v=20261008u";
+} from "./common.js?v=20261008v";
 import {
   collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, getDocs, writeBatch,
   serverTimestamp, arrayRemove, addDoc, query, orderBy, limit, where, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { SYSTEMS } from "./systems.js?v=20261008u";
-import { sendEmail } from "./email.js?v=20261008u";
-import { syncNotifyList, wantsNotify } from "./notify.js?v=20261008u";
+import { SYSTEMS } from "./systems.js?v=20261008v";
+import { sendEmail } from "./email.js?v=20261008v";
+import { syncNotifyList, wantsNotify } from "./notify.js?v=20261008v";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { me: "", admins: [] };
