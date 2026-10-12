@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId, pad, enhanceDateInputs, downloadCSV, loadXlsx,
-} from "../../assets/js/common.js?v=20261008s";
+} from "../../assets/js/common.js?v=20261008t";
 import {
   collection, doc, onSnapshot, getDoc, getDocs, query, where, writeBatch, serverTimestamp, updateDoc, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { setupApplicants } from "./qef-applicants.js?v=20261008s";
+import { setupApplicants } from "./qef-applicants.js?v=20261008t";
 import {
   QEF, STATUS, statusText, mdmStatus, currentYearStart, yearLabel, defaultMdmExpiry, mdmExpiry, yearEnd, addYear,
-} from "./qef-config.js?v=20261008s";
+} from "./qef-config.js?v=20261008t";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, devices: [], openId: null };
@@ -96,7 +96,6 @@ boot({
     setupStock();
     setupMdm();
     setupAdd();
-    setupImport();
     setupUpdate();
     setupApplicants({ getDevices: () => S.devices });
     onSnapshot(collection(db, "qef_devices"), (snap) => {
@@ -178,7 +177,7 @@ function renderList() {
   $("#list-count").textContent = `顯示 ${list.length} 部（共 ${S.devices.length} 部）`;
   const box = $("#device-list");
   if (!S.devices.length) {
-    box.innerHTML = `<p class="empty">還未有 iPad 資料。請到「匯入 Excel」上載現有的點算表，或到「新增 iPad」逐部加入。</p>`;
+    box.innerHTML = `<p class="empty">還未有 iPad 資料。請到「Excel 更新」上載 iPad 資料，或到「新增 iPad」逐部加入。</p>`;
     return;
   }
   box.innerHTML = `
@@ -342,7 +341,7 @@ async function renderDetail(id, keep = false) {
 /** 借用者記錄：每位學生一行，連續學年合併 */
 function borrowerTable(d) {
   const log = [...(d.holderLog || [])].reverse();
-  if (!log.length) return `<p class="hint">沒有借用者記錄。匯入 Excel 時選擇「同時匯入歷年借用者」，即可加入以往的記錄。</p>`;
+  if (!log.length) return `<p class="hint">沒有借用者記錄。</p>`;
   return `
     <div class="table-scroll">
       <table class="table">
@@ -1120,12 +1119,10 @@ function setupAdd() {
   });
 }
 
-/* ---------- 匯入 Excel ---------- */
+/* ---------- Excel 工具 ---------- */
 let XLSX = null;
-const IMP = { wb: null, rows: null };
-// 「現時持有者」欄中代表 iPad 已不在學生手上的字眼
-const RETURNED = /歸還|取機|放棄|畢業|退學|轉校|框中|在校/;
 
+/** 儲存格 → 日期 ID（支援 Excel 日期、2027-08-31、31/8/2027） */
 function toDateId(v) {
   if (v instanceof Date) return `${v.getFullYear()}-${pad(v.getMonth() + 1)}-${pad(v.getDate())}`;
   if (typeof v === "number" && v > 30000) { const p = XLSX.SSF.parse_date_code(v); return `${p.y}-${pad(p.m)}-${pad(p.d)}`; }
@@ -1135,243 +1132,3 @@ function toDateId(v) {
   m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);   // 日/月/年
   return m ? `${m[3]}-${pad(m[2])}-${pad(m[1])}` : "";
 }
-
-/** 讀取 QEF 校產點算工作表 */
-function parseSheet(rows) {
-  const hi = rows.findIndex((r) => r.some((c) => String(c).trim() === "Label No."));
-  if (hi < 0) return null;
-  const h = rows[hi].map((c) => String(c ?? "").trim());
-  const at = (name, nth = 0) => h.reduce((acc, x, i) => (x === name ? [...acc, i] : acc), [])[nth] ?? -1;
-  const col = {
-    label: at("Label No."), serial: at("機序號"), batch: at("可上堂借用"), mdm: at("MDM 系統"),
-    pLabel: at("Pencil Label No."), pSerial: at("Pencil 機序號"),
-    applicant: at("申請者"), strn: at("申請者STRN"), cls1: at("班別", 0), no1: at("學號", 0),
-    state: at("狀況"), holder: at("現時持有者") >= 0 ? at("現時持有者") : at("持有者"),
-    cls2: at("班別", 1), no2: at("學號", 1), date: at("點算日期"),
-    body: at("iPads機身"), pencil: at("Apple Pencil"), case: at("保護套"),
-  };
-  const noteCol = col.case >= 0 ? col.case + 1 : -1;
-  const s = (r, i) => (i >= 0 && r[i] != null ? String(r[i]).trim() : "");
-  const out = [];
-  for (const r of rows.slice(hi + 1)) {
-    const label = s(r, col.label);
-    const serial = s(r, col.serial);
-    if (!label || !serial) continue;   // 略過總結行
-    const bm = s(r, col.batch).match(/^(\d{2}-\d{2})/);
-    const holderRaw = s(r, col.holder);
-    const state = s(r, col.state);
-    const applicant = { name: s(r, col.applicant), strn: s(r, col.strn).toUpperCase(), cls: s(r, col.cls1).toUpperCase(), no: s(r, col.no1) };
-    let status;
-    let holder = null;
-    let lastHolder = null;
-    const notes = [];
-    let writeOffYear = null;
-    if (/注銷|註銷/.test(holderRaw)) {
-      // 例如「26-27注銷」：本學年或之後的為「待注銷」，之前學年的為「已注銷」
-      const wy = holderRaw.match(/(\d{2})-(\d{2})/);
-      writeOffYear = wy ? `${wy[1]}-${wy[2]}` : null;
-      status = wy && 2000 + Number(wy[1]) >= currentYearStart() ? "pendingWriteOff" : "retired";
-      notes.push(holderRaw);
-    }
-    else if (!holderRaw || RETURNED.test(holderRaw)) {
-      status = "available";
-      if (applicant.name) lastHolder = applicant;
-      if (holderRaw) notes.push(`${applicant.name ? `${applicant.name}：` : ""}${holderRaw}`);
-    } else {
-      status = "loaned";
-      holder = {
-        name: holderRaw,
-        strn: holderRaw === applicant.name ? applicant.strn : "",
-        cls: (s(r, col.cls2) || applicant.cls).toUpperCase(),
-        no: s(r, col.no2) || applicant.no,
-        since: "",
-      };
-    }
-    if (state) {
-      notes.push(`狀況：${state}`);
-      if (status === "available" && /壞|爆|維修/.test(state)) status = "repair";
-    }
-    // 當年的借用者（用於「借用者記錄」）
-    const log = [];
-    if (applicant.name) {
-      let outcome = "";
-      if (/畢業|退學|轉校|放棄/.test(state)) outcome = state;
-      else if (holderRaw && (RETURNED.test(holderRaw) || /注銷|註銷/.test(holderRaw))) outcome = holderRaw;
-      else if (holderRaw === applicant.name) outcome = "借用中";
-      else if (holderRaw) outcome = "轉借";
-      // 仍由申請者持有時，用當年的班別及學號（「現時持有者」旁的欄）
-      const sameHolder = holderRaw === applicant.name;
-      log.push({ ...applicant, cls: (sameHolder && s(r, col.cls2).toUpperCase()) || applicant.cls,
-        no: (sameHolder && s(r, col.no2)) || applicant.no, outcome });
-    }
-    if (status === "loaned" && holder.name !== applicant.name) log.push({ name: holder.name, strn: "", cls: holder.cls, no: holder.no, outcome: "借用中" });
-    const extra = s(r, noteCol);
-    if (extra) notes.push(extra);
-    const date = col.date >= 0 ? toDateId(r[col.date]) : "";
-    // 保護套不用檢查，只讀取機身及 Pencil（保護套欄只用來找出其後的備註欄）
-    const check = (s(r, col.body) || s(r, col.pencil) || date)
-      ? { date, body: s(r, col.body), pencil: s(r, col.pencil) } : null;
-    out.push({
-      id: idOf(label, serial), label, serial: serial.toUpperCase(), batch: bm ? bm[1] : "", mdm: s(r, col.mdm),
-      pencilLabel: s(r, col.pLabel), pencilSerial: s(r, col.pSerial).toUpperCase(),
-      status, holder, lastHolder, check, note: notes.join("\n"), log, ...(writeOffYear ? { writeOffYear } : {}),
-    });
-  }
-  return out;
-}
-
-/** 由工作表名稱推算學年開始年份，例如「2025-2026年度…」→ 2025；「2024-9月_…-2023-9-27」→ 2023 */
-function sheetYear(name) {
-  let m = name.match(/(\d{4})-(\d{4})年度/);
-  if (m) return Number(m[1]);
-  m = name.match(/(\d{4})-(\d{1,2})-(\d{1,2})\s*$/);
-  if (m) return Number(m[2]) >= 9 ? Number(m[1]) : Number(m[1]) - 1;
-  m = name.match(/(\d{4})/);
-  return m ? Number(m[1]) : null;
-}
-
-/** 各學年工作表的點算結果 → 每部 iPad 的盤點記錄 */
-function buildStocktakes(sheets) {
-  const out = {};
-  for (const { year, list } of sheets) {
-    for (const d of list) {
-      const c = d.check;
-      if (!c || !(c.date || c.body || c.pencil)) continue;
-      (out[d.id] ||= {})[`y${year}`] = { date: c.date || "", body: c.body || "", pencil: c.pencil || "", by: "Excel" };
-    }
-  }
-  return out;
-}
-
-/** 把各學年的借用者合併為每部 iPad 的借用者記錄（同一學生連續學年合併為一行） */
-function buildLogs(sheets) {
-  const byDev = {};
-  for (const { year, list } of [...sheets].sort((a, b) => a.year - b.year)) {
-    for (const d of list) {
-      for (const e of d.log) {
-        const arr = (byDev[d.id] ||= []);
-        const key = (x) => (x.strn || x.name).toUpperCase();
-        const last = arr[arr.length - 1];
-        if (last && key(last) === key(e)) {
-          if (!last.years.includes(yearLabel(year))) last.years.push(yearLabel(year));
-          Object.assign(last, { cls: e.cls || last.cls, no: e.no || last.no, outcome: e.outcome || last.outcome, strn: last.strn || e.strn });
-        } else {
-          arr.push({ years: [yearLabel(year)], name: e.name, strn: e.strn, cls: e.cls, no: e.no, outcome: e.outcome, source: "excel" });
-        }
-      }
-    }
-  }
-  // 較早的記錄若仍寫「借用中」，代表之後已轉給其他學生
-  for (const arr of Object.values(byDev)) arr.forEach((x, i) => { if (i < arr.length - 1 && x.outcome === "借用中") x.outcome = "—"; });
-  for (const k of Object.keys(byDev)) byDev[k] = mergeLog(byDev[k]);
-  return byDev;
-}
-
-function setupImport() {
-  $("#import-file").addEventListener("change", async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    $("#import-result").innerHTML = `<p class="empty">正在讀取 ${esc(file.name)}…</p>`;
-    try {
-      XLSX = await loadXlsx();
-      IMP.wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
-      const names = IMP.wb.SheetNames.filter((n) => /QEF/.test(n));
-      const sel = $("#import-sheet");
-      sel.innerHTML = (names.length ? names : IMP.wb.SheetNames).map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
-      // 預設選最新年度
-      const latest = [...names].sort((a, b) => (b.match(/20\d\d/)?.[0] || "").localeCompare(a.match(/20\d\d/)?.[0] || ""))[0];
-      if (latest) sel.value = latest;
-      $("#import-sheet-wrap").hidden = false;
-      preview();
-    } catch (err) {
-      $("#import-result").innerHTML = `<p class="load-error">未能讀取檔案：${esc(err.message)}</p>`;
-    }
-  });
-  $("#import-sheet").addEventListener("change", preview);
-  $("#import-result").addEventListener("click", (e) => { if (e.target.closest("[data-run-import]")) runImport(e.target.closest("[data-run-import]")); });
-}
-
-function preview() {
-  const rows = XLSX.utils.sheet_to_json(IMP.wb.Sheets[$("#import-sheet").value], { header: 1, raw: true, defval: "" });
-  const list = parseSheet(rows);
-  const box = $("#import-result");
-  if (!list?.length) { IMP.rows = null; box.innerHTML = `<p class="load-error">這個工作表找不到「Label No.」標題或 iPad 資料。</p>`; return; }
-  IMP.rows = list;
-  const qefSheets = IMP.wb.SheetNames.filter((n) => /QEF校產/.test(n) && sheetYear(n) != null);
-  const main = $("#import-sheet").value;
-  const sheetData = qefSheets.map((n) => ({
-    year: sheetYear(n),
-    list: n === main ? list : (parseSheet(XLSX.utils.sheet_to_json(IMP.wb.Sheets[n], { header: 1, raw: true, defval: "" })) || []),
-  }));
-  IMP.logs = buildLogs(sheetData);
-  IMP.stocks = buildStocktakes(sheetData);
-  const logCount = Object.values(IMP.logs).reduce((n, a) => n + a.length, 0);
-  const by = (key) => list.reduce((m, d) => { m[d[key]] = (m[d[key]] || 0) + 1; return m; }, {});
-  const batches = by("batch");
-  const statuses = by("status");
-  const exist = list.filter((d) => S.devices.some((x) => x.id === d.id)).length;
-  const noStrn = list.filter((d) => d.status === "loaned" && !d.holder.strn);
-  box.innerHTML = `
-    <div class="import-bar">
-      <p>共 ${list.length} 部 iPad：新增 ${list.length - exist} 部，更新 ${exist} 部。</p>
-      <button class="btn btn--primary" data-run-import>確認匯入</button>
-    </div>
-    <label class="check mt-s"><input type="checkbox" id="import-logs" checked>
-      同時匯入歷年借用者及點算記錄（${qefSheets.length} 張 QEF 校產點算工作表：${qefSheets.map((n) => yearLabel(sheetYear(n))).sort().join("、")}，共 ${logCount} 項）</label>
-    <div class="forms-grid mt-s">
-      <div class="card-form"><h3>各批次數量</h3><ul class="old-list">${Object.entries(batches).sort().map(([k, v]) => `<li>${esc(k || "（未有批次）")}：${v} 部</li>`).join("")}</ul></div>
-      <div class="card-form"><h3>狀態</h3><ul class="old-list">${Object.entries(statuses).map(([k, v]) => `<li>${STATUS[k]?.label || k}：${v} 部</li>`).join("")}</ul></div>
-    </div>
-    ${noStrn.length ? `<p class="warn mt-s">${noStrn.length} 部借出中的 iPad，持有者與申請者不同，所以沒有 STRN：${noStrn.map((d) => esc(d.label)).join("、")}。匯入後可在詳細資料補上。</p>` : ""}
-    <div class="table-scroll mt-s">
-      <table class="table">
-        <thead><tr><th>Label</th><th>機序號</th><th>批次</th><th>MDM</th><th>狀態</th><th>持有者</th><th>備註</th></tr></thead>
-        <tbody>${list.map((d) => `
-          <tr><td>${esc(d.label)}</td><td class="mono">${esc(d.serial)}</td><td>${esc(d.batch)}</td><td>${esc(d.mdm)}</td>
-          <td><span class="badge badge--${STATUS[d.status].tone}">${esc(statusText(d))}</span></td>
-          <td>${esc(holderText(d.holder))} <span class="mono">${esc(d.holder?.strn || "")}</span></td>
-          <td class="pre"><small>${esc(d.note)}</small></td></tr>`).join("")}
-        </tbody>
-      </table>
-    </div>`;
-}
-
-async function runImport(btn) {
-  if (!IMP.rows) return;
-  if (!confirm(`匯入 ${IMP.rows.length} 部 iPad？同一 Label 的現有資料會被更新。`)) return;
-  btn.disabled = true;
-  btn.textContent = "匯入中…";
-  const sheet = $("#import-sheet").value;
-  try {
-    for (let i = 0; i < IMP.rows.length; i += 200) {
-      const b = writeBatch(db);
-      for (const d of IMP.rows.slice(i, i + 200)) {
-        const { id, log, ...data } = d;
-        if ($("#import-logs")?.checked) {
-          // 保留在平台上登記（source: app）而 Excel 沒有的記錄
-          const appLogs = (S.devices.find((x) => x.id === id)?.holderLog || []).filter((x) => x.source === "app");
-          data.holderLog = [...(IMP.logs[id] || []), ...appLogs];
-          // 歷年點算結果；已在平台盤點的學年不會被覆蓋
-          const existing = S.devices.find((x) => x.id === id)?.stocktakes || {};
-          data.stocktakes = { ...(IMP.stocks[id] || {}), ...existing };
-        }
-        void log;
-        b.set(devRef(id), { ...data, updatedAt: serverTimestamp(), updatedBy: S.user.email, importedFrom: sheet }, { merge: true });
-        b.set(doc(histColl()), {
-          deviceId: id, label: d.label, type: "import", by: S.user.email, at: serverTimestamp(), date: todayId(),
-          student: d.holder || null, note: `${sheet}${d.note ? `：${d.note.replace(/\n/g, "；")}` : ""}`,
-        });
-      }
-      await b.commit();
-    }
-    IMP.rows = null;
-    $("#import-result").innerHTML = `<p class="empty">匯入完成。</p>`;
-    $("#import-file").value = "";
-    toast("匯入完成。", "success");
-  } catch (err) {
-    btn.disabled = false;
-    btn.textContent = "確認匯入";
-    toast("未能匯入：" + err.message, "error");
-  }
-}
-
