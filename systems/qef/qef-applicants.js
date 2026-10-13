@@ -2,11 +2,11 @@
 // - 各年申請人名單（教育局申請者名單／借用情況文件）
 // - 每學年向教育局回覆的借用情況（A／B／C／D）
 // - 檢查新申請者是否三年內已申請
-import { db, esc, toast, downloadCSV, loadXlsx } from "../../assets/js/common.js?v=20261008w";
+import { db, esc, toast, downloadCSV, loadXlsx } from "../../assets/js/common.js?v=20261008x";
 import {
   collection, doc, onSnapshot, writeBatch, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { currentYearStart, yearLabel } from "./qef-config.js?v=20261008w";
+import { currentYearStart, yearLabel } from "./qef-config.js?v=20261008x";
 
 const $ = (sel) => document.querySelector(sel);
 const WINDOW = 3;   // 檢查最近幾個學年
@@ -166,12 +166,20 @@ function renderList() {
                 <option value="">未回覆</option>
                 ${Object.keys(REPLY).map((k) => `<option value="${k}" ${cur.code === k ? "selected" : ""}>${k} ${REPLY_ZH[k]}</option>`).join("")}
               </select>` : `<small class="hint">不在名單</small>`}</td>
-            <td>${loanText(r.strn)}</td>
+            <td>${cur ? loanText(r.strn) : `${latestText(r)} ${loanText(r.strn)}`}</td>
           </tr>`;
         }).join("")}
         </tbody>
       </table>
     </div>`;
+}
+
+/** 不在本年名單的申請人：顯示最近一年的回覆狀態 */
+function latestText(r) {
+  const k = Object.keys(r.statuses || {}).filter((x) => r.statuses[x]?.code).sort().pop();
+  if (!k) return `<small class="hint">沒有回覆記錄</small>`;
+  const st = r.statuses[k];
+  return `<span class="badge badge--${TONE[st.code] || "muted"}" title="${esc(st.text || REPLY[st.code] || "")}">${yearLabel(Number(k.slice(1)))}：${esc(st.code)} ${esc(REPLY_ZH[st.code] || "")}</span>`;
 }
 
 /** 以 STRN 找出該學生借用過的 QEF iPad */

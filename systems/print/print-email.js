@@ -1,6 +1,6 @@
-import { fmtDate } from "../../assets/js/common.js?v=20261008w";
-import { adminMail } from "../../assets/js/notify.js?v=20261008w";
-import { PRINT } from "./print-config.js?v=20261008w";
+import { fmtDate } from "../../assets/js/common.js?v=20261008x";
+import { adminMail } from "../../assets/js/notify.js?v=20261008x";
+import { PRINT } from "./print-config.js?v=20261008x";
 
 /** 寄給管理員的彩色列印限額通知；kind：new、approved、rejected */
 export function buildPrintEmail(r, kind, note = "", actor = "") {
