@@ -1,6 +1,6 @@
-import { fmtDate } from "../../assets/js/common.js?v=20261008x";
-import { adminMail } from "../../assets/js/notify.js?v=20261008x";
-import { COPILOT, purposeText } from "./copilot-config.js?v=20261008x";
+import { fmtDate } from "../../assets/js/common.js?v=20261013b";
+import { adminMail } from "../../assets/js/notify.js?v=20261013b";
+import { COPILOT, purposeText } from "./copilot-config.js?v=20261013b";
 
 /** 寄給管理員的 Copilot 借用通知；kind：new、approved、rejected、returned */
 export function buildCopilotEmail(r, kind, note = "", actor = "") {
