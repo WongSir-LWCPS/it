@@ -641,3 +641,14 @@ th.is-sorted .sort-mark { opacity: 1; }
 .reply-select.reply-A { background: var(--go-bg); }
 .reply-select.reply-C { background: var(--wait-bg); }
 .reply-select.reply-D { background: var(--stop-bg); }
+
+/* 電子器材損壞報告 */
+.repair-auto { margin-bottom: 12px; }
+.repair-form .field { margin-bottom: 12px; }
+.repair-tools { margin: 12px 0; }
+.repair-tools input[type="search"] { min-width: 220px; }
+.repair-edit { display: grid; gap: 10px; border-top: 1px dashed var(--line); padding-top: 12px; }
+.repair-edit .field { margin: 0; }
+td .repair-edit { min-width: 240px; border-top: 0; padding-top: 0; }
+.repair-tools .field--inline { display: flex; align-items: center; gap: 8px; margin: 0; }
+.repair-tools .field--inline span { white-space: nowrap; }

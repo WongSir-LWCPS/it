@@ -54,6 +54,15 @@ export const SYSTEMS = [
     icon: "🖥️",
   },
   {
+    id: "repair",
+    name: "電子器材損壞報告",
+    desc: "發現電子器材損壞時填表通知IT組，並可查看IT組的跟進情況。",
+    href: "systems/repair/index.html",
+    adminHref: "systems/repair/admin.html",
+    adminLabel: "管理及跟進",
+    icon: "🛠️",
+  },
+  {
     id: "qef",
     name: "QEF iPad管理",
     desc: "（只限IT組）管理學校 QEF iPad 的資料、借出及歸還記錄、狀態及 MDM。",

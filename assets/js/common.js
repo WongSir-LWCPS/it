@@ -3,12 +3,12 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261013b";
-import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261013b";
-import { SYSTEMS } from "./systems.js?v=20261013b";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261016a";
+import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261016a";
+import { SYSTEMS } from "./systems.js?v=20261016a";
 
 startI18n();
-export { tr, t, isEn } from "./i18n.js?v=20261013b";
+export { tr, t, isEn } from "./i18n.js?v=20261016a";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -415,7 +415,7 @@ function setupDrawer(root, isAdmin, current, hidden = []) {
     ${visibleSystems(hidden, isAdmin).map((s) => `
       ${link(s.href, s.name + (hidden.includes(s.id) ? "（已隱藏）" : ""), s.id, s.icon || "🧩")}
       ${isAdmin && s.adminHref && (current === s.id || current === `${s.id}-admin`)
-        ? link(s.adminHref, "管理及審批", `${s.id}-admin`, "", true) : ""}`).join("")}
+        ? link(s.adminHref, s.adminLabel || "管理及審批", `${s.id}-admin`, "", true) : ""}`).join("")}
     ${isAdmin ? `<p class="drawer-group">管理</p>${link("settings.html", "平台設定", "settings", "⚙️")}` : ""}`;
   document.body.append(backdrop, drawer);
 

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-Hant-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>電子器材損壞報告 管理及跟進｜IT一站式平台</title>
+  <link rel="icon" href="../../assets/img/favicon.png">
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261016a">
+  <script>
+    // 程式載入或執行失敗時，在頁面上顯示原因（而不是空白頁）
+    (function () {
+      function show(msg) {
+        var el = document.getElementById("loading") || document.getElementById("load-fail");
+        if (!el) {
+          el = document.createElement("div");
+          el.id = "load-fail";
+          el.className = "loading";
+          document.body.insertBefore(el, document.body.firstChild.nextSibling);
+        }
+        el.innerHTML = "系統未能載入：" + String(msg).replace(/</g, "&lt;") +
+          "<br>請按 Ctrl + Shift + R（Mac：Cmd + Shift + R）重新整理。如仍未能解決，請把這段文字截圖告訴IT組。";
+      }
+      window.__showLoadError = show;
+      // 程式檔下載失敗（例如 404）
+      window.addEventListener("error", function (e) {
+        var t = e.target;
+        if (t && t !== window) {            // 資源載入失敗：只理會程式檔（字型、圖片失敗不影響使用）
+          if (t.tagName === "SCRIPT") show("未能下載程式檔 " + (t.src || ""));
+          return;
+        }
+        show(e.message || "程式錯誤");
+      }, true);
+      window.addEventListener("unhandledrejection", function (e) { show((e.reason && e.reason.message) || "程式錯誤"); });
+      // 15 秒後仍未顯示任何內容
+      setTimeout(function () {
+        var main = document.getElementById("main"), gate = document.getElementById("gate");
+        if (document.getElementById("loading") || (main && main.hidden && gate && gate.hidden)) show("載入時間過長，請檢查網絡連線");
+      }, 15000);
+    })();
+  </script>
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+  <p id="loading" class="loading">載入中…</p>
+  <div id="gate" class="gate" hidden></div>
+
+  <main id="main" class="wrap" hidden>
+    <nav class="crumbs" aria-label="位置">
+      <a href="../../index.html">IT一站式平台</a>
+      <span aria-hidden="true">/</span>
+      <a href="index.html">電子器材損壞報告</a>
+      <span aria-hidden="true">/</span>
+      <span>管理及跟進</span>
+    </nav>
+
+    <div id="admin-area" hidden>
+      <h1>電子器材損壞報告 管理及跟進</h1>
+      <p id="email-status" class="warn" hidden></p>
+
+      <div class="tabs" role="tablist">
+        <button role="tab" class="tab" data-tab="open" aria-selected="true">未完成維修 <span id="open-count" class="count"></span></button>
+        <button role="tab" class="tab" data-tab="done" aria-selected="false">已完成維修</button>
+      </div>
+
+      <div class="block-head repair-tools">
+        <label class="field field--inline"><span>搜尋</span>
+          <input id="search" type="search" placeholder="地點、器材、老師…" autocomplete="off">
+        </label>
+        <button class="btn btn--small" type="button" id="export">匯出 CSV</button>
+      </div>
+
+      <section id="tab-open" class="panel" role="tabpanel">
+        <div id="open-list" class="reviews"></div>
+      </section>
+      <section id="tab-done" class="panel" role="tabpanel" hidden>
+        <div id="done-list"></div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="admin.js?v=20261016a"></script>
+</body>
+</html>

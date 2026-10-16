@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, APP, isBlockedEmail, fmtTimestamp, fmtDate, todayId, enhanceDateInputs, downloadCSV,
-} from "./common.js?v=20261013b";
+} from "./common.js?v=20261016a";
 import {
   collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, getDocs, writeBatch,
   serverTimestamp, arrayRemove, addDoc, query, orderBy, limit, where, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { SYSTEMS } from "./systems.js?v=20261013b";
-import { sendEmail } from "./email.js?v=20261013b";
-import { syncNotifyList, wantsNotify } from "./notify.js?v=20261013b";
+import { SYSTEMS } from "./systems.js?v=20261016a";
+import { sendEmail } from "./email.js?v=20261016a";
+import { syncNotifyList, wantsNotify } from "./notify.js?v=20261016a";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { me: "", admins: [] };
@@ -189,6 +189,11 @@ const SOURCES = [
     key: "copilot", label: "Copilot借用申請", coll: "copilot_requests", field: "endDate",
     old: (r, start) => (r.endDate || "") < start,
     row: (r) => ["Copilot借用", r.startDate, `至 ${r.endDate}`, (r.purposes || []).join("、"), r.applicantName, r.email, r.status, r.reviewNote],
+  },
+  {
+    key: "repair", label: "電子器材損壞報告", coll: "repair_reports", field: "date",
+    old: (r, start) => (r.date || "") < start,
+    row: (r) => ["器材損壞報告", r.date, r.doneDate ? `完成 ${r.doneDate}` : "", `${r.location}：${r.device}｜${r.problem}`, r.teacherName, r.email, r.status, r.followUp],
   },
 ];
 

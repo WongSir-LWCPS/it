@@ -23,6 +23,47 @@ export const MONTHS_EN = MON;
 
 /* ---------- 完全相同的句子 ---------- */
 const DICT = {
+  // 電子器材損壞報告
+  "電子器材損壞報告": "Equipment Fault Report",
+  "發現電子器材損壞時填表通知IT組，並可查看IT組的跟進情況。": "Report damaged electronic equipment to the IT Team and check their follow-up.",
+  "發現電子器材損壞時，請填寫下表。提交後IT組會收到電郵通知，跟進情況可在下方「我的報告」查看。": "When you find damaged electronic equipment, please fill in this form. The IT Team will be notified by email; check the follow-up under “My reports” below.",
+  "管理及跟進": "Manage & Follow Up",
+  "電子器材損壞報告 管理及跟進": "Equipment Fault Report – Manage & Follow Up",
+  "報告老師": "Reported by",
+  "報告日期": "Report date",
+  "地點": "Location",
+  "損壞的器材": "Equipment",
+  "損壞情況": "Problem",
+  "例如：3A 課室、電腦室、禮堂": "e.g. 3A classroom, Computer Room, Hall",
+  "例如：投影機、電腦、喇叭、實物投影機": "e.g. projector, computer, speaker, visualiser",
+  "例如：投影機開機後沒有畫面，指示燈閃紅色": "e.g. The projector shows no picture and the light flashes red",
+  "提交報告": "Submit report",
+  "我的報告": "My reports",
+  "你還未提交任何報告。": "You have not submitted any reports.",
+  "請填寫地點。": "Please enter the location.",
+  "請填寫損壞的器材。": "Please enter the equipment.",
+  "請填寫損壞情況。": "Please describe the problem.",
+  "已提交報告，IT組會盡快跟進。可在下方「我的報告」查看跟進情況。": "Report submitted. The IT Team will follow up soon; check “My reports” below.",
+  "跟進中": "In progress",
+  "已完成維修": "Repaired",
+  "未完成維修": "Not yet repaired",
+  "完成維修日期": "Repair date",
+  "IT組跟進情況": "IT Team follow-up",
+  "跟進情況": "Follow-up",
+  "跟進情況（老師可在「我的報告」看到）": "Follow-up (visible to the teacher under “My reports”)",
+  "例如：已更換投影機燈泡；已聯絡供應商，等待維修": "e.g. Replaced the projector lamp; contacted the supplier, awaiting repair",
+  "最後更新": "Last updated",
+  "搜尋": "Search",
+  "地點、器材、老師…": "Location, equipment, teacher…",
+  "匯出 CSV": "Export CSV",
+  "沒有未完成維修的報告。老師提交的新報告會即時出現在這裏。": "No reports waiting for repair. New reports from teachers will appear here.",
+  "沒有符合搜尋的報告。": "No reports match your search.",
+  "沒有已完成維修的報告。": "No repaired reports.",
+  "請填寫完成維修日期。": "Please enter the repair date.",
+  "已儲存：已完成維修": "Saved: repaired",
+  "已儲存跟進情況": "Follow-up saved",
+  "返回報告表": "Back to report form",
+
   // 平台
   "IT一站式平台": "IT One-Stop Platform",
   "樂華天主教小學": "Lok Wah Catholic Primary School",
@@ -406,6 +447,8 @@ const DICT = {
 const x = (s) => DICT[s] ?? s;
 const wd = (c) => WD[c] || c;
 const PATTERNS = [
+  [/^更新：(.+)$/, (x) => `Updated: ${x}`],
+  [/^未能讀取你的報告：(.+)$/, (x) => `Unable to load your reports: ${x}`],
   // 日期
   [/^(\d{4})年(\d{1,2})月(\d{1,2})日（星期(.)）$/, (y, m, d, w) => `${wd(w)} ${d} ${MON[m - 1]} ${y}`],
   [/^(\d{4})年(\d{1,2})月$/, (y, m) => `${MON[m - 1]} ${y}`],
