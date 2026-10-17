@@ -1,12 +1,12 @@
 import {
   boot, db, esc, toast, todayId, downloadCSV, enhanceDateInputs,
-} from "../../assets/js/common.js?v=20261017b";
+} from "../../assets/js/common.js?v=20261017c";
 import {
   collection, doc, onSnapshot, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { emailEnabled } from "../../assets/js/email.js?v=20261017b";
-import { syncNotifyList } from "../../assets/js/notify.js?v=20261017b";
-import { REPAIR, RSTATUS } from "./repair-config.js?v=20261017b";
+import { emailEnabled } from "../../assets/js/email.js?v=20261017c";
+import { syncNotifyList } from "../../assets/js/notify.js?v=20261017c";
+import { REPAIR, RSTATUS } from "./repair-config.js?v=20261017c";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, list: [], q: "" };

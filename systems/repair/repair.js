@@ -1,12 +1,12 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId,
-} from "../../assets/js/common.js?v=20261017b";
+} from "../../assets/js/common.js?v=20261017c";
 import {
   collection, addDoc, onSnapshot, query, where, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261017b";
-import { REPAIR, RSTATUS, chineseName } from "./repair-config.js?v=20261017b";
-import { buildRepairEmail } from "./repair-email.js?v=20261017b";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261017c";
+import { REPAIR, RSTATUS, chineseName } from "./repair-config.js?v=20261017c";
+import { buildRepairEmail } from "./repair-email.js?v=20261017c";
 
 const $ = (sel) => document.querySelector(sel);
 /** 簡短日期，令表格不會太闊，例如 16/10/2026 */

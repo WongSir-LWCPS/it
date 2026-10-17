@@ -665,3 +665,12 @@ td .repair-edit { min-width: 240px; border-top: 0; padding-top: 0; }
 }
 .repair-table input[type="date"] { width: 150px; }
 .repair-table input[type="date"]:focus, .repair-table textarea:focus { outline: 2px solid var(--ink); outline-offset: 0; }
+/* 闊版面（用於多欄表格） */
+.wrap--wide { max-width: min(1600px, 100%); }
+.repair-table { width: 100%; }
+.repair-table th, .repair-table td { padding-left: 10px; padding-right: 10px; }
+.repair-table .repair-problem { min-width: 200px; max-width: 360px; }
+.repair-table td:nth-child(8) { min-width: 240px; }
+.repair-table textarea { min-width: 220px; }
+.repair-table .picker { display: inline-block; width: 160px; min-width: 0; }
+.repair-table .picker input[type="date"] { width: 100%; padding-right: 38px; }
