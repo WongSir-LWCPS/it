@@ -1,12 +1,12 @@
 import {
-  boot, db, esc, toast, fmtDate, fmtTimestamp, todayId, downloadCSV, enhanceDateInputs,
-} from "../../assets/js/common.js?v=20261016a";
+  boot, db, esc, toast, todayId, downloadCSV, enhanceDateInputs,
+} from "../../assets/js/common.js?v=20261017b";
 import {
   collection, doc, onSnapshot, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { emailEnabled } from "../../assets/js/email.js?v=20261016a";
-import { syncNotifyList } from "../../assets/js/notify.js?v=20261016a";
-import { REPAIR, RSTATUS } from "./repair-config.js?v=20261016a";
+import { emailEnabled } from "../../assets/js/email.js?v=20261017b";
+import { syncNotifyList } from "../../assets/js/notify.js?v=20261017b";
+import { REPAIR, RSTATUS } from "./repair-config.js?v=20261017b";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, list: [], q: "" };
@@ -56,7 +56,7 @@ boot({
       if (!e.target.matches('input[name="done"]')) return;
       const card = e.target.closest("[data-id]");
       const d = card.querySelector('input[name="doneDate"]');
-      d.closest(".field").hidden = !e.target.checked;
+      card.querySelector(".repair-date").hidden = !e.target.checked;
       if (e.target.checked && !d.value) d.value = todayId();
     };
     ["#open-list", "#done-list"].forEach((id) => {
@@ -66,107 +66,66 @@ boot({
   },
 });
 
-/** 跟進表單 */
-function editor(r, draft) {
-  const done = draft ? draft.done : r.status === "done";
-  const doneDate = draft ? draft.doneDate : (r.doneDate || "");
-  const followUp = draft ? draft.followUp : (r.followUp || "");
-  return `
-    <div class="repair-edit">
-      <label class="check"><input type="checkbox" name="done" ${done ? "checked" : ""}> 已完成維修</label>
-      <label class="field field--date" ${done ? "" : "hidden"}><span>完成維修日期</span>
-        <input type="date" name="doneDate" value="${esc(doneDate)}" max="${todayId()}">
-      </label>
-      <label class="field"><span>跟進情況（老師可在「我的報告」看到）</span>
-        <textarea name="followUp" rows="2" maxlength="1000" placeholder="例如：已更換投影機燈泡；已聯絡供應商，等待維修">${esc(followUp)}</textarea>
-      </label>
-      <div class="actions">
-        <button class="btn btn--primary btn--small" type="button" data-save>儲存</button>
-      </div>
-    </div>`;
-}
+/** 簡短日期，令表格不會太闊，例如 16/10/2026 */
+const shortDate = (id) => (id ? id.split("-").reverse().map((x) => String(+x)).join("/") : "");
 
 /** 重新繪畫前保存未儲存的輸入，避免其他人更新資料時清走正在輸入的內容 */
 function drafts(box) {
   const out = {};
-  box.querySelectorAll("[data-id]").forEach((el) => {
+  box.querySelectorAll("tr[data-id]").forEach((el) => {
     const f = (n) => el.querySelector(`[name="${n}"]`);
     if (!f("done") || el.dataset.saved) return;
-    out[el.dataset.id] = { done: f("done").checked, doneDate: f("doneDate").value, followUp: f("followUp").value };
+    const r = S.list.find((x) => x.id === el.dataset.id);
+    const d = { done: f("done").checked, doneDate: f("doneDate").value, followUp: f("followUp").value };
+    // 只保留有改動的輸入
+    if (r && (d.done !== (r.status === "done") || d.doneDate !== (r.doneDate || "") || d.followUp !== (r.followUp || ""))) out[el.dataset.id] = d;
   });
   return out;
 }
 
 function render() {
-  renderOpen();
-  renderDone();
+  const open = S.list.filter((r) => r.status !== "done");
+  $("#open-count").textContent = open.length || "";
+  renderTable($("#open-list"), open.filter(match).sort((a, b) => -byNewest(a, b)),
+    open.length ? "沒有符合搜尋的報告。" : "沒有未完成維修的報告。老師提交的新報告會即時出現在這裏。");
+  renderTable($("#done-list"), S.list.filter((r) => r.status === "done" && match(r))
+    .sort((a, b) => (b.doneDate || "").localeCompare(a.doneDate || "") || byNewest(a, b)),
+  "沒有已完成維修的報告。");
 }
 
-function info(r) {
-  return `
-    <dl class="kv kv--wide">
-      <dt>報告老師</dt><dd data-no-translate>${esc(r.teacherName)}<br><small>${esc(r.email)}</small></dd>
-      <dt>報告日期</dt><dd>${fmtDate(r.date)}</dd>
-      <dt>地點</dt><dd data-no-translate>${esc(r.location)}</dd>
-      <dt>損壞的器材</dt><dd data-no-translate>${esc(r.device)}</dd>
-      <dt>損壞情況</dt><dd class="pre" data-no-translate>${esc(r.problem)}</dd>
-      ${r.followUpBy ? `<dt>最後更新</dt><dd><small>${esc(r.followUpBy)}<br>${fmtTimestamp(r.followUpAt)}</small></dd>` : ""}
-    </dl>`;
-}
-
-function renderOpen() {
-  const box = $("#open-list");
+/** 一行代表一個報告；完成維修、日期及跟進情況可直接在表內修改 */
+function renderTable(box, list, emptyText) {
   const keep = drafts(box);
-  const all = S.list.filter((r) => r.status !== "done");
-  $("#open-count").textContent = all.length || "";
-  const list = all.filter(match).sort((a, b) => -byNewest(a, b));
-  if (!list.length) {
-    box.innerHTML = `<p class="empty">${all.length ? "沒有符合搜尋的報告。" : "沒有未完成維修的報告。老師提交的新報告會即時出現在這裏。"}</p>`;
-    return;
-  }
-  box.innerHTML = list.map((r) => `
-    <article class="review" data-id="${r.id}">
-      <header class="review-head">
-        <strong data-no-translate>${esc(r.location)}：${esc(r.device)}</strong>
-        <span class="badge badge--wait">跟進中</span>
-      </header>
-      ${info(r)}
-      ${editor(r, keep[r.id])}
-    </article>`).join("");
-  enhanceDateInputs(box);
-}
-
-function renderDone() {
-  const box = $("#done-list");
-  const keep = drafts(box);
-  const list = S.list.filter((r) => r.status === "done" && match(r))
-    .sort((a, b) => (b.doneDate || "").localeCompare(a.doneDate || "") || byNewest(a, b));
-  if (!list.length) { box.innerHTML = `<p class="empty">沒有已完成維修的報告。</p>`; return; }
+  if (!list.length) { box.innerHTML = `<p class="empty">${emptyText}</p>`; return; }
   box.innerHTML = `
     <div class="table-scroll">
-      <table class="table">
-        <thead><tr><th>報告日期</th><th>地點</th><th>損壞的器材</th><th>損壞情況</th><th>報告老師</th><th>完成維修日期</th><th>跟進情況</th><th><span class="sr-only">操作</span></th></tr></thead>
+      <table class="table repair-table">
+        <thead><tr>
+          <th>報告日期</th><th>地點</th><th>損壞的器材</th><th>損壞情況</th><th>報告老師</th>
+          <th>已完成維修</th><th>完成維修日期</th><th>跟進情況</th><th><span class="sr-only">操作</span></th>
+        </tr></thead>
         <tbody>
-          ${list.map((r) => `
+          ${list.map((r) => {
+            const k = keep[r.id];
+            const done = k ? k.done : r.status === "done";
+            const doneDate = k ? k.doneDate : (r.doneDate || "");
+            const followUp = k ? k.followUp : (r.followUp || "");
+            return `
             <tr data-id="${r.id}">
-              <td class="nowrap">${fmtDate(r.date)}</td>
+              <td class="nowrap">${shortDate(r.date)}</td>
               <td data-no-translate>${esc(r.location)}</td>
               <td data-no-translate>${esc(r.device)}</td>
-              <td class="pre" data-no-translate>${esc(r.problem)}</td>
-              <td data-no-translate>${esc(r.teacherName)}</td>
-              <td class="nowrap">${fmtDate(r.doneDate)}</td>
-              <td class="pre" data-no-translate>${esc(r.followUp || "")}</td>
-              <td>${keep[r.id] ? editor(r, keep[r.id]) : `<button class="btn btn--small" type="button" data-edit>修改</button>`}</td>
-            </tr>`).join("")}
+              <td class="pre repair-problem" data-no-translate>${esc(r.problem)}</td>
+              <td class="nowrap" data-no-translate>${esc(r.teacherName)}</td>
+              <td class="center"><input type="checkbox" name="done" aria-label="已完成維修" ${done ? "checked" : ""}></td>
+              <td><div class="repair-date" ${done ? "" : "hidden"}><input type="date" name="doneDate" value="${esc(doneDate)}" max="${todayId()}" aria-label="完成維修日期"></div></td>
+              <td><textarea name="followUp" rows="2" maxlength="1000" aria-label="跟進情況" placeholder="跟進情況">${esc(followUp)}</textarea></td>
+              <td><button class="btn btn--primary btn--small" type="button" data-save>儲存</button></td>
+            </tr>`;
+          }).join("")}
         </tbody>
       </table>
     </div>`;
-  box.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => {
-    const tr = b.closest("[data-id]");
-    const r = S.list.find((x) => x.id === tr.dataset.id);
-    b.parentElement.innerHTML = editor(r);
-    enhanceDateInputs(tr);
-  }));
   enhanceDateInputs(box);
 }
 

@@ -24,6 +24,13 @@ export const MONTHS_EN = MON;
 /* ---------- 完全相同的句子 ---------- */
 const DICT = {
   // 電子器材損壞報告
+  "請選擇地點": "Choose a location",
+  "其他地點": "Other location",
+  "請輸入地點": "Enter the location",
+  "請選擇地點。": "Please choose a location.",
+  "完成日期": "Repair date",
+  "IT組跟進": "IT follow-up",
+  "已完成維修": "Repaired",
   "電子器材損壞報告": "Equipment Fault Report",
   "發現電子器材損壞時填表通知IT組，並可查看IT組的跟進情況。": "Report damaged electronic equipment to the IT Team and check their follow-up.",
   "發現電子器材損壞時，請填寫下表。提交後IT組會收到電郵通知，跟進情況可在下方「我的報告」查看。": "When you find damaged electronic equipment, please fill in this form. The IT Team will be notified by email; check the follow-up under “My reports” below.",

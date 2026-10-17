@@ -652,3 +652,16 @@ th.is-sorted .sort-mark { opacity: 1; }
 td .repair-edit { min-width: 240px; border-top: 0; padding-top: 0; }
 .repair-tools .field--inline { display: flex; align-items: center; gap: 8px; margin: 0; }
 .repair-tools .field--inline span { white-space: nowrap; }
+/* 器材損壞報告：表格 */
+.repair-form .field input, .repair-form .field select, .repair-form .field textarea { max-width: 100%; }
+.repair-table td { vertical-align: top; }
+.repair-table .repair-problem { min-width: 160px; max-width: 280px; }
+.repair-table textarea { min-width: 200px; width: 100%; font-size: .88rem; }
+.repair-table .picker { min-width: 150px; }
+.repair-table td.center { text-align: center; }
+.repair-table input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--ink); }
+.repair-table input[type="date"], .repair-table textarea {
+  font: inherit; font-size: .88rem; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: inherit;
+}
+.repair-table input[type="date"] { width: 150px; }
+.repair-table input[type="date"]:focus, .repair-table textarea:focus { outline: 2px solid var(--ink); outline-offset: 0; }
