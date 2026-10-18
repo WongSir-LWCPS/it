@@ -24,6 +24,10 @@ export const MONTHS_EN = MON;
 /* ---------- 完全相同的句子 ---------- */
 const DICT = {
   // 電子器材損壞報告
+  "損壞分析": "Fault analysis",
+  "例如：投影機燈泡損壞": "e.g. Projector lamp failed",
+  "例如：已更換燈泡": "e.g. Lamp replaced",
+  "正在載入你的報告…": "Loading your reports…",
   "正在載入報告…": "Loading reports…",
   "請選擇地點": "Choose a location",
   "其他地點": "Other location",

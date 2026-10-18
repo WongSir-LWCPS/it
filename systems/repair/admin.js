@@ -1,18 +1,37 @@
 import {
   boot, db, esc, toast, todayId, downloadCSV, enhanceDateInputs,
-} from "../../assets/js/common.js?v=20261017d";
+} from "../../assets/js/common.js?v=20261018a";
 import {
   collection, doc, onSnapshot, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { emailEnabled } from "../../assets/js/email.js?v=20261017d";
-import { syncNotifyList } from "../../assets/js/notify.js?v=20261017d";
-import { REPAIR, RSTATUS } from "./repair-config.js?v=20261017d";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { auth, isStaffEmail } from "../../assets/js/common.js?v=20261018a";
+import { emailEnabled } from "../../assets/js/email.js?v=20261018a";
+import { syncNotifyList } from "../../assets/js/notify.js?v=20261018a";
+import { REPAIR, RSTATUS } from "./repair-config.js?v=20261018a";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, list: [], q: "" };
 const byNewest = (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
-const match = (r) => !S.q || [r.location, r.device, r.problem, r.teacherName, r.email, r.followUp]
+const match = (r) => !S.q || [r.location, r.device, r.problem, r.teacherName, r.email, r.analysis, r.followUp]
   .some((v) => (v || "").toLowerCase().includes(S.q));
+
+// 登入後立即讀取報告，不用等待平台其他檢查（非管理員會被安全規則拒絕，不會顯示任何資料）
+let listening = false;
+function listenReports() {
+  if (listening) return;
+  listening = true;
+  onSnapshot(collection(db, REPAIR.coll), (snap) => {
+    S.list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    render();
+  }, (e) => {
+    listening = false;
+    if (S.user) toast("未能讀取資料：" + e.message, "error");
+  });
+}
+onAuthStateChanged(auth, (user) => {
+  if (user && isStaffEmail((user.email || "").toLowerCase())) listenReports();
+});
 
 boot({
   root: "../../", current: "repair-admin",
@@ -27,11 +46,7 @@ boot({
       return;
     }
     S.user = user;
-    // 先讀取報告，其他設定稍後才做，令表格盡快顯示
-    onSnapshot(collection(db, REPAIR.coll), (snap) => {
-      S.list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      render();
-    }, (e) => toast("未能讀取資料：" + e.message, "error"));
+    listenReports();
     $("#admin-area").hidden = false;
     if (!emailEnabled()) {
       const w = $("#email-status");
@@ -44,6 +59,7 @@ boot({
     document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => {
       document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t === tab)));
       document.querySelectorAll(".panel").forEach((p) => { p.hidden = p.id !== `tab-${tab.dataset.tab}`; });
+      document.querySelectorAll(".panel:not([hidden]) textarea").forEach(fitHeight);
     }));
     $("#search").addEventListener("input", (e) => { S.q = e.target.value.trim().toLowerCase(); render(); });
     $("#export").addEventListener("click", exportCSV);
@@ -64,6 +80,7 @@ boot({
     ["#open-list", "#done-list"].forEach((id) => {
       $(id).addEventListener("click", onClick);
       $(id).addEventListener("change", onChange);
+      $(id).addEventListener("input", (e) => { if (e.target.matches("textarea")) fitHeight(e.target); });
     });
   },
 });
@@ -78,9 +95,10 @@ function drafts(box) {
     const f = (n) => el.querySelector(`[name="${n}"]`);
     if (!f("done") || el.dataset.saved) return;
     const r = S.list.find((x) => x.id === el.dataset.id);
-    const d = { done: f("done").checked, doneDate: f("doneDate").value, followUp: f("followUp").value };
+    const d = { done: f("done").checked, doneDate: f("doneDate").value, analysis: f("analysis").value, followUp: f("followUp").value };
     // 只保留有改動的輸入
-    if (r && (d.done !== (r.status === "done") || d.doneDate !== (r.doneDate || "") || d.followUp !== (r.followUp || ""))) out[el.dataset.id] = d;
+    if (r && (d.done !== (r.status === "done") || d.doneDate !== (r.doneDate || "")
+      || d.analysis !== (r.analysis || "") || d.followUp !== (r.followUp || ""))) out[el.dataset.id] = d;
   });
   return out;
 }
@@ -104,7 +122,7 @@ function renderTable(box, list, emptyText) {
       <table class="table repair-table">
         <thead><tr>
           <th>報告日期</th><th>地點</th><th>損壞的器材</th><th>損壞情況</th><th>報告老師</th>
-          <th>已完成維修</th><th>完成維修日期</th><th>跟進情況</th><th><span class="sr-only">操作</span></th>
+          <th>損壞分析</th><th>跟進情況</th><th>已完成維修</th><th>完成維修日期</th><th><span class="sr-only">操作</span></th>
         </tr></thead>
         <tbody>
           ${list.map((r) => {
@@ -112,6 +130,7 @@ function renderTable(box, list, emptyText) {
             const done = k ? k.done : r.status === "done";
             const doneDate = k ? k.doneDate : (r.doneDate || "");
             const followUp = k ? k.followUp : (r.followUp || "");
+            const analysis = k ? k.analysis : (r.analysis || "");
             return `
             <tr data-id="${r.id}">
               <td class="nowrap">${shortDate(r.date)}</td>
@@ -119,9 +138,10 @@ function renderTable(box, list, emptyText) {
               <td data-no-translate>${esc(r.device)}</td>
               <td class="pre repair-problem" data-no-translate>${esc(r.problem)}</td>
               <td class="nowrap" data-no-translate>${esc(r.teacherName)}</td>
+              <td><textarea name="analysis" rows="1" maxlength="1000" aria-label="損壞分析" placeholder="例如：投影機燈泡損壞">${esc(analysis)}</textarea></td>
+              <td><textarea name="followUp" rows="1" maxlength="1000" aria-label="跟進情況" placeholder="例如：已更換燈泡">${esc(followUp)}</textarea></td>
               <td class="center"><input type="checkbox" name="done" aria-label="已完成維修" ${done ? "checked" : ""}></td>
               <td><div class="repair-date" ${done ? "" : "hidden"}><input type="date" name="doneDate" value="${esc(doneDate)}" max="${todayId()}" aria-label="完成維修日期"></div></td>
-              <td><textarea name="followUp" rows="2" maxlength="1000" aria-label="跟進情況" placeholder="跟進情況">${esc(followUp)}</textarea></td>
               <td><button class="btn btn--primary btn--small" type="button" data-save>儲存</button></td>
             </tr>`;
           }).join("")}
@@ -129,6 +149,14 @@ function renderTable(box, list, emptyText) {
       </table>
     </div>`;
   enhanceDateInputs(box);
+  box.querySelectorAll("textarea").forEach(fitHeight);
+}
+
+/** 輸入欄按內容自動調整高度（沒有內容時只佔一行） */
+function fitHeight(t) {
+  if (!t.offsetParent) return;   // 分頁未顯示時無法量度，切換分頁時再調整
+  t.style.height = "auto";
+  t.style.height = t.scrollHeight + 2 + "px";
 }
 
 async function save(el, btn) {
@@ -138,6 +166,7 @@ async function save(el, btn) {
   const done = f("done").checked;
   const doneDate = f("doneDate").value;
   const followUp = f("followUp").value.trim();
+  const analysis = f("analysis").value.trim();
   if (done && !/^\d{4}-\d{2}-\d{2}$/.test(doneDate)) { toast("請填寫完成維修日期。", "error"); f("doneDate").focus(); return; }
   btn.disabled = true;
   el.dataset.saved = "1";   // 儲存後不再保留這張表單的輸入
@@ -146,6 +175,7 @@ async function save(el, btn) {
       status: done ? "done" : "open",
       doneDate: done ? doneDate : "",
       followUp,
+      analysis,
       followUpBy: S.user.email,
       followUpAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -161,8 +191,8 @@ async function save(el, btn) {
 function exportCSV() {
   const list = S.list.filter(match).sort(byNewest);
   downloadCSV(`器材損壞報告_${todayId()}.csv`, [
-    ["報告日期", "地點", "損壞的器材", "損壞情況", "報告老師", "電郵", "狀態", "完成維修日期", "跟進情況"],
+    ["報告日期", "地點", "損壞的器材", "損壞情況", "報告老師", "電郵", "損壞分析", "跟進情況", "狀態", "完成維修日期"],
     ...list.map((r) => [r.date, r.location, r.device, r.problem, r.teacherName, r.email,
-      RSTATUS[r.status]?.label || r.status, r.doneDate || "", r.followUp || ""]),
+      r.analysis || "", r.followUp || "", RSTATUS[r.status]?.label || r.status, r.doneDate || ""]),
   ]);
 }

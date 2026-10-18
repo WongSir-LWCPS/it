@@ -1,17 +1,53 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId,
-} from "../../assets/js/common.js?v=20261017d";
+} from "../../assets/js/common.js?v=20261018a";
 import {
   collection, addDoc, onSnapshot, query, where, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261017d";
-import { REPAIR, RSTATUS, chineseName } from "./repair-config.js?v=20261017d";
-import { buildRepairEmail } from "./repair-email.js?v=20261017d";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { auth, isStaffEmail } from "../../assets/js/common.js?v=20261018a";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261018a";
+import { REPAIR, RSTATUS, chineseName } from "./repair-config.js?v=20261018a";
+import { buildRepairEmail } from "./repair-email.js?v=20261018a";
 
 const $ = (sel) => document.querySelector(sel);
 /** 簡短日期，令表格不會太闊，例如 16/10/2026 */
 const shortDate = (id) => (id ? id.split("-").reverse().map((x) => String(+x)).join("/") : "");
 const S = { user: null, mine: [] };
+
+// 「我的報告」：登入後立即讀取，不用等待平台其他檢查；並先顯示上次的記錄（只存於本機）
+const cacheKey = (uid) => `repair-mine-${uid}`;
+let listening = false;
+function listenMine(user) {
+  if (listening) return;
+  listening = true;
+  try {
+    const cached = JSON.parse(localStorage.getItem(cacheKey(user.uid)) || "null");
+    if (Array.isArray(cached)) {
+      S.mine = cached.map((r) => ({ ...r, followUpAt: r.followUpAt ? { toDate: () => new Date(r.followUpAt) } : null }));
+      renderMine();
+    }
+  } catch { /* 沒有本機記錄 */ }
+  onSnapshot(query(collection(db, REPAIR.coll), where("uid", "==", user.uid)), (snap) => {
+    S.mine = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    renderMine();
+    fillSuggestions();
+    try {
+      localStorage.setItem(cacheKey(user.uid), JSON.stringify(S.mine.map((r) => ({
+        id: r.id, date: r.date, location: r.location, device: r.device, problem: r.problem,
+        status: r.status, doneDate: r.doneDate || "", followUp: r.followUp || "",
+        createdAt: { seconds: r.createdAt?.seconds || Date.now() / 1000 },
+        followUpAt: r.followUpAt?.toDate ? r.followUpAt.toDate().getTime() : null,
+      }))));
+    } catch { /* 無法儲存時只影響下次載入速度 */ }
+  }, (e) => {
+    console.error(e);
+    $("#mine").innerHTML = `<p class="load-error">未能讀取你的報告：${esc(e.message)}</p>`;
+  });
+}
+onAuthStateChanged(auth, (user) => {
+  if (user && isStaffEmail((user.email || "").toLowerCase())) listenMine(user);
+});
 
 boot({
   root: "../../", current: "repair",
@@ -19,14 +55,7 @@ boot({
     S.user = user;
     $("#admin-link").hidden = !isAdmin;
     setupForm();
-    onSnapshot(query(collection(db, REPAIR.coll), where("uid", "==", user.uid)), (snap) => {
-      S.mine = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      renderMine();
-      fillSuggestions();
-    }, (e) => {
-      console.error(e);
-      $("#mine").innerHTML = `<p class="load-error">未能讀取你的報告：${esc(e.message)}</p>`;
-    });
+    listenMine(user);
   },
 });
 

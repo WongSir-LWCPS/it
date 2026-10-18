@@ -3,12 +3,12 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261017d";
-import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261017d";
-import { SYSTEMS } from "./systems.js?v=20261017d";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261018a";
+import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261018a";
+import { SYSTEMS } from "./systems.js?v=20261018a";
 
 startI18n();
-export { tr, t, isEn } from "./i18n.js?v=20261017d";
+export { tr, t, isEn } from "./i18n.js?v=20261018a";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
