@@ -2,10 +2,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261018d";
-import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261018d";
-import { SYSTEMS } from "./systems.js?v=20261018d";
+import {
+  getFirestore, doc, getDoc, collection, query, where, getCountFromServer,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261018e";
+import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261018e";
+import { SYSTEMS } from "./systems.js?v=20261018e";
 
 startI18n();
 
@@ -26,7 +28,7 @@ document.addEventListener("click", (e) => {
 });
 // 網址加上 #mine 時直接打開「我的申請」
 if (location.hash === "#mine") showTab("mine");   // module 程式執行時頁面已載入
-export { tr, t, isEn } from "./i18n.js?v=20261018d";
+export { tr, t, isEn } from "./i18n.js?v=20261018e";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -418,6 +420,39 @@ export async function loadXlsx() {
   return window.XLSX;
 }
 
+/* ---------- 管理員：各系統未處理數量 ---------- */
+const PENDING_KEY = "itp-pending";
+/** 未處理數量徽章（初始隱藏，載入數量後才顯示） */
+export const pendingBadge = (sysId) => `<span class="pending-badge" data-pending="${sysId}" hidden></span>`;
+function applyPending(counts) {
+  document.querySelectorAll("[data-pending]").forEach((el) => {
+    const n = counts?.[el.dataset.pending] || 0;
+    el.hidden = !n;
+    el.textContent = n > 99 ? "99+" : String(n);
+    el.title = `${n} 項未處理`;
+  });
+}
+let pendingTimer = null;
+/** 讀取各系統未處理的數量（只計算數目，不下載資料）；先顯示上次的數字 */
+export async function refreshPending() {
+  try { applyPending(JSON.parse(sessionStorage.getItem(PENDING_KEY) || "null")); } catch { /* 沒有記錄 */ }
+  const list = SYSTEMS.filter((x) => x.pending);
+  const results = await Promise.all(list.map((x) =>
+    getCountFromServer(query(collection(db, x.pending.coll), where("status", "==", x.pending.status)))
+      .then((r) => [x.id, r.data().count]).catch((e) => { console.warn("未能讀取未處理數量", x.id, e); return [x.id, null]; })));
+  const counts = {};
+  results.forEach(([id, n]) => { if (n != null) counts[id] = n; });
+  try { sessionStorage.setItem(PENDING_KEY, JSON.stringify(counts)); } catch { /* 無法儲存 */ }
+  applyPending(counts);
+  return counts;
+}
+function startPending() {
+  refreshPending();
+  clearInterval(pendingTimer);
+  pendingTimer = setInterval(() => { if (!document.hidden) refreshPending(); }, 120000);   // 每 2 分鐘更新
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshPending(); });
+}
+
 function setupDrawer(root, isAdmin, current, hidden = []) {
   const backdrop = document.createElement("div");
   backdrop.className = "drawer-backdrop";
@@ -425,9 +460,9 @@ function setupDrawer(root, isAdmin, current, hidden = []) {
   drawer.id = "drawer";
   drawer.className = "drawer";
   drawer.setAttribute("aria-label", "系統選單");
-  const link = (href, label, id, icon = "", sub = false) =>
+  const link = (href, label, id, icon = "", sub = false, badge = "") =>
     `<a class="drawer-link${sub ? " drawer-link--sub" : ""}${id === current ? " is-current" : ""}" href="${root}${href}"
-       ${id === current ? 'aria-current="page"' : ""}>${icon ? `<span class="drawer-icon" aria-hidden="true">${icon}</span>` : ""}${esc(label)}</a>`;
+       ${id === current ? 'aria-current="page"' : ""}>${icon ? `<span class="drawer-icon" aria-hidden="true">${icon}</span>` : ""}${esc(label)}${badge}</a>`;
 
   drawer.innerHTML = `
     <div class="drawer-head">
@@ -437,7 +472,8 @@ function setupDrawer(root, isAdmin, current, hidden = []) {
     ${link("index.html", "平台首頁", "home", "🏠")}
     <p class="drawer-group">系統</p>
     ${visibleSystems(hidden, isAdmin).map((s) => `
-      ${link(s.href, s.name + (hidden.includes(s.id) ? "（已隱藏）" : ""), s.id, s.icon || "🧩")}
+      ${link(s.href, s.name + (hidden.includes(s.id) ? "（已隱藏）" : ""), s.id, s.icon || "🧩", false,
+        isAdmin && s.pending ? pendingBadge(s.id) : "")}
       ${isAdmin && s.adminHref && (current === s.id || current === `${s.id}-admin`)
         ? link(s.adminHref, s.adminLabel || "管理及審批", `${s.id}-admin`, "", true) : ""}`).join("")}
     ${isAdmin ? `<p class="drawer-group">管理</p>${link("settings.html", "平台設定", "settings", "⚙️")}` : ""}`;
@@ -549,6 +585,7 @@ export function boot({ root = "./", current = "", onReady }) {
     if (!started) {
       started = true;
       await onReady({ user, isAdmin, hiddenSystems });
+      if (isAdmin) startPending();   // 管理員：顯示各系統未處理數量
     }
    } catch (e) {
     console.error(e);

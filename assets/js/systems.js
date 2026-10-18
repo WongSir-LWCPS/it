@@ -14,6 +14,7 @@ export const SYSTEMS = [
   },
   {
     id: "ktv",
+    pending: { coll: "ktv_bookings", status: "pending" },   // 管理員看到的未處理數量
     name: "樂Kids TV 預約",
     desc: "查看每次樂Kids TV的播放時段，申請預約播放，並跟進審批結果。",
     href: "systems/ktv/index.html",
@@ -22,6 +23,7 @@ export const SYSTEMS = [
   },
   {
     id: "print",
+    pending: { coll: "print_requests", status: "pending" },   // 管理員看到的未處理數量
     name: "增加彩色列印限額申請",
     desc: "申請增加彩色列印限額，IT組處理後會以電郵通知，約需 1 個工作天。",
     href: "systems/print/index.html",
@@ -30,6 +32,7 @@ export const SYSTEMS = [
   },
   {
     id: "copilot",
+    pending: { coll: "copilot_requests", status: "pending" },   // 管理員看到的未處理數量
     name: "Copilot借用申請",
     desc: "申請借用 Microsoft Copilot，每次最多 14 天，IT組審批後會以電郵通知。",
     href: "systems/copilot/index.html",
@@ -47,6 +50,7 @@ export const SYSTEMS = [
   // },
   {
     id: "infostation",
+    pending: { coll: "infostation_bookings", status: "pending" },   // 管理員看到的未處理數量
     name: "樂天資訊站預約",
     desc: "預約大堂電視、大堂資訊站及流動樂天資訊站，顯示活動資訊；可選多個日期。",
     href: "systems/infostation/index.html",
@@ -55,6 +59,7 @@ export const SYSTEMS = [
   },
   {
     id: "repair",
+    pending: { coll: "repair_reports", status: "open" },   // 管理員看到的未處理數量
     name: "電子器材損壞報告",
     desc: "發現電子器材損壞時填表通知IT組，並可查看IT組的跟進情況。",
     href: "systems/repair/index.html",

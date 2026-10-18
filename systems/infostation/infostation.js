@@ -1,14 +1,14 @@
 import {
   boot, db, esc, toast, chineseName, fmtDate, todayId, isStaffEmail, enhanceDateInputs, timePicker,
-} from "../../assets/js/common.js?v=20261018d";
+} from "../../assets/js/common.js?v=20261018e";
 import {
   collection, doc, addDoc, updateDoc, onSnapshot, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261018d";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261018e";
 import {
   INFO, ISTATUS, deviceName, deviceWithPlace, findClashes, isActive, slotEnd,
-} from "./infostation-config.js?v=20261018d";
-import { buildInfoEmail, slotText } from "./infostation-email.js?v=20261018d";
+} from "./infostation-config.js?v=20261018e";
+import { buildInfoEmail, slotText } from "./infostation-email.js?v=20261018e";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, all: [], dates: [], closed: [] };
@@ -47,10 +47,6 @@ function setupForm() {
   // 申請人：預設為登入名稱的中文部分，可自行修改
   f.applicantName.defaultValue = chineseName(S.user);
   f.applicantName.value = f.applicantName.defaultValue;
-  f.forOther.addEventListener("change", () => {
-    $("#other-email-wrap").hidden = !f.forOther.checked;
-    if (f.forOther.checked) f.otherEmail.focus();
-  });
   renderDeviceChoices();
   enhanceDateInputs(f);
   const tp = { from: INFO.timeFrom, to: INFO.timeTo };
@@ -124,7 +120,6 @@ function renderDates() {
 function resetForm() {
   const f = $("#req-form");
   f.reset();
-  $("#other-email-wrap").hidden = true;
   ["startTime", "endTime", "multiStart", "multiEnd"].forEach((n) => f[n]._tp.set("", true));
   f.startDate.min = todayId();
   f.endDate.min = todayId();
@@ -132,7 +127,6 @@ function resetForm() {
   f.startDate.value = todayId();
   f.endDate.value = todayId();
   S.dates = [];
-  $("#other-email-wrap").hidden = true;
   $("#range-fields").hidden = false;
   $("#multi-fields").hidden = true;
   renderLocations();
@@ -160,9 +154,8 @@ async function submit(e) {
   e.preventDefault();
   const f = $("#req-form");
   const warn = (msg) => { const w = $("#req-warn"); w.hidden = !msg; w.textContent = msg; };
-  const isOther = f.forOther.checked;
   const applicantName = f.applicantName.value.trim().slice(0, 40);
-  const applicantEmail = (isOther ? f.otherEmail.value : S.user.email).trim().toLowerCase();
+  const applicantEmail = S.user.email.toLowerCase();
   const devices = [...f.querySelectorAll('input[name="device"]:checked')].map((x) => x.value);
   const locations = {};
   $("#location-fields").querySelectorAll("input").forEach((i) => { locations[i.dataset.loc] = i.value.trim(); });
@@ -170,7 +163,6 @@ async function submit(e) {
   const content = f.content.value.trim();
 
   if (!applicantName) return warn("請輸入申請人名稱。");
-  if (isOther && !isStaffEmail(applicantEmail)) return warn("請輸入申請人的學校電郵（@lwcps.edu.hk）。");
   if (!devices.length) return warn("請選擇最少一部器材。");
   const closed = devices.find((d) => S.closed.includes(d));
   if (closed) return warn(`${deviceName(closed)}暫停開放預約，請選擇其他器材。`);

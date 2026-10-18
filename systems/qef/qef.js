@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId, pad, enhanceDateInputs, downloadCSV, loadXlsx,
-} from "../../assets/js/common.js?v=20261018d";
+} from "../../assets/js/common.js?v=20261018e";
 import {
   collection, doc, onSnapshot, getDoc, getDocs, query, where, writeBatch, serverTimestamp, updateDoc, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { setupApplicants } from "./qef-applicants.js?v=20261018d";
+import { setupApplicants } from "./qef-applicants.js?v=20261018e";
 import {
   QEF, STATUS, statusText, mdmStatus, currentYearStart, yearLabel, defaultMdmExpiry, mdmExpiry, yearEnd, addYear,
-} from "./qef-config.js?v=20261018d";
+} from "./qef-config.js?v=20261018e";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, devices: [], openId: null };
@@ -273,7 +273,7 @@ async function renderDetail(id, keep = false) {
         <h3>歸還</h3>
         <div class="field-row">
           <label class="field field--date"><span>歸還日期</span><input type="date" name="date" value="${todayId()}"></label>
-          <label class="field"><span>原因</span><select name="reason">${QEF.returnReasons.map((r) => `<option>${esc(r)}</option>`).join("")}</select></label>
+          <label class="field"><span>原因</span><select name="reason">${QEF.returnReasons.map((r) => `<option value="${esc(r)}">${esc(r)}</option>`).join("")}</select></label>
         </div>
         <div class="field-row">
           <label class="field"><span>iPad 機身</span>${checkSelect("body")}</label>

@@ -681,3 +681,11 @@ td .repair-edit { min-width: 240px; border-top: 0; padding-top: 0; }
 .device-open-row { display: flex; align-items: center; gap: 10px; font-size: .95rem; }
 .device-open-row .badge { margin-left: auto; }
 .for-other { margin: -4px 0 12px; }
+/* 管理員：未處理數量 */
+.pending-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 20px; padding: 0 6px; margin-left: 8px; border-radius: 999px;
+  background: #D93A3A; color: #fff; font-size: .75rem; font-weight: 700; line-height: 1; vertical-align: middle;
+}
+.pending-badge[hidden] { display: none !important; }
+.drawer-link .pending-badge { margin-left: auto; }
