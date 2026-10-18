@@ -3,9 +3,9 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261018c";
-import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261018c";
-import { SYSTEMS } from "./systems.js?v=20261018c";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261018d";
+import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261018d";
+import { SYSTEMS } from "./systems.js?v=20261018d";
 
 startI18n();
 
@@ -26,7 +26,7 @@ document.addEventListener("click", (e) => {
 });
 // 網址加上 #mine 時直接打開「我的申請」
 if (location.hash === "#mine") showTab("mine");   // module 程式執行時頁面已載入
-export { tr, t, isEn } from "./i18n.js?v=20261018c";
+export { tr, t, isEn } from "./i18n.js?v=20261018d";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -63,6 +63,12 @@ export function fmtTimestamp(ts) {
   if (!ts?.toDate) return "";
   const d = ts.toDate();
   return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** 登入名稱的中文部分，例如「陳大文 Chan Tai Man」→「陳大文」；全英文名稱則保留原文 */
+export function chineseName(user) {
+  const name = (user?.displayName || "").trim();
+  return name.replace(/[A-Za-z][A-Za-z.'\- ]*/g, "").replace(/\s+/g, " ").trim() || name || (user?.email || "").split("@")[0];
 }
 
 /** 是否屬於被封鎖的帳戶（例如學生帳戶） */

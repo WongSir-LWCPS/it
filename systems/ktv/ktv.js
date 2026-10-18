@@ -1,16 +1,16 @@
 import {
-  boot, db, esc, toast, fmtDate, daysUntil, parseDateId, weekdayName,
+  boot, chineseName, db, esc, toast, fmtDate, daysUntil, parseDateId, weekdayName,
   enhanceDateInputs, timePicker, fmtTime12,
-} from "../../assets/js/common.js?v=20261018c";
+} from "../../assets/js/common.js?v=20261018d";
 import {
   collection, doc, onSnapshot, writeBatch, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261018c";
-import { buildKtvEmail } from "./ktv-email.js?v=20261018c";
-import { KTV, STATUS } from "./ktv-config.js?v=20261018c";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261018d";
+import { buildKtvEmail } from "./ktv-email.js?v=20261018d";
+import { KTV, STATUS } from "./ktv-config.js?v=20261018d";
 import {
   timeLabel, toMin, lockIdOf, findConflict, buildDays, overlapsKtvWindow, minBookDate, canBook, sortBookings,
-} from "./ktv-common.js?v=20261018c";
+} from "./ktv-common.js?v=20261018d";
 
 const S = {
   user: null, isAdmin: false, regularDates: [], bookings: [], hidePast: true,
@@ -329,7 +329,7 @@ function openDialog({ kind, date = "", slot = 0 }) {
   const form = $("#book-form");
   form.reset();
   form.kind.value = kind;
-  form.teacherName.value = S.user.displayName || "";
+  form.teacherName.value = chineseName(S.user);   // 預設為登入名稱的中文部分，可自行修改
   $("#book-warn").hidden = true;
   const custom = kind === "custom";
   $("#custom-fields").hidden = !custom;

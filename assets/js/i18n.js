@@ -34,6 +34,10 @@ const DICT = {
   "填寫報告": "New report",
   "預約": "Book",
   "正在載入…": "Loading…",
+  // 申請人名稱
+  "代其他同事申請": "Apply for another colleague",
+  "請輸入老師名稱": "Enter the teacher name",
+  "請填寫報告老師。": "Please enter the teacher name.",
   // 電子器材損壞報告
   "損壞分析": "Fault analysis",
   "例如：投影機燈泡損壞": "e.g. Projector lamp failed",

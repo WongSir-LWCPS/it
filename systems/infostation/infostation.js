@@ -1,18 +1,17 @@
 import {
-  boot, db, esc, toast, fmtDate, todayId, isStaffEmail, enhanceDateInputs, timePicker,
-} from "../../assets/js/common.js?v=20261018c";
+  boot, db, esc, toast, chineseName, fmtDate, todayId, isStaffEmail, enhanceDateInputs, timePicker,
+} from "../../assets/js/common.js?v=20261018d";
 import {
   collection, doc, addDoc, updateDoc, onSnapshot, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261018c";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261018d";
 import {
   INFO, ISTATUS, deviceName, deviceWithPlace, findClashes, isActive, slotEnd,
-} from "./infostation-config.js?v=20261018c";
-import { buildInfoEmail, slotText } from "./infostation-email.js?v=20261018c";
+} from "./infostation-config.js?v=20261018d";
+import { buildInfoEmail, slotText } from "./infostation-email.js?v=20261018d";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, all: [], dates: [], closed: [] };
-const loginName = () => (S.user.displayName || S.user.email.split("@")[0]).trim();
 
 boot({
   root: "../../", current: "infostation",
@@ -45,7 +44,13 @@ boot({
 /* ---------- 表格 ---------- */
 function setupForm() {
   const f = $("#req-form");
-  $("#login-name").textContent = `使用登入名稱：${loginName()}`;
+  // 申請人：預設為登入名稱的中文部分，可自行修改
+  f.applicantName.defaultValue = chineseName(S.user);
+  f.applicantName.value = f.applicantName.defaultValue;
+  f.forOther.addEventListener("change", () => {
+    $("#other-email-wrap").hidden = !f.forOther.checked;
+    if (f.forOther.checked) f.otherEmail.focus();
+  });
   renderDeviceChoices();
   enhanceDateInputs(f);
   const tp = { from: INFO.timeFrom, to: INFO.timeTo };
@@ -56,10 +61,6 @@ function setupForm() {
     errorText: "完結時間必須遲於開始時間。" });
   f.multiStart.addEventListener("change", () => f.multiEnd._tp.refresh());
 
-  f.querySelectorAll('input[name="nameMode"]').forEach((r) => r.addEventListener("change", () => {
-    $("#other-wrap").hidden = f.nameMode.value !== "other";
-    if (f.nameMode.value === "other") f.otherName.focus();
-  }));
   $("#device-choices").addEventListener("change", renderLocations);
   f.querySelectorAll('input[name="dateMode"]').forEach((r) => r.addEventListener("change", () => {
     const multi = f.dateMode.value === "multi";
@@ -123,6 +124,7 @@ function renderDates() {
 function resetForm() {
   const f = $("#req-form");
   f.reset();
+  $("#other-email-wrap").hidden = true;
   ["startTime", "endTime", "multiStart", "multiEnd"].forEach((n) => f[n]._tp.set("", true));
   f.startDate.min = todayId();
   f.endDate.min = todayId();
@@ -130,7 +132,7 @@ function resetForm() {
   f.startDate.value = todayId();
   f.endDate.value = todayId();
   S.dates = [];
-  $("#other-wrap").hidden = true;
+  $("#other-email-wrap").hidden = true;
   $("#range-fields").hidden = false;
   $("#multi-fields").hidden = true;
   renderLocations();
@@ -158,8 +160,8 @@ async function submit(e) {
   e.preventDefault();
   const f = $("#req-form");
   const warn = (msg) => { const w = $("#req-warn"); w.hidden = !msg; w.textContent = msg; };
-  const isOther = f.nameMode.value === "other";
-  const applicantName = (isOther ? f.otherName.value : loginName()).trim().slice(0, 40);
+  const isOther = f.forOther.checked;
+  const applicantName = f.applicantName.value.trim().slice(0, 40);
   const applicantEmail = (isOther ? f.otherEmail.value : S.user.email).trim().toLowerCase();
   const devices = [...f.querySelectorAll('input[name="device"]:checked')].map((x) => x.value);
   const locations = {};

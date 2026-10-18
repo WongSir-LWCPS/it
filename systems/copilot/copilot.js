@@ -1,16 +1,15 @@
 import {
-  boot, db, esc, toast, isStaffEmail, fmtDate, fmtTimestamp, todayId, enhanceDateInputs,
-} from "../../assets/js/common.js?v=20261018c";
+  boot, db, esc, toast, chineseName, isStaffEmail, fmtDate, fmtTimestamp, todayId, enhanceDateInputs,
+} from "../../assets/js/common.js?v=20261018d";
 import {
   collection, doc, addDoc, updateDoc, onSnapshot, query, where, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261018c";
-import { COPILOT, CSTATUS, loanDays, purposeText } from "./copilot-config.js?v=20261018c";
-import { buildCopilotEmail } from "./copilot-email.js?v=20261018c";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261018d";
+import { COPILOT, CSTATUS, loanDays, purposeText } from "./copilot-config.js?v=20261018d";
+import { buildCopilotEmail } from "./copilot-email.js?v=20261018d";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, mine: [] };
-const loginName = () => (S.user.displayName || S.user.email.split("@")[0]).trim();
 
 boot({
   root: "../../", current: "copilot",
@@ -43,7 +42,13 @@ function checkDates(start, end) {
 
 function setupForm() {
   const f = $("#req-form");
-  $("#login-name").textContent = `使用登入名稱：${loginName()}`;
+  // 申請人：預設為登入名稱的中文部分，可自行修改
+  f.applicantName.defaultValue = chineseName(S.user);
+  f.applicantName.value = f.applicantName.defaultValue;
+  f.forOther.addEventListener("change", () => {
+    $("#other-email-wrap").hidden = !f.forOther.checked;
+    if (f.forOther.checked) f.otherEmail.focus();
+  });
   f.group.innerHTML = `<option value="">請選擇</option>` + COPILOT.groups.map((g) => `<option value="${esc(g)}">${esc(g)}</option>`).join("");
   $("#purpose-choices").innerHTML = COPILOT.purposes.map((p) => `
     <label class="choice"><input type="checkbox" name="purpose" value="${esc(p)}"><span>${esc(p)}</span></label>`).join("");
@@ -69,10 +74,6 @@ function setupForm() {
   f.endDate.addEventListener("change", showDays);
   showDays();
 
-  f.querySelectorAll('input[name="nameMode"]').forEach((r) => r.addEventListener("change", () => {
-    $("#other-wrap").hidden = f.nameMode.value !== "other";
-    if (f.nameMode.value === "other") f.otherName.focus();
-  }));
   f.group.addEventListener("change", () => {
     $("#other-group-wrap").hidden = f.group.value !== "其他";
     if (f.group.value === "其他") f.otherGroup.focus();
@@ -85,8 +86,8 @@ function setupForm() {
   f.addEventListener("submit", async (e) => {
     e.preventDefault();
     const warn = (msg) => { const w = $("#req-warn"); w.hidden = !msg; w.textContent = msg; };
-    const isOther = f.nameMode.value === "other";
-    const applicantName = (isOther ? f.otherName.value : loginName()).trim().slice(0, 40);
+    const isOther = f.forOther.checked;
+    const applicantName = f.applicantName.value.trim().slice(0, 40);
     const applicantEmail = (isOther ? f.otherEmail.value : S.user.email).trim().toLowerCase();
     const purposes = [...f.querySelectorAll('input[name="purpose"]:checked')].map((x) => x.value);
     const otherPurpose = purposes.includes("其他") ? f.otherPurpose.value.trim() : "";
@@ -133,7 +134,7 @@ function setupForm() {
     console.info("通知管理員：", result);
     toast("已提交申請，IT組審批後可在「我的申請」分頁查看結果。", "success");
     f.reset();
-    $("#other-wrap").hidden = true;
+    $("#other-email-wrap").hidden = true;
     $("#other-purpose-wrap").hidden = true;
     $("#other-group-wrap").hidden = true;
     resetDates();

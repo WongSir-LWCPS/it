@@ -1,12 +1,12 @@
 import {
-  boot, db, esc, toast, isStaffEmail, fmtDate, fmtTimestamp, todayId,
-} from "../../assets/js/common.js?v=20261018c";
+  boot, db, esc, toast, chineseName, isStaffEmail, fmtDate, fmtTimestamp, todayId,
+} from "../../assets/js/common.js?v=20261018d";
 import {
   collection, doc, addDoc, updateDoc, onSnapshot, query, where, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261018c";
-import { PRINT, PSTATUS } from "./print-config.js?v=20261018c";
-import { buildPrintEmail } from "./print-email.js?v=20261018c";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261018d";
+import { PRINT, PSTATUS } from "./print-config.js?v=20261018d";
+import { buildPrintEmail } from "./print-email.js?v=20261018d";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, mine: [] };
@@ -33,23 +33,22 @@ boot({
   },
 });
 
-const loginName = () => (S.user.displayName || S.user.email.split("@")[0]).trim();
 
 function setupForm() {
   const f = $("#req-form");
-  $("#login-name").textContent = `使用登入名稱：${loginName()}`;
-  const sync = () => {
-    const other = f.nameMode.value === "other";
-    $("#other-wrap").hidden = !other;
-    if (other) f.otherName.focus();
-  };
-  f.querySelectorAll('input[name="nameMode"]').forEach((r) => r.addEventListener("change", sync));
+  // 申請人：預設為登入名稱的中文部分，可自行修改
+  f.applicantName.defaultValue = chineseName(S.user);
+  f.applicantName.value = f.applicantName.defaultValue;
+  f.forOther.addEventListener("change", () => {
+    $("#other-email-wrap").hidden = !f.forOther.checked;
+    if (f.forOther.checked) f.otherEmail.focus();
+  });
 
   f.addEventListener("submit", async (e) => {
     e.preventDefault();
     const warn = (msg) => { const w = $("#req-warn"); w.hidden = !msg; w.textContent = msg; };
-    const isOther = f.nameMode.value === "other";
-    const applicantName = (isOther ? f.otherName.value : loginName()).trim().slice(0, 40);
+    const isOther = f.forOther.checked;
+    const applicantName = f.applicantName.value.trim().slice(0, 40);
     const applicantEmail = (isOther ? f.otherEmail.value : S.user.email).trim().toLowerCase();
     if (!applicantName) return warn("請輸入申請人名稱。");
     if (isOther && !isStaffEmail(applicantEmail)) return warn("請輸入申請人的學校電郵（@lwcps.edu.hk）。");
@@ -84,7 +83,7 @@ function setupForm() {
     console.info("通知管理員：", result);
     toast("已提交申請，IT組會盡快處理。可在「我的申請」分頁查看進度。", "success");
     f.reset();
-    $("#other-wrap").hidden = true;
+    $("#other-email-wrap").hidden = true;
     btn.disabled = false;
     btn.textContent = "提交申請";
   });

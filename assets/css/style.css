@@ -680,3 +680,4 @@ td .repair-edit { min-width: 240px; border-top: 0; padding-top: 0; }
 .device-open { display: grid; gap: 12px; max-width: 560px; }
 .device-open-row { display: flex; align-items: center; gap: 10px; font-size: .95rem; }
 .device-open-row .badge { margin-left: auto; }
+.for-other { margin: -4px 0 12px; }
