@@ -1,14 +1,14 @@
 import {
   boot, db, esc, toast, todayId, downloadCSV, enhanceDateInputs,
-} from "../../assets/js/common.js?v=20261018e";
+} from "../../assets/js/common.js?v=20261018f";
 import {
-  collection, doc, onSnapshot, updateDoc, serverTimestamp,
+  collection, doc, onSnapshot, updateDoc, deleteDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { auth, isStaffEmail } from "../../assets/js/common.js?v=20261018e";
-import { emailEnabled } from "../../assets/js/email.js?v=20261018e";
-import { syncNotifyList } from "../../assets/js/notify.js?v=20261018e";
-import { REPAIR, RSTATUS } from "./repair-config.js?v=20261018e";
+import { auth, isStaffEmail, refreshPending } from "../../assets/js/common.js?v=20261018f";
+import { emailEnabled } from "../../assets/js/email.js?v=20261018f";
+import { syncNotifyList } from "../../assets/js/notify.js?v=20261018f";
+import { REPAIR, RSTATUS } from "./repair-config.js?v=20261018f";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, list: [], q: "" };
@@ -69,6 +69,8 @@ boot({
     const onClick = (e) => {
       const btn = e.target.closest("[data-save]");
       if (btn) save(btn.closest("[data-id]"), btn);
+      const del = e.target.closest("[data-delete]");
+      if (del) remove(del.closest("[data-id]"), del);
     };
     const onChange = (e) => {
       if (!e.target.matches('input[name="done"]')) return;
@@ -142,7 +144,10 @@ function renderTable(box, list, emptyText) {
               <td><textarea name="followUp" rows="1" maxlength="1000" aria-label="跟進情況" placeholder="例如：已更換燈泡">${esc(followUp)}</textarea></td>
               <td class="center"><input type="checkbox" name="done" aria-label="已完成維修" ${done ? "checked" : ""}></td>
               <td><div class="repair-date" ${done ? "" : "hidden"}><input type="date" name="doneDate" value="${esc(doneDate)}" max="${todayId()}" aria-label="完成維修日期"></div></td>
-              <td><button class="btn btn--primary btn--small" type="button" data-save>儲存</button></td>
+              <td><div class="repair-actions">
+                <button class="btn btn--primary btn--small" type="button" data-save>儲存</button>
+                <button class="btn btn--stop btn--small" type="button" data-delete>刪除</button>
+              </div></td>
             </tr>`;
           }).join("")}
         </tbody>
@@ -181,12 +186,30 @@ async function save(el, btn) {
       updatedAt: serverTimestamp(),
     });
     toast(done ? "已儲存：已完成維修" : "已儲存跟進情況", "success");
+    refreshPending();
   } catch (e) {
     btn.disabled = false;
     delete el.dataset.saved;
     toast("未能儲存：" + e.message, "error");
   }
 }
+
+/** 刪除報告（不能復原） */
+async function remove(el, btn) {
+  const r = S.list.find((x) => x.id === el.dataset.id);
+  if (!r) return;
+  if (!confirm(`刪除這份報告？\n${fmtShort(r)}\n刪除後不能復原。`)) return;
+  btn.disabled = true;
+  try {
+    await deleteDoc(doc(db, REPAIR.coll, r.id));
+    toast("已刪除報告。", "success");
+    refreshPending();
+  } catch (e) {
+    btn.disabled = false;
+    toast("未能刪除：" + e.message, "error");
+  }
+}
+const fmtShort = (r) => `${shortDate(r.date)} ${r.location}：${r.device}（${r.teacherName}）`;
 
 function exportCSV() {
   const list = S.list.filter(match).sort(byNewest);

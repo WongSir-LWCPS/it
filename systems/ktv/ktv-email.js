@@ -1,6 +1,6 @@
-import { fmtDate } from "../../assets/js/common.js?v=20261018e";
-import { adminMail } from "../../assets/js/notify.js?v=20261018e";
-import { timeLabel } from "./ktv-common.js?v=20261018e";
+import { fmtDate } from "../../assets/js/common.js?v=20261018f";
+import { adminMail } from "../../assets/js/notify.js?v=20261018f";
+import { timeLabel } from "./ktv-common.js?v=20261018f";
 
 /** 寄給管理員的樂Kids TV 通知；kind：new、approved、rejected、cancelled、updated */
 export function buildKtvEmail(b, kind, note = "", actor = "") {

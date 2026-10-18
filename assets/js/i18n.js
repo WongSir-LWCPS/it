@@ -229,6 +229,9 @@ const DICT = {
   "請輸入老師名稱": "Enter the teacher name",
   "請填寫報告老師。": "Please enter the teacher name.",
   // 電子器材損壞報告
+  "已刪除報告。": "Report deleted.",
+  "刪除這份報告？": "Delete this report?",
+  "刪除後不能復原。": "This cannot be undone.",
   "損壞分析": "Fault analysis",
   "例如：投影機燈泡損壞": "e.g. Projector lamp failed",
   "例如：已更換燈泡": "e.g. Lamp replaced",
