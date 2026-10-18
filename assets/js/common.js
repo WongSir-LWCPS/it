@@ -3,9 +3,9 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261018b";
-import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261018b";
-import { SYSTEMS } from "./systems.js?v=20261018b";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261018c";
+import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261018c";
+import { SYSTEMS } from "./systems.js?v=20261018c";
 
 startI18n();
 
@@ -26,7 +26,7 @@ document.addEventListener("click", (e) => {
 });
 // 網址加上 #mine 時直接打開「我的申請」
 if (location.hash === "#mine") showTab("mine");   // module 程式執行時頁面已載入
-export { tr, t, isEn } from "./i18n.js?v=20261018b";
+export { tr, t, isEn } from "./i18n.js?v=20261018c";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);

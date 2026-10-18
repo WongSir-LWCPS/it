@@ -22,6 +22,7 @@ var I18N = {
     viewWeek: '週', viewDay: '日', viewList: '列表',
     listMineOnly: '只顯示我的預約', listShowPast: '顯示已過去的預約', listEmpty: '沒有符合條件的預約。',
     listDate: '日期', listPeriods: '節數', listIpads: 'iPad', listClass: '班別', listQty: '數量', listTeacher: '老師', listNote: '備註', listCountPrefix: '共 ', listCountSuffix: ' 項預約', listTitle: '預約列表', listOpen: '查看',
+    listSearch: '搜尋', listSearchPh: '老師、班別、備註…', listIpadAll: '全部 iPad', listClassAll: '全部班別', listFrom: '由', listTo: '至', listClear: '清除篩選',
     periodCol: '節數',
     icyReservedTag: 'IT組預留',
     slotClosedTitle: '此節未開放借用',
@@ -170,6 +171,7 @@ var I18N = {
     viewWeek: 'Week', viewDay: 'Day', viewList: 'List',
     listMineOnly: 'My bookings only', listShowPast: 'Show past bookings', listEmpty: 'No bookings match.',
     listDate: 'Date', listPeriods: 'Periods', listIpads: 'iPad', listClass: 'Class', listQty: 'Qty', listTeacher: 'Teacher', listNote: 'Note', listCountPrefix: '', listCountSuffix: ' booking(s)', listTitle: 'Booking list', listOpen: 'View',
+    listSearch: 'Search', listSearchPh: 'Teacher, class, note…', listIpadAll: 'All iPads', listClassAll: 'All classes', listFrom: 'From', listTo: 'To', listClear: 'Clear filters',
     periodCol: 'Period',
     icyReservedTag: 'IT Reserved',
     slotClosedTitle: 'This period is not open for booking',
@@ -344,7 +346,8 @@ var ui = {
   datepickerMonth: null,
   loansOpen: false,
   listMine: true,     /* 列表：只顯示我的預約 */
-  listPast: false     /* 列表：顯示已過去的預約 */
+  listPast: false,    /* 列表：顯示已過去的預約 */
+  listQ: '', listIpad: '', listClass: '', listFrom: '', listTo: ''   /* 列表：搜尋及篩選 */
 };
 
 /* ===================== boot ===================== */
@@ -647,7 +650,13 @@ function renderShell(){
     (isReadOnly ? '<div class="readonly-banner">' + escapeHtml(t('readonlyBanner')) + '</div>' : '') +
     renderToolbar() +
     (ui.mode === 'list' ? '<div class="list-wrap">' + renderList() + '</div>' : '<div class="grid-wrap">' + renderGrid() + '</div>');
+  var ae = document.activeElement, keepId = ae && ae.id && ae.id.indexOf('lf-') === 0 ? ae.id : null;
+  var selStart = keepId && ae.selectionStart;
   document.getElementById('app').innerHTML = html;
+  if (keepId) {   /* 背景同步重繪時，保留搜尋欄的輸入位置 */
+    var el = document.getElementById(keepId);
+    if (el) { el.focus(); try { if (selStart != null) el.setSelectionRange(selStart, selStart); } catch(e){} }
+  }
 }
 
 function renderAppbar(){
@@ -693,19 +702,48 @@ function renderToolbar(){
 }
 
 /* ===================== render: list ===================== */
+/** 只重繪結果，不影響正在輸入的搜尋欄 */
+function refreshListResults(){
+  var box = document.getElementById('list-results');
+  if (box) box.innerHTML = renderListResults(); else renderShell();
+}
 /** 是否自己的預約：新預約記錄電郵；舊預約以老師名稱比對 */
 function isMine(g){
   if (g.email) return !!env.email && g.email === env.email;
   return !!env.teacherName && g.teacher === env.teacherName;
 }
+function bookingClassLabel(g){ return (g.className === '其他') ? (g.otherClass || t('otherOption')) : g.className; }
 function renderList(){
+  var classes = {};
+  STATE.bookings.forEach(function(g){ classes[bookingClassLabel(g)] = 1; });
+  var classOpts = Object.keys(classes).sort();
+  var opt = function(v, label, cur){ return '<option value="' + escapeHtml(v) + '"' + (v === cur ? ' selected' : '') + '>' + escapeHtml(label) + '</option>'; };
+  var filters = '<div class="list-filterbar">' +
+    '<label class="lf"><span>' + escapeHtml(t('listSearch')) + '</span><input type="search" id="lf-q" data-role="lf" data-key="listQ" value="' + escapeHtml(ui.listQ) + '" placeholder="' + escapeHtml(t('listSearchPh')) + '" autocomplete="off"></label>' +
+    '<label class="lf"><span>iPad</span><select id="lf-ipad" data-role="lf" data-key="listIpad">' + opt('', t('listIpadAll'), ui.listIpad) +
+      STATE.ipads.map(function(ip){ return opt(ip.id, ip.code + ' ' + ip.name, ui.listIpad); }).join('') + '</select></label>' +
+    '<label class="lf"><span>' + escapeHtml(t('listClass')) + '</span><select id="lf-class" data-role="lf" data-key="listClass">' + opt('', t('listClassAll'), ui.listClass) +
+      classOpts.map(function(c){ return opt(c, c, ui.listClass); }).join('') + '</select></label>' +
+    '<label class="lf"><span>' + escapeHtml(t('listFrom')) + '</span><input type="date" id="lf-from" data-role="lf" data-key="listFrom" value="' + escapeHtml(ui.listFrom) + '"></label>' +
+    '<label class="lf"><span>' + escapeHtml(t('listTo')) + '</span><input type="date" id="lf-to" data-role="lf" data-key="listTo" value="' + escapeHtml(ui.listTo) + '"></label>' +
+    '<button class="btn small" data-act="list-clear">' + escapeHtml(t('listClear')) + '</button>' +
+    '</div>';
+  return filters + '<div id="list-results">' + renderListResults() + '</div>';
+}
+function renderListResults(){
   var today = todayISO();
   var order = {};
   STATE.periods.forEach(function(p, i){ order[p.id] = i; });
   var firstPeriod = function(g){ return Math.min.apply(null, g.periodIds.map(function(id){ return order[id] == null ? 99 : order[id]; })); };
+  var q = (ui.listQ || '').trim().toLowerCase();
   var list = STATE.bookings.filter(function(g){
     if (!ui.listPast && g.date < today) return false;
     if (ui.listMine && !isMine(g)) return false;
+    if (ui.listIpad && g.ipadIds.indexOf(ui.listIpad) < 0) return false;
+    if (ui.listClass && bookingClassLabel(g) !== ui.listClass) return false;
+    if (ui.listFrom && g.date < ui.listFrom) return false;
+    if (ui.listTo && g.date > ui.listTo) return false;
+    if (q && [g.teacher, bookingClassLabel(g), g.note].join(' ').toLowerCase().indexOf(q) < 0) return false;
     return true;
   }).sort(function(a, b){
     if (a.date !== b.date) return ui.listPast ? (a.date < b.date ? 1 : -1) : (a.date < b.date ? -1 : 1);
@@ -716,7 +754,7 @@ function renderList(){
   var iName = function(id){ var ip = STATE.ipads.filter(function(x){ return x.id === id; })[0]; return ip ? ip.code : id; };
   var rows = list.map(function(g){
     var info = STATE.calendar[g.date];
-    var label = (g.className === '其他') ? (g.otherClass || t('otherOption')) : g.className;
+    var label = bookingClassLabel(g);
     var periods = g.periodIds.slice().sort(function(a, b){ return (order[a]||0) - (order[b]||0); });
     return '<tr class="' + (g.date < today ? 'is-past' : '') + '">' +
       '<td class="nowrap">' + escapeHtml(fmtFullDate(g.date)) + ' ' + dayTagHtml(info) + '</td>' +
@@ -1475,6 +1513,7 @@ function bindGlobalEvents(){
       case 'view-week': setMode('week'); break;
       case 'view-day': setMode('day'); break;
       case 'view-list': setMode('list'); break;
+      case 'list-clear': ui.listQ = ''; ui.listIpad = ''; ui.listClass = ''; ui.listFrom = ''; ui.listTo = ''; renderShell(); break;
       case 'toggle-lang': toggleLang(); break;
       case 'toggle-chip':
         var chipKey = targetEl.getAttribute('data-date') + '::' + targetEl.getAttribute('data-ipad');
@@ -1551,8 +1590,9 @@ function bindGlobalEvents(){
 
   document.addEventListener('change', function(e){
     var el = e.target;
-    if (el.getAttribute && el.getAttribute('data-role') === 'list-mine') { ui.listMine = el.checked; renderShell(); return; }
-    if (el.getAttribute && el.getAttribute('data-role') === 'list-past') { ui.listPast = el.checked; renderShell(); return; }
+    if (el.getAttribute && el.getAttribute('data-role') === 'list-mine') { ui.listMine = el.checked; refreshListResults(); return; }
+    if (el.getAttribute && el.getAttribute('data-role') === 'list-past') { ui.listPast = el.checked; refreshListResults(); return; }
+    if (el.getAttribute && el.getAttribute('data-role') === 'lf') { ui[el.getAttribute('data-key')] = el.value; refreshListResults(); return; }
     if (el.id === 'f-class') {
       syncBookingFieldsFromDOM();
       var wrap = document.getElementById('f-otherwrap');
@@ -1589,6 +1629,10 @@ function bindGlobalEvents(){
   });
 
   document.addEventListener('input', function(e){
+    var lf = e.target;
+    if (lf.getAttribute && lf.getAttribute('data-role') === 'lf' && lf.tagName === 'INPUT' && lf.type === 'search') {
+      ui.listQ = lf.value; refreshListResults(); return;
+    }
     var el = e.target;
     if (el && el.id === 'f-qty') {
       var max = +el.getAttribute('data-max') || 0;
