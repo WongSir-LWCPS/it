@@ -1,12 +1,12 @@
 import {
   boot, db, esc, toast, isStaffEmail, fmtDate, fmtTimestamp, todayId, enhanceDateInputs,
-} from "../../assets/js/common.js?v=20261018a";
+} from "../../assets/js/common.js?v=20261018b";
 import {
   collection, doc, addDoc, updateDoc, onSnapshot, query, where, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261018a";
-import { COPILOT, CSTATUS, loanDays, purposeText } from "./copilot-config.js?v=20261018a";
-import { buildCopilotEmail } from "./copilot-email.js?v=20261018a";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261018b";
+import { COPILOT, CSTATUS, loanDays, purposeText } from "./copilot-config.js?v=20261018b";
+import { buildCopilotEmail } from "./copilot-email.js?v=20261018b";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, mine: [] };
@@ -131,7 +131,7 @@ function setupForm() {
 
     const result = await notifyAdmins("copilot", buildCopilotEmail({ ...data, createdAt: null }, "new"));
     console.info("通知管理員：", result);
-    toast("已提交申請，IT組審批後可在下方「我的申請」查看結果。", "success");
+    toast("已提交申請，IT組審批後可在「我的申請」分頁查看結果。", "success");
     f.reset();
     $("#other-wrap").hidden = true;
     $("#other-purpose-wrap").hidden = true;

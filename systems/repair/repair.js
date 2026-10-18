@@ -1,14 +1,14 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId,
-} from "../../assets/js/common.js?v=20261018a";
+} from "../../assets/js/common.js?v=20261018b";
 import {
   collection, addDoc, onSnapshot, query, where, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { auth, isStaffEmail } from "../../assets/js/common.js?v=20261018a";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261018a";
-import { REPAIR, RSTATUS, chineseName } from "./repair-config.js?v=20261018a";
-import { buildRepairEmail } from "./repair-email.js?v=20261018a";
+import { auth, isStaffEmail } from "../../assets/js/common.js?v=20261018b";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261018b";
+import { REPAIR, RSTATUS, chineseName } from "./repair-config.js?v=20261018b";
+import { buildRepairEmail } from "./repair-email.js?v=20261018b";
 
 const $ = (sel) => document.querySelector(sel);
 /** 簡短日期，令表格不會太闊，例如 16/10/2026 */
@@ -118,7 +118,7 @@ function setupForm() {
     }
     const result = await notifyAdmins("repair", buildRepairEmail(data));
     console.info("通知IT組：", result);
-    toast("已提交報告，IT組會盡快跟進。可在下方「我的報告」查看跟進情況。", "success");
+    toast("已提交報告，IT組會盡快跟進。可在「我的報告」分頁查看跟進情況。", "success");
     f.reset();
     $("#loc-other-wrap").hidden = true;
     $("#rep-date").textContent = fmtDate(todayId());

@@ -1,17 +1,17 @@
 import {
   boot, db, esc, toast, fmtDate, todayId, isStaffEmail, enhanceDateInputs, timePicker,
-} from "../../assets/js/common.js?v=20261018a";
+} from "../../assets/js/common.js?v=20261018b";
 import {
   collection, doc, addDoc, updateDoc, onSnapshot, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261018a";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261018b";
 import {
   INFO, ISTATUS, deviceName, deviceWithPlace, findClashes, isActive, slotEnd,
-} from "./infostation-config.js?v=20261018a";
-import { buildInfoEmail, slotText } from "./infostation-email.js?v=20261018a";
+} from "./infostation-config.js?v=20261018b";
+import { buildInfoEmail, slotText } from "./infostation-email.js?v=20261018b";
 
 const $ = (sel) => document.querySelector(sel);
-const S = { user: null, all: [], dates: [] };
+const S = { user: null, all: [], dates: [], closed: [] };
 const loginName = () => (S.user.displayName || S.user.email.split("@")[0]).trim();
 
 boot({
@@ -21,6 +21,12 @@ boot({
     $("#admin-link").hidden = !isAdmin;
     $("#intro").textContent = INFO.intro;
     setupForm();
+
+    // IT組可在「管理及審批」暫停個別器材的預約
+    onSnapshot(doc(db, "settings", "infostation"), (d) => {
+      S.closed = d.data()?.closedDevices || [];
+      renderDeviceChoices();
+    }, (e) => console.warn("未能讀取器材設定", e));
 
     // 讀取所有預約：用於顯示已預約時段及檢查時間衝突
     onSnapshot(collection(db, "infostation_bookings"), (snap) => {
@@ -40,8 +46,7 @@ boot({
 function setupForm() {
   const f = $("#req-form");
   $("#login-name").textContent = `使用登入名稱：${loginName()}`;
-  $("#device-choices").innerHTML = INFO.devices.map((d) => `
-    <label class="choice"><input type="checkbox" name="device" value="${d.id}"><span>${esc(d.name)}</span></label>`).join("");
+  renderDeviceChoices();
   enhanceDateInputs(f);
   const tp = { from: INFO.timeFrom, to: INFO.timeTo };
   timePicker(f.startTime, { ...tp, label: "開始時間" });
@@ -80,6 +85,19 @@ function setupForm() {
   });
   resetForm();
   f.addEventListener("submit", submit);
+}
+
+/** 只顯示開放預約的器材，並保留已選擇的項目 */
+function renderDeviceChoices() {
+  const box = $("#device-choices");
+  const checked = [...box.querySelectorAll('input[name="device"]:checked')].map((x) => x.value);
+  const open = INFO.devices.filter((d) => !S.closed.includes(d.id));
+  box.innerHTML = open.length
+    ? open.map((d) => `
+    <label class="choice"><input type="checkbox" name="device" value="${d.id}" ${checked.includes(d.id) ? "checked" : ""}><span>${esc(d.name)}</span></label>`).join("")
+    : `<p class="empty">暫時沒有開放預約的器材。</p>`;
+  $("#req-submit").disabled = !open.length;
+  renderLocations();
 }
 
 function renderLocations() {
@@ -152,6 +170,8 @@ async function submit(e) {
   if (!applicantName) return warn("請輸入申請人名稱。");
   if (isOther && !isStaffEmail(applicantEmail)) return warn("請輸入申請人的學校電郵（@lwcps.edu.hk）。");
   if (!devices.length) return warn("請選擇最少一部器材。");
+  const closed = devices.find((d) => S.closed.includes(d));
+  if (closed) return warn(`${deviceName(closed)}暫停開放預約，請選擇其他器材。`);
   const missing = Object.entries(locations).find(([, v]) => !v);
   if (missing) return warn(`請填寫${deviceName(missing[0])}的擺放地點。`);
   if (!activity) return warn("請填寫活動名稱。");
@@ -185,7 +205,7 @@ async function submit(e) {
     return;
   }
   notifyAdmins("infostation", buildInfoEmail(data, "new")).then((r) => console.info("通知管理員：", r));
-  toast("已提交申請，IT組審批後可在下方「我的申請」查看結果。", "success");
+  toast("已提交申請，IT組審批後可在「我的申請」分頁查看結果。", "success");
   resetForm();
   btn.disabled = false;
   btn.textContent = "提交申請";

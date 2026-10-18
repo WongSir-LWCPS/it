@@ -675,3 +675,8 @@ td .repair-edit { min-width: 240px; border-top: 0; padding-top: 0; }
 .repair-table textarea { min-width: 180px; min-height: 0; height: 34px; resize: vertical; overflow: hidden; line-height: 1.4; display: block; }
 .repair-table td { vertical-align: middle; }
 .repair-table .repair-problem { min-width: 160px; max-width: 300px; }
+.page-tabs { margin: 8px 0 16px; }
+/* 樂天資訊站：開放器材 */
+.device-open { display: grid; gap: 12px; max-width: 560px; }
+.device-open-row { display: flex; align-items: center; gap: 10px; font-size: .95rem; }
+.device-open-row .badge { margin-left: auto; }

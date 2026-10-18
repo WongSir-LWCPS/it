@@ -23,6 +23,17 @@ export const MONTHS_EN = MON;
 
 /* ---------- 完全相同的句子 ---------- */
 const DICT = {
+  // 分頁、開放器材
+  "開放器材": "Available devices",
+  "選擇開放給老師預約的器材。取消勾選的器材不會在預約表格出現；已提交的預約不受影響。": "Choose which devices teachers can book. Unticked devices are hidden from the booking form; existing bookings are not affected.",
+  "暫停預約": "Paused",
+  "開放預約": "Open",
+  "已更新開放器材。": "Available devices updated.",
+  "暫時沒有開放預約的器材。": "No devices are open for booking at the moment.",
+  "申請表": "Request form",
+  "填寫報告": "New report",
+  "預約": "Book",
+  "正在載入…": "Loading…",
   // 電子器材損壞報告
   "損壞分析": "Fault analysis",
   "例如：投影機燈泡損壞": "e.g. Projector lamp failed",
@@ -38,7 +49,7 @@ const DICT = {
   "已完成維修": "Repaired",
   "電子器材損壞報告": "Equipment Fault Report",
   "發現電子器材損壞時填表通知IT組，並可查看IT組的跟進情況。": "Report damaged electronic equipment to the IT Team and check their follow-up.",
-  "發現電子器材損壞時，請填寫下表。提交後IT組會收到電郵通知，跟進情況可在下方「我的報告」查看。": "When you find damaged electronic equipment, please fill in this form. The IT Team will be notified by email; check the follow-up under “My reports” below.",
+  "發現電子器材損壞時，請填寫下表。提交後IT組會收到電郵通知，跟進情況可在「我的報告」分頁查看。": "When you find damaged electronic equipment, please fill in this form. The IT Team will be notified by email; check the follow-up in the “My reports” tab.",
   "管理及跟進": "Manage & Follow Up",
   "電子器材損壞報告 管理及跟進": "Equipment Fault Report – Manage & Follow Up",
   "報告老師": "Reported by",
@@ -55,7 +66,7 @@ const DICT = {
   "請填寫地點。": "Please enter the location.",
   "請填寫損壞的器材。": "Please enter the equipment.",
   "請填寫損壞情況。": "Please describe the problem.",
-  "已提交報告，IT組會盡快跟進。可在下方「我的報告」查看跟進情況。": "Report submitted. The IT Team will follow up soon; check “My reports” below.",
+  "已提交報告，IT組會盡快跟進。可在「我的報告」分頁查看跟進情況。": "Report submitted. The IT Team will follow up soon; check the “My reports” tab.",
   "跟進中": "In progress",
   "已完成維修": "Repaired",
   "未完成維修": "Not yet repaired",
@@ -284,7 +295,7 @@ const DICT = {
   "開始時間": "Start time",
   "結束時間": "End time",
   "播放日期": "Date",
-  "已提交申請。審批結果可在下方「我的申請」查看。": "Request submitted. Check the result under “My requests” below.",
+  "已提交申請。審批結果可在「我的申請」分頁查看。": "Request submitted. Check the result in the “My requests” tab.",
   "已取消申請，該時段已重新開放。": "Request cancelled. The slot is open again.",
   "此時段剛有其他老師申請，請選擇另一個時段。": "Another teacher has just requested this slot. Please choose another one.",
   "未能提交：這個時間可能剛被預約。請選擇其他時間。": "Could not submit: this time may have just been booked. Please choose another time.",
@@ -292,7 +303,7 @@ const DICT = {
   "請填寫日期、開始時間及結束時間。": "Please fill in the date, start time and end time.",
   "結束時間必須遲於開始時間。": "The end time must be later than the start time.",
   "這段時間是當日樂Kids TV的播放時間，請關閉此視窗，在時間表直接預約樂Kids TV時段。": "This overlaps the Lok Kids TV broadcast on that day. Please close this window and book a Lok Kids TV slot from the timetable.",
-  "你還未提交任何申請。在上面的時間表選擇可預約的時段，或按「預約其他時段」。": "You have not submitted any requests yet. Choose an available slot in the timetable above, or click “Book another time”.",
+  "你還未提交任何申請。在「播放時間表」分頁選擇可預約的時段，或按「預約其他時段」。": "You have not submitted any requests yet. Choose an available slot in the “Timetable” tab, or click “Book another time”.",
   "IT組尚未加入播放日期。你仍可按「預約其他時段」申請。": "The IT Team has not added broadcast dates yet. You can still use “Book another time”.",
   "沒有即將播放的日期。取消勾選「隱藏已播放的日期」可查看過往節目。": "No upcoming dates. Untick “Hide past dates” to see past programmes.",
   "時間": "Time",
@@ -351,7 +362,7 @@ const DICT = {
   "使用登入名稱": "Use my login name",
   "申請日期為提交當日。提交後，IT組會收到通知；處理進度可在「我的申請」查看。": "The request date is the day you submit. The IT Team will be notified; check progress under “My requests”.",
   "例如：需要列印全年級彩色工作紙": "e.g. colour worksheets for the whole level",
-  "已提交申請，IT組會盡快處理。可在下方「我的申請」查看進度。": "Request submitted. The IT Team will handle it soon. Check progress under “My requests” below.",
+  "已提交申請，IT組會盡快處理。可在「我的申請」分頁查看進度。": "Request submitted. The IT Team will handle it soon. Check progress in the “My requests” tab.",
   "請輸入申請人名稱。": "Please enter the applicant name.",
   "彩色列印限額 管理及審批": "Colour Printing Quota – Manage & Approve",
 
@@ -374,7 +385,7 @@ const DICT = {
   "Copilot 會授權給申請人的學校電郵。提交後，IT組會收到通知；審批結果可在「我的申請」查看。": "Copilot will be assigned to the applicant's school email. The IT Team will be notified; check the result under “My requests”.",
   "借用期間": "Loan period",
   "授權帳戶": "Licensed account",
-  "已提交申請，IT組審批後可在下方「我的申請」查看結果。": "Request submitted. Check the result under “My requests” below after the IT Team reviews it.",
+  "已提交申請，IT組審批後可在「我的申請」分頁查看結果。": "Request submitted. Check the result in the “My requests” tab after the IT Team reviews it.",
   "請輸入姓名或代號。": "Please enter your name or code.",
   "請選擇所屬組別/科組。": "Please choose your group / panel.",
   "請輸入所屬組別/科組。": "Please enter your group / panel.",
@@ -459,6 +470,7 @@ const DICT = {
 const x = (s) => DICT[s] ?? s;
 const wd = (c) => WD[c] || c;
 const PATTERNS = [
+  [/^(.+)暫停開放預約，請選擇其他器材。$/, (d) => `${tr(d)} is not open for booking. Please choose another device.`],
   [/^更新：(.+)$/, (x) => `Updated: ${x}`],
   [/^未能讀取你的報告：(.+)$/, (x) => `Unable to load your reports: ${x}`],
   // 日期
@@ -476,7 +488,7 @@ const PATTERNS = [
   [/^(.+?)(\d+) 天$/, (pre, n) => `${tr(pre.trim())} ${n} days`],
   // 樂Kids TV
   [/^樂Kids TV 每次播放共 (\d+) 個時段，每段 5 分鐘。.*須在播放日前 (\d+) 天申請。$/,
-    (n, d) => `Each Lok Kids TV broadcast has ${n} five-minute slots. Click “Book this slot” to apply, or “Book another time” for other days or times. Check the result under “My requests” below. Requests must be made ${d} days before the broadcast.`],
+    (n, d) => `Each Lok Kids TV broadcast has ${n} five-minute slots. Click “Book this slot” to apply, or “Book another time” for other days or times. Check the result in the “My requests” tab. Requests must be made ${d} days before the broadcast.`],
   [/^用於樂Kids TV播放時間以外的日子或時間。可預約 (.+) 至 (.+)，每次最長 (\d+) 分鐘。$/,
     (a, b, n) => `For days or times outside the Lok Kids TV broadcast. Bookable ${a}–${b}, up to ${n} minutes.`],
   [/^(.+)，審批中$/, (who) => `${who} · pending`],

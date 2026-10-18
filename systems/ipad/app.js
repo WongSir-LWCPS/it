@@ -19,7 +19,9 @@ var I18N = {
     prevWeek: '上一週', prevDay: '上一日',
     today: '今日', selectDate: '選擇日期',
     nextWeek: '下一週', nextDay: '下一日',
-    viewWeek: '週', viewDay: '日',
+    viewWeek: '週', viewDay: '日', viewList: '列表',
+    listMineOnly: '只顯示我的預約', listShowPast: '顯示已過去的預約', listEmpty: '沒有符合條件的預約。',
+    listDate: '日期', listPeriods: '節數', listIpads: 'iPad', listClass: '班別', listQty: '數量', listTeacher: '老師', listNote: '備註', listCountPrefix: '共 ', listCountSuffix: ' 項預約', listTitle: '預約列表', listOpen: '查看',
     periodCol: '節數',
     icyReservedTag: 'IT組預留',
     slotClosedTitle: '此節未開放借用',
@@ -165,7 +167,9 @@ var I18N = {
     prevWeek: 'Previous Week', prevDay: 'Previous Day',
     today: 'Today', selectDate: 'Select Date',
     nextWeek: 'Next Week', nextDay: 'Next Day',
-    viewWeek: 'Week', viewDay: 'Day',
+    viewWeek: 'Week', viewDay: 'Day', viewList: 'List',
+    listMineOnly: 'My bookings only', listShowPast: 'Show past bookings', listEmpty: 'No bookings match.',
+    listDate: 'Date', listPeriods: 'Periods', listIpads: 'iPad', listClass: 'Class', listQty: 'Qty', listTeacher: 'Teacher', listNote: 'Note', listCountPrefix: '', listCountSuffix: ' booking(s)', listTitle: 'Booking list', listOpen: 'View',
     periodCol: 'Period',
     icyReservedTag: 'IT Reserved',
     slotClosedTitle: 'This period is not open for booking',
@@ -338,7 +342,9 @@ var ui = {
   settingsTab: 'ipad',
   datepickerOpen: false,
   datepickerMonth: null,
-  loansOpen: false
+  loansOpen: false,
+  listMine: true,     /* 列表：只顯示我的預約 */
+  listPast: false     /* 列表：顯示已過去的預約 */
 };
 
 /* ===================== boot ===================== */
@@ -347,7 +353,7 @@ init();
 function init(){
   try {
     var vp = localStorage.getItem(STORAGE_VIEWPREF);
-    if (vp === 'week' || vp === 'day') ui.mode = vp;
+    if (vp === 'week' || vp === 'day' || vp === 'list') ui.mode = vp;
   } catch (e) {}
   if (!ui.mode) ui.mode = (window.matchMedia && window.matchMedia('(max-width: 767px)').matches) ? 'day' : 'week';
   ui.lang = env.lang === 'en' ? 'en' : 'zh';   /* 語言跟隨 IT一站式平台 */
@@ -640,7 +646,7 @@ function renderShell(){
   var html = renderAppbar() +
     (isReadOnly ? '<div class="readonly-banner">' + escapeHtml(t('readonlyBanner')) + '</div>' : '') +
     renderToolbar() +
-    '<div class="grid-wrap">' + renderGrid() + '</div>';
+    (ui.mode === 'list' ? '<div class="list-wrap">' + renderList() + '</div>' : '<div class="grid-wrap">' + renderGrid() + '</div>');
   document.getElementById('app').innerHTML = html;
 }
 
@@ -662,6 +668,19 @@ function tooltipHtml(ip){
 
 function renderToolbar(){
   var isDay = ui.mode === 'day';
+  var seg = '<div class="seg">' +
+      '<button class="' + (ui.mode==='week'?'active':'') + '" data-act="view-week">' + escapeHtml(t('viewWeek')) + '</button>' +
+      '<button class="' + (ui.mode==='day'?'active':'') + '" data-act="view-day">' + escapeHtml(t('viewDay')) + '</button>' +
+      '<button class="' + (ui.mode==='list'?'active':'') + '" data-act="view-list">' + escapeHtml(t('viewList')) + '</button>' +
+    '</div>';
+  if (ui.mode === 'list') {
+    return '<div class="toolbar">' +
+      '<div class="toolbar-nav list-filters">' +
+        '<label class="list-check"><input type="checkbox" data-role="list-mine"' + (ui.listMine?' checked':'') + '> ' + escapeHtml(t('listMineOnly')) + '</label>' +
+        '<label class="list-check"><input type="checkbox" data-role="list-past"' + (ui.listPast?' checked':'') + '> ' + escapeHtml(t('listShowPast')) + '</label>' +
+      '</div>' +
+      '<div class="toolbar-title">' + escapeHtml(t('listTitle')) + '</div>' + seg + '</div>';
+  }
   return '<div class="toolbar">' +
     '<div class="toolbar-nav">' +
       '<button class="btn-round" data-act="nav-prev" aria-label="' + escapeHtml(isDay?t('prevDay'):t('prevWeek')) + '">' + CHEV_L + '</button>' +
@@ -669,12 +688,52 @@ function renderToolbar(){
       '<button class="btn-round" data-act="nav-datepicker" aria-label="' + escapeHtml(t('selectDate')) + '">' + CAL_SVG + '</button>' +
       '<button class="btn-round" data-act="nav-next" aria-label="' + escapeHtml(isDay?t('nextDay'):t('nextWeek')) + '">' + CHEV_R + '</button>' +
     '</div>' +
-    '<div class="toolbar-title">' + fmtRangeTitle() + '</div>' +
-    '<div class="seg">' +
-      '<button class="' + (ui.mode==='week'?'active':'') + '" data-act="view-week">' + escapeHtml(t('viewWeek')) + '</button>' +
-      '<button class="' + (ui.mode==='day'?'active':'') + '" data-act="view-day">' + escapeHtml(t('viewDay')) + '</button>' +
-    '</div>' +
+    '<div class="toolbar-title">' + fmtRangeTitle() + '</div>' + seg +
     '</div>';
+}
+
+/* ===================== render: list ===================== */
+/** 是否自己的預約：新預約記錄電郵；舊預約以老師名稱比對 */
+function isMine(g){
+  if (g.email) return !!env.email && g.email === env.email;
+  return !!env.teacherName && g.teacher === env.teacherName;
+}
+function renderList(){
+  var today = todayISO();
+  var order = {};
+  STATE.periods.forEach(function(p, i){ order[p.id] = i; });
+  var firstPeriod = function(g){ return Math.min.apply(null, g.periodIds.map(function(id){ return order[id] == null ? 99 : order[id]; })); };
+  var list = STATE.bookings.filter(function(g){
+    if (!ui.listPast && g.date < today) return false;
+    if (ui.listMine && !isMine(g)) return false;
+    return true;
+  }).sort(function(a, b){
+    if (a.date !== b.date) return ui.listPast ? (a.date < b.date ? 1 : -1) : (a.date < b.date ? -1 : 1);
+    return firstPeriod(a) - firstPeriod(b);
+  });
+  if (!list.length) return '<p class="list-empty">' + escapeHtml(t('listEmpty')) + '</p>';
+  var pName = function(id){ var p = STATE.periods.filter(function(x){ return x.id === id; })[0]; return p ? periodName(p) : id; };
+  var iName = function(id){ var ip = STATE.ipads.filter(function(x){ return x.id === id; })[0]; return ip ? ip.code : id; };
+  var rows = list.map(function(g){
+    var info = STATE.calendar[g.date];
+    var label = (g.className === '其他') ? (g.otherClass || t('otherOption')) : g.className;
+    var periods = g.periodIds.slice().sort(function(a, b){ return (order[a]||0) - (order[b]||0); });
+    return '<tr class="' + (g.date < today ? 'is-past' : '') + '">' +
+      '<td class="nowrap">' + escapeHtml(fmtFullDate(g.date)) + ' ' + dayTagHtml(info) + '</td>' +
+      '<td>' + escapeHtml(periods.map(pName).join(ui.lang === 'en' ? ', ' : '、')) + '</td>' +
+      '<td class="nowrap">' + escapeHtml(g.ipadIds.map(iName).join(', ')) + '</td>' +
+      '<td><span class="list-color" style="background:' + escapeHtml(g.color || '#ccc') + '"></span>' + escapeHtml(label) + (g.temp ? ' <span class="slot-temp-tag">' + escapeHtml(t('tempRentTag')) + '</span>' : '') + '</td>' +
+      '<td class="num">' + (+g.qty || 0) + '</td>' +
+      '<td>' + escapeHtml(g.teacher || '') + '</td>' +
+      '<td>' + escapeHtml(g.note || '') + '</td>' +
+      '<td><button class="btn small" data-act="open-group" data-group="' + g.id + '">' + escapeHtml(t('listOpen')) + '</button></td>' +
+      '</tr>';
+  }).join('');
+  return '<p class="list-count">' + escapeHtml(t('listCountPrefix') + list.length + t('listCountSuffix')) + '</p>' +
+    '<div class="list-scroll"><table class="list-table"><thead><tr>' +
+    '<th>' + escapeHtml(t('listDate')) + '</th><th>' + escapeHtml(t('listPeriods')) + '</th><th>' + escapeHtml(t('listIpads')) + '</th>' +
+    '<th>' + escapeHtml(t('listClass')) + '</th><th>' + escapeHtml(t('listQty')) + '</th><th>' + escapeHtml(t('listTeacher')) + '</th>' +
+    '<th>' + escapeHtml(t('listNote')) + '</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>';
 }
 
 /* ===================== render: grid ===================== */
@@ -916,6 +975,10 @@ function submitBooking(){
     note: m.note.trim(), qty: qtyVal, color: m.color,
     createdAt: m.editing ? undefined : Date.now(), updatedAt: Date.now()
   };
+  /* 記錄預約者電郵，供「列表」的「只顯示我的預約」使用 */
+  var oldG = m.editing ? STATE.bookings.filter(function(g){ return g.id===m.groupId; })[0] : null;
+  if (oldG && oldG.email) group.email = oldG.email;
+  else if (!m.editing && env.email) group.email = env.email;
   if (m.temp) group.temp = true;
   if (m.editing) {
     var old = STATE.bookings.filter(function(g){ return g.id===m.groupId; })[0];
@@ -1411,6 +1474,7 @@ function bindGlobalEvents(){
       case 'nav-datepicker': toggleDatepicker(); break;
       case 'view-week': setMode('week'); break;
       case 'view-day': setMode('day'); break;
+      case 'view-list': setMode('list'); break;
       case 'toggle-lang': toggleLang(); break;
       case 'toggle-chip':
         var chipKey = targetEl.getAttribute('data-date') + '::' + targetEl.getAttribute('data-ipad');
@@ -1487,6 +1551,8 @@ function bindGlobalEvents(){
 
   document.addEventListener('change', function(e){
     var el = e.target;
+    if (el.getAttribute && el.getAttribute('data-role') === 'list-mine') { ui.listMine = el.checked; renderShell(); return; }
+    if (el.getAttribute && el.getAttribute('data-role') === 'list-past') { ui.listPast = el.checked; renderShell(); return; }
     if (el.id === 'f-class') {
       syncBookingFieldsFromDOM();
       var wrap = document.getElementById('f-otherwrap');

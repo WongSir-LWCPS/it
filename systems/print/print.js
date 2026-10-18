@@ -1,12 +1,12 @@
 import {
   boot, db, esc, toast, isStaffEmail, fmtDate, fmtTimestamp, todayId,
-} from "../../assets/js/common.js?v=20261018a";
+} from "../../assets/js/common.js?v=20261018b";
 import {
   collection, doc, addDoc, updateDoc, onSnapshot, query, where, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261018a";
-import { PRINT, PSTATUS } from "./print-config.js?v=20261018a";
-import { buildPrintEmail } from "./print-email.js?v=20261018a";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261018b";
+import { PRINT, PSTATUS } from "./print-config.js?v=20261018b";
+import { buildPrintEmail } from "./print-email.js?v=20261018b";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, mine: [] };
@@ -82,7 +82,7 @@ function setupForm() {
     // 通知管理員（失敗不影響申請）
     const result = await notifyAdmins("print", buildPrintEmail({ ...data, createdAt: null }, "new"));
     console.info("通知管理員：", result);
-    toast("已提交申請，IT組會盡快處理。可在下方「我的申請」查看進度。", "success");
+    toast("已提交申請，IT組會盡快處理。可在「我的申請」分頁查看進度。", "success");
     f.reset();
     $("#other-wrap").hidden = true;
     btn.disabled = false;

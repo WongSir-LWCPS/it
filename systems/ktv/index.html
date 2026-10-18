@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../assets/css/style.css?v=20261018a">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261018b">
   <script>
     // 程式載入或執行失敗時，在頁面上顯示原因（而不是空白頁）
     (function () {
@@ -59,29 +59,35 @@
 
     <section id="hero" class="onair" aria-label="下一次播放"></section>
 
-    <section class="block">
-      <div class="block-head">
-        <h2>播放時間表</h2>
-        <div class="block-tools">
-          <button type="button" class="btn btn--small" id="jump-next">跳到下一次播放</button>
-          <label class="check"><input type="checkbox" id="toggle-past" checked> 隱藏已播放的日期</label>
+    <div class="tabs page-tabs" role="tablist" data-auto-tabs>
+      <button role="tab" class="tab" data-tab="guide" aria-selected="true">播放時間表</button>
+      <button role="tab" class="tab" data-tab="mine" aria-selected="false">我的申請</button>
+    </div>
+
+    <section id="tab-guide" class="panel" role="tabpanel">
+      <section class="block">
+        <div class="block-head">
+          <h2>播放時間表</h2>
+          <div class="block-tools">
+            <button type="button" class="btn btn--small" id="jump-next">跳到下一次播放</button>
+            <label class="check"><input type="checkbox" id="toggle-past" checked> 隱藏已播放的日期</label>
+          </div>
         </div>
-      </div>
-      <p class="hint" id="guide-hint"></p>
-      <div class="guide-actions">
-        <ul class="legend" aria-label="圖例">
-          <li><span class="swatch swatch--approved"></span>已批准節目</li>
-          <li><span class="swatch swatch--pending"></span>審批中</li>
-          <li><span class="swatch swatch--open"></span>可預約</li>
-        </ul>
-        <button type="button" class="btn btn--primary" id="book-custom">預約其他時段</button>
-      </div>
-      <div id="guide" class="guide"></div>
+        <p class="hint" id="guide-hint"></p>
+        <div class="guide-actions">
+          <ul class="legend" aria-label="圖例">
+            <li><span class="swatch swatch--approved"></span>已批准節目</li>
+            <li><span class="swatch swatch--pending"></span>審批中</li>
+            <li><span class="swatch swatch--open"></span>可預約</li>
+          </ul>
+          <button type="button" class="btn btn--primary" id="book-custom">預約其他時段</button>
+        </div>
+        <div id="guide" class="guide"></div>
+      </section>
     </section>
 
-    <section class="block">
-      <h2>我的申請</h2>
-      <div id="mine"></div>
+    <section id="tab-mine" class="panel" role="tabpanel" hidden>
+      <div id="mine"><p class="empty">正在載入…</p></div>
     </section>
   </main>
 
@@ -129,6 +135,6 @@
     </form>
   </dialog>
 
-  <script type="module" src="ktv.js?v=20261018a"></script>
+  <script type="module" src="ktv.js?v=20261018b"></script>
 </body>
 </html>

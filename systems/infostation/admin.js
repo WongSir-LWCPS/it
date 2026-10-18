@@ -1,15 +1,15 @@
 import {
   boot, db, esc, toast, fmtTimestamp, todayId, daysUntil, pad,
-} from "../../assets/js/common.js?v=20261018a";
+} from "../../assets/js/common.js?v=20261018b";
 import {
-  collection, doc, onSnapshot, updateDoc, serverTimestamp,
+  collection, doc, onSnapshot, updateDoc, setDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { emailEnabled } from "../../assets/js/email.js?v=20261018a";
-import { notifyAdmins, syncNotifyList } from "../../assets/js/notify.js?v=20261018a";
+import { emailEnabled } from "../../assets/js/email.js?v=20261018b";
+import { notifyAdmins, syncNotifyList } from "../../assets/js/notify.js?v=20261018b";
 import {
   INFO, ISTATUS, deviceWithPlace, findClashes, isActive, deviceName, slotStart, slotEnd,
-} from "./infostation-config.js?v=20261018a";
-import { buildInfoEmail, slotText } from "./infostation-email.js?v=20261018a";
+} from "./infostation-config.js?v=20261018b";
+import { buildInfoEmail, slotText } from "./infostation-email.js?v=20261018b";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, list: [], filter: "active", upcoming: true };
@@ -46,6 +46,11 @@ boot({
     }));
     $("#all-filter").addEventListener("change", (e) => { S.filter = e.target.value; renderAll(); });
     $("#all-upcoming").addEventListener("change", (e) => { S.upcoming = e.target.checked; renderAll(); });
+
+    // 開放器材設定
+    onSnapshot(doc(db, "settings", "infostation"), (d) => renderDeviceOpen(d.data()?.closedDevices || []),
+      (e) => { $("#device-open").innerHTML = `<p class="load-error">未能讀取器材設定：${esc(e.message)}</p>`; });
+    $("#device-open").addEventListener("change", saveDeviceOpen);
 
     onSnapshot(collection(db, "infostation_bookings"), (snap) => {
       S.list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -218,4 +223,27 @@ function renderNext() {
         : `<p class="hint">沒有預約</p>`}
       </div>`;
   }).join("");
+}
+
+/* ---------- 開放器材 ---------- */
+function renderDeviceOpen(closed) {
+  $("#device-open").innerHTML = INFO.devices.map((d) => `
+    <label class="check device-open-row">
+      <input type="checkbox" value="${d.id}" ${closed.includes(d.id) ? "" : "checked"}>
+      <span>${esc(d.name)}</span>
+      <span class="badge badge--${closed.includes(d.id) ? "muted" : "go"}">${closed.includes(d.id) ? "暫停預約" : "開放預約"}</span>
+    </label>`).join("");
+}
+
+async function saveDeviceOpen() {
+  const boxes = [...$("#device-open").querySelectorAll("input")];
+  const closedDevices = boxes.filter((b) => !b.checked).map((b) => b.value);
+  boxes.forEach((b) => { b.disabled = true; });
+  try {
+    await setDoc(doc(db, "settings", "infostation"), { closedDevices, updatedBy: S.user.email, updatedAt: serverTimestamp() }, { merge: true });
+    toast("已更新開放器材。", "success");
+  } catch (e) {
+    toast("未能儲存：" + e.message, "error");
+  }
+  boxes.forEach((b) => { b.disabled = false; });
 }

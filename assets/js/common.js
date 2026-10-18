@@ -3,12 +3,30 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261018a";
-import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261018a";
-import { SYSTEMS } from "./systems.js?v=20261018a";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261018b";
+import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261018b";
+import { SYSTEMS } from "./systems.js?v=20261018b";
 
 startI18n();
-export { tr, t, isEn } from "./i18n.js?v=20261018a";
+
+/* ---------- 頁面分頁（例如「申請表／我的申請」） ---------- */
+/** 切換到指定分頁；只適用於有 data-auto-tabs 的分頁列 */
+export function showTab(name) {
+  const bar = document.querySelector("[data-auto-tabs]");
+  if (!bar) return;
+  bar.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === name)));
+  bar.querySelectorAll(".tab").forEach((t) => {
+    const panel = document.getElementById(`tab-${t.dataset.tab}`);
+    if (panel) panel.hidden = t.dataset.tab !== name;
+  });
+}
+document.addEventListener("click", (e) => {
+  const tab = e.target.closest("[data-auto-tabs] .tab");
+  if (tab) showTab(tab.dataset.tab);
+});
+// 網址加上 #mine 時直接打開「我的申請」
+if (location.hash === "#mine") showTab("mine");   // module 程式執行時頁面已載入
+export { tr, t, isEn } from "./i18n.js?v=20261018b";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);

@@ -1,9 +1,9 @@
-import { boot, db, isEn, toast } from "../../assets/js/common.js?v=20261018a";
+import { boot, db, isEn, toast } from "../../assets/js/common.js?v=20261018b";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { LEGACY_FIREBASE, LEGACY_DOC, IPAD_DOC } from "./ipad-config.js?v=20261018a";
+import { LEGACY_FIREBASE, LEGACY_DOC, IPAD_DOC } from "./ipad-config.js?v=20261018b";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null };
@@ -36,6 +36,7 @@ function startApp(isAdmin, user) {
     isAdmin,
     lang: isEn ? "en" : "zh",
     teacherName: teacherShortName(user),
+    email: (user?.email || "").toLowerCase(),
     openAdmin: isAdmin && new URLSearchParams(location.search).has("admin"),
     store: makeStore(),
     // 管理員可隨時由舊系統重新匯入（平台正式推出前，舊系統仍在使用）

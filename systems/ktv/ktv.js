@@ -1,16 +1,16 @@
 import {
   boot, db, esc, toast, fmtDate, daysUntil, parseDateId, weekdayName,
   enhanceDateInputs, timePicker, fmtTime12,
-} from "../../assets/js/common.js?v=20261018a";
+} from "../../assets/js/common.js?v=20261018b";
 import {
   collection, doc, onSnapshot, writeBatch, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261018a";
-import { buildKtvEmail } from "./ktv-email.js?v=20261018a";
-import { KTV, STATUS } from "./ktv-config.js?v=20261018a";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261018b";
+import { buildKtvEmail } from "./ktv-email.js?v=20261018b";
+import { KTV, STATUS } from "./ktv-config.js?v=20261018b";
 import {
   timeLabel, toMin, lockIdOf, findConflict, buildDays, overlapsKtvWindow, minBookDate, canBook, sortBookings,
-} from "./ktv-common.js?v=20261018a";
+} from "./ktv-common.js?v=20261018b";
 
 const S = {
   user: null, isAdmin: false, regularDates: [], bookings: [], hidePast: true,
@@ -26,7 +26,7 @@ boot({
     $("#admin-link").hidden = !isAdmin;
     $("#guide").innerHTML = `<p class="empty">正在讀取播放時間表…</p>`;
     $("#guide-hint").textContent =
-      `樂Kids TV 每次播放共 ${KTV.slots.length} 個時段，每段 5 分鐘。按「預約此時段」填寫申請；如要在其他日子或時間播放，按「預約其他時段」。提交後可在下方「我的申請」查看審批結果。須在播放日前 ${KTV.cutoffDays} 天申請。`;
+      `樂Kids TV 每次播放共 ${KTV.slots.length} 個時段，每段 5 分鐘。按「預約此時段」填寫申請；如要在其他日子或時間播放，按「預約其他時段」。提交後可在「我的申請」分頁查看審批結果。須在播放日前 ${KTV.cutoffDays} 天申請。`;
 
     onSnapshot(doc(db, "ktv_settings", "main"), (snap) => {
       S.regularDates = (snap.data()?.regularDates || []).filter((d) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d));
@@ -162,7 +162,7 @@ function renderMine() {
   const mine = S.bookings.filter((b) => b.uid === S.user.uid).sort((a, b) => -sortBookings(a, b));
   const box = $("#mine");
   if (!mine.length) {
-    box.innerHTML = `<p class="empty">你還未提交任何申請。在上面的時間表選擇可預約的時段，或按「預約其他時段」。</p>`;
+    box.innerHTML = `<p class="empty">你還未提交任何申請。在「播放時間表」分頁選擇可預約的時段，或按「預約其他時段」。</p>`;
     return;
   }
   box.innerHTML = `
@@ -289,7 +289,7 @@ function setupDialog() {
     try {
       await batch.commit();
       dialog.close();
-      toast("已提交申請。審批結果可在下方「我的申請」查看。", "success");
+      toast("已提交申請。審批結果可在「我的申請」分頁查看。", "success");
       notifyAdmins("ktv", buildKtvEmail({ date, start, end, kind, topic, teacherName, teacherEmail: S.user.email,
         mode: fd.get("mode"), remarks: fd.get("remarks").trim() }, "new")).then((r) => console.info("通知管理員：", r));
     } catch (err) {

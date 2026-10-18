@@ -236,3 +236,9 @@ python3 tools/set-version.py
 | 集合 | 欄位 |
 | --- | --- |
 | `repair_reports` | `teacherName`、`email`、`uid`、`date`（報告日期）、`location`、`device`、`problem`、`status`（open 跟進中／done 已完成維修）、`doneDate`、`analysis`（損壞分析）、`followUp`、`followUpBy`、`followUpAt` |
+
+## 頁面分頁及其他（2026-10-18 更新）
+
+- 電子器材損壞報告、樂天資訊站預約、Copilot借用申請、增加彩色列印限額申請、樂Kids TV預約：老師頁面分為兩個分頁，第一個是申請表／時間表，第二個是「我的申請」（電子器材損壞報告為「我的報告」）。網址加上 `#mine` 可直接打開第二個分頁。分頁由 `assets/js/common.js` 的 `showTab()` 處理（分頁列加上 `data-auto-tabs`）。
+- 樂天資訊站「管理及審批」→「開放器材」：勾選開放給老師預約的器材，設定存於 `settings/infostation`（`closedDevices`：暫停預約的器材 ID）。暫停的器材不會在預約表格出現，已提交的預約不受影響。
+- iPad借用：工具列新增「列表」檢視，以表格列出預約，可選「只顯示我的預約」及「顯示已過去的預約」，按「查看」打開該預約。新預約會記錄預約者電郵（`email`），舊預約以老師名稱判斷是否屬於自己。
