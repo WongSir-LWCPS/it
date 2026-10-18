@@ -1,12 +1,12 @@
 import {
   boot, db, esc, toast, todayId, downloadCSV, enhanceDateInputs,
-} from "../../assets/js/common.js?v=20261017c";
+} from "../../assets/js/common.js?v=20261017d";
 import {
   collection, doc, onSnapshot, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { emailEnabled } from "../../assets/js/email.js?v=20261017c";
-import { syncNotifyList } from "../../assets/js/notify.js?v=20261017c";
-import { REPAIR, RSTATUS } from "./repair-config.js?v=20261017c";
+import { emailEnabled } from "../../assets/js/email.js?v=20261017d";
+import { syncNotifyList } from "../../assets/js/notify.js?v=20261017d";
+import { REPAIR, RSTATUS } from "./repair-config.js?v=20261017d";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, list: [], q: "" };
@@ -27,13 +27,19 @@ boot({
       return;
     }
     S.user = user;
+    // 先讀取報告，其他設定稍後才做，令表格盡快顯示
+    onSnapshot(collection(db, REPAIR.coll), (snap) => {
+      S.list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      render();
+    }, (e) => toast("未能讀取資料：" + e.message, "error"));
     $("#admin-area").hidden = false;
     if (!emailEnabled()) {
       const w = $("#email-status");
       w.hidden = false;
       w.textContent = "尚未設定電郵通知：管理員不會收到電郵。設定方法見 README.md。";
     }
-    syncNotifyList().catch((e) => console.warn(e));
+    // 整理通知名單（不影響顯示，延後進行以免拖慢載入）
+    setTimeout(() => syncNotifyList().catch((e) => console.warn(e)), 4000);
 
     document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => {
       document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t === tab)));
@@ -42,10 +48,6 @@ boot({
     $("#search").addEventListener("input", (e) => { S.q = e.target.value.trim().toLowerCase(); render(); });
     $("#export").addEventListener("click", exportCSV);
 
-    onSnapshot(collection(db, REPAIR.coll), (snap) => {
-      S.list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      render();
-    }, (e) => toast("未能讀取資料：" + e.message, "error"));
 
     // 跟進表單（未完成及已完成兩個分頁共用）
     const onClick = (e) => {
