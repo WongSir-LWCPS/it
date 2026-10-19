@@ -246,3 +246,16 @@ python3 tools/set-version.py
 - 申請人／報告老師：各系統以輸入方塊顯示，預設為登入名稱的中文部分（`common.js` 的 `chineseName()`，例如「黃榮耀 Wong Wing Yiu」→「黃榮耀」），可自行修改。申請人電郵一律為登入帳戶的電郵。
 - 管理員：首頁「管理及審批」按鈕及側邊選單會以紅色數字顯示各系統未處理的數量（樂Kids TV、彩色列印、Copilot、樂天資訊站為「審批中」，電子器材損壞報告為「跟進中」），每 2 分鐘及回到頁面時更新。設定見 `assets/js/systems.js` 各系統的 `pending`。
 - QEF iPad管理已加入英文版。匯出的 CSV 及 Excel 更新範本仍使用中文欄名及狀態，方便匯入。
+
+## 器材資產管理（systems/assets/，只限管理員）
+
+- 分頁：總覽（各 iPad 車正常／總數、教師借用、課室／組別專用、需要跟進）、資產清單（搜尋及按類別、用途、位置、型號、MDM、狀態篩選，可匯出 CSV）、教師借用（借出／歸還）、盤點（按學年，可掃描 Label 或機序號）、Excel 匯入／匯出、新增器材。
+- 用途：課堂 iPad 車（iPad 車＋車內編號）、課室／組別專用（位置／組別）、教師長期借用（借用老師及日期；沒有借用老師即「可借出」）、後備／未分配。
+- 狀態：正常、維修中、遺失、待注銷、已注銷。
+- 打開器材可：借出給老師、歸還、調配（更改用途或位置）、更改狀態、編輯資料、刪除，並查看操作記錄。
+- 匯入學校的 iPad 資產表：「身份」CarN_XX → 課堂 iPad 車；「身份」教師＋借用人 → 教師長期借用；借用人為課室或組別（含 RM、/F、室、後備、staff、組）→ 課室／組別專用；借用人含損壞字眼 → 維修中；備註的 P05 等 → Apple Pencil。重複匯入只會更新有改動的項目。
+
+| 集合 | 欄位 |
+| --- | --- |
+| `asset_items` | 文件 ID = Label：`label`、`type`、`serial`、`model`、`mdm`、`owner`、`usage`（cart／room／teacher／spare）、`cart`、`slot`、`location`、`holder`（`name`、`since`）、`pencil`、`accessories`、`status`、`note`、`stocktakes`（`y2026: { date, by, result, note }`） |
+| `asset_history` | 每次新增、借出、歸還、調配、更改狀態、修改、盤點、匯入的記錄（不可修改或刪除） |

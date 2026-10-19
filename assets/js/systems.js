@@ -68,6 +68,15 @@ export const SYSTEMS = [
     icon: "🛠️",
   },
   {
+    id: "assets",
+    name: "器材資產管理",
+    desc: "（只限IT組）記錄學校器材（例如課堂 iPad 車、教師長期借用、課室專用 iPad）的用途、位置、借用老師、狀態及盤點。",
+    href: "systems/assets/index.html",
+    icon: "📦",
+    adminOnly: true,  // 只限平台管理員（IT組）
+    notify: false,
+  },
+  {
     id: "qef",
     name: "QEF iPad管理",
     desc: "（只限IT組）管理學校 QEF iPad 的資料、借出及歸還記錄、狀態及 MDM。",
