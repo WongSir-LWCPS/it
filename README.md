@@ -249,7 +249,7 @@ python3 tools/set-version.py
 
 ## 器材資產管理（systems/assets/，只限管理員）
 
-- 分頁：總覽（各 iPad 車正常／總數、教師借用、課室／組別專用、需要跟進）、資產清單（搜尋及按類別、用途、位置、型號、MDM、狀態篩選，可匯出 CSV）、教師借用（借出／歸還）、盤點（按學年，可掃描 Label 或機序號）、Excel 匯入／匯出、新增器材。
+- 分頁：總覽（各 iPad 車正常／總數、教師借用、課室／組別專用、需要跟進）、資產清單（搜尋及按類別、用途、位置、型號、MDM、狀態篩選，可匯出 CSV；「＋ 新增器材」按鈕）、教師借用（借出／歸還）、Excel 匯入／匯出。
 - 用途：課堂 iPad 車（iPad 車＋車內編號）、課室／組別專用（位置／組別）、教師長期借用（借用老師及日期；沒有借用老師即「可借出」）、後備／未分配。
 - 狀態：正常、維修中、遺失、待注銷、已注銷。
 - 打開器材可：借出給老師、歸還、調配（更改用途或位置）、更改狀態、編輯資料、刪除，並查看操作記錄。
@@ -257,5 +257,5 @@ python3 tools/set-version.py
 
 | 集合 | 欄位 |
 | --- | --- |
-| `asset_items` | 文件 ID = Label：`label`、`type`、`serial`、`model`、`mdm`、`owner`、`usage`（cart／room／teacher／spare）、`cart`、`slot`、`location`、`holder`（`name`、`since`）、`pencil`、`accessories`、`status`、`note`、`stocktakes`（`y2026: { date, by, result, note }`） |
-| `asset_history` | 每次新增、借出、歸還、調配、更改狀態、修改、盤點、匯入的記錄（不可修改或刪除） |
+| `asset_items` | 文件 ID = Label：`label`、`type`、`serial`、`model`、`mdm`、`owner`、`usage`（cart／room／teacher／spare）、`cart`、`slot`、`location`、`holder`（`name`、`since`）、`pencil`、`accessories`、`status`、`note` |
+| `asset_history` | 每次新增、借出、歸還、調配、更改狀態、修改、匯入的記錄（不可修改或刪除） |
