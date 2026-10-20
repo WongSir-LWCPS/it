@@ -608,12 +608,6 @@ textarea.input{resize:vertical;min-height:56px;}
 .fixed-light .modal-head .icon-btn{color:var(--text);}
 .fixed-light .modal-head .icon-btn:hover{background:var(--surface-alt);}
 
-/* 匯入舊資料 */
-.import-panel{max-width:620px;}
-.import-panel .btn{display:inline-flex;align-items:center;gap:6px;}
-.import-msg{margin-top:12px;font-size:13px;color:var(--text-muted);}
-.import-msg.err{color:var(--danger);}
-.import-msg.ok{color:var(--success);}
 
 /* ---------- 預約列表 ---------- */
 .list-wrap{padding:14px;}
