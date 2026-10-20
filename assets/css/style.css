@@ -706,3 +706,14 @@ tr.is-issue td { background: var(--stop-bg); }
 .list-tight { margin: 4px 0 12px; padding-left: 20px; }
 .list-tight li { margin: 2px 0; }
 #st-list select, #st-list input:not([type]) { font: inherit; font-size: .88rem; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+/* 系統開放對象 */
+.sys-name { display: inline-flex; align-items: center; gap: 8px; }
+.seg-choice { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--paper); flex-wrap: wrap; }
+.seg-opt { position: relative; cursor: pointer; }
+.seg-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.seg-opt span { display: inline-block; padding: 5px 14px; border-radius: 999px; font-size: .88rem; color: var(--muted); white-space: nowrap; }
+.seg-opt input:checked + span { background: var(--ink); color: #fff; }
+.seg-opt input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
+.seg-opt.is-disabled { cursor: not-allowed; }
+.seg-opt.is-disabled span { opacity: .4; text-decoration: line-through; }
+@media (max-width: 560px) { .sys-list li { flex-direction: column; align-items: flex-start; } }

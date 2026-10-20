@@ -1,14 +1,14 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId,
-} from "../../assets/js/common.js?v=20261019b";
+} from "../../assets/js/common.js?v=20261020b";
 import {
   collection, addDoc, onSnapshot, query, where, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { auth, isStaffEmail } from "../../assets/js/common.js?v=20261019b";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261019b";
-import { REPAIR, RSTATUS, chineseName } from "./repair-config.js?v=20261019b";
-import { buildRepairEmail } from "./repair-email.js?v=20261019b";
+import { auth, isStaffEmail } from "../../assets/js/common.js?v=20261020b";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261020b";
+import { REPAIR, RSTATUS, chineseName } from "./repair-config.js?v=20261020b";
+import { buildRepairEmail } from "./repair-email.js?v=20261020b";
 
 const $ = (sel) => document.querySelector(sel);
 /** 簡短日期，令表格不會太闊，例如 16/10/2026 */
@@ -29,6 +29,7 @@ function listenMine(user) {
     }
   } catch { /* 沒有本機記錄 */ }
   onSnapshot(query(collection(db, REPAIR.coll), where("uid", "==", user.uid)), (snap) => {
+    if (!$("#mine")) return;   // 系統未開放時頁面沒有這個區域
     S.mine = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     renderMine();
     fillSuggestions();
@@ -42,7 +43,7 @@ function listenMine(user) {
     } catch { /* 無法儲存時只影響下次載入速度 */ }
   }, (e) => {
     console.error(e);
-    $("#mine").innerHTML = `<p class="load-error">未能讀取你的報告：${esc(e.message)}</p>`;
+    if ($("#mine")) $("#mine").innerHTML = `<p class="load-error">未能讀取你的報告：${esc(e.message)}</p>`;
   });
 }
 onAuthStateChanged(auth, (user) => {
@@ -133,6 +134,7 @@ function setupForm() {
 function renderMine() {
   const list = [...S.mine].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
   const box = $("#mine");
+  if (!box) return;   // 系統未開放時頁面沒有這個區域
   if (!list.length) { box.innerHTML = `<p class="empty">你還未提交任何報告。</p>`; return; }
   box.innerHTML = `
     <div class="table-scroll">

@@ -1,5 +1,5 @@
 // 樂天資訊站預約：設定
-import { tr, isEn } from "../../assets/js/i18n.js?v=20261019b";
+import { tr, isEn } from "../../assets/js/i18n.js?v=20261020b";
 
 export const INFO = {
   title: "樂天資訊站預約",

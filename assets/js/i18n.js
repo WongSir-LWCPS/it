@@ -34,6 +34,16 @@ const DICT = {
   "填寫報告": "New report",
   "預約": "Book",
   "正在載入…": "Loading…",
+  // 系統開放對象
+  "全部老師": "All teachers",
+  "隱藏": "Hidden",
+  "系統開放對象": "System access",
+  "前往平台設定": "Go to Settings",
+  "只限IT組使用": "IT Team only",
+  "這個系統只供IT組（平台管理員）使用。": "This system is for the IT Team (platform administrators) only.",
+  "這個系統已在「平台設定」設為隱藏。如要使用，請把開放對象改為「IT組」或「全部老師」。": "This system is hidden in Settings. To use it, change its access to “IT Team” or “All teachers”.",
+  "這個系統的資料只限管理員讀取，不能開放給全部老師": "This system's data can only be read by administrators, so it cannot be opened to all teachers",
+  "選擇每個系統開放給誰使用：「全部老師」所有教職員都可使用；「IT組」只有管理員看到及可以進入（例如正式推出前測試）；「隱藏」任何人都不會在平台首頁及側邊選單看到，亦不能開啟。QEF iPad管理及器材資產管理的資料只限管理員讀取，不能開放給全部老師。": "Choose who can use each system: “All teachers” – all staff; “IT Team” – only administrators can see and open it (e.g. for testing before launch); “Hidden” – nobody sees it on the home page or menu, and it cannot be opened. QEF iPad Management and Equipment Assets data can only be read by administrators, so they cannot be opened to all teachers.",
   // 器材資產管理
   "＋ 新增器材": "+ Add equipment",
   "器材資產管理": "Equipment Assets",
@@ -769,6 +779,8 @@ const DICT = {
 const x = (s) => DICT[s] ?? s;
 const wd = (c) => WD[c] || c;
 const PATTERNS = [
+  [/^「(.+)」已設為：(全部老師|IT組|隱藏)。$/, (n, v) => `“${tr(n)}” set to: ${tr(v)}.`],
+  [/^(.+) 開放對象$/, (n) => `${tr(n)} access`],
   // 器材資產管理
   [/^顯示 (\d+) 項（共 (\d+) 項，不包括已注銷）$/, (n, t) => `Showing ${n} of ${t} (excl. written off)`],
   [/^(\d+) 部有問題$/, (n) => `${n} with issues`],

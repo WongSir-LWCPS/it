@@ -21,7 +21,7 @@ var I18N = {
     nextWeek: '下一週', nextDay: '下一日',
     viewWeek: '週', viewDay: '日', viewList: '列表',
     listMineOnly: '只顯示我的預約', listShowPast: '顯示已過去的預約', listEmpty: '沒有符合條件的預約。',
-    listDate: '日期', listPeriods: '節數', listIpads: 'iPad', listClass: '班別', listQty: '數量', listTeacher: '老師', listNote: '備註', listCountPrefix: '共 ', listCountSuffix: ' 項預約', listTitle: '預約列表', listOpen: '查看',
+    listDate: '日期', listPeriods: '節數', listIpads: 'iPad', listClass: '班別', listQty: '數量', listTeacher: '老師', listNote: '備註', listCountPrefix: '共 ', listCountSuffix: ' 項預約', listTitle: '預約列表', listOpen: '查看', listShowDeleted: '顯示已刪除的預約', listDeletedTag: '已刪除',
     listSearch: '搜尋', listSearchPh: '老師、班別、備註…', listIpadAll: '全部 iPad', listClassAll: '全部班別', listFrom: '由', listTo: '至', listClear: '清除篩選',
     periodCol: '節數',
     icyReservedTag: 'IT組預留',
@@ -170,7 +170,7 @@ var I18N = {
     nextWeek: 'Next Week', nextDay: 'Next Day',
     viewWeek: 'Week', viewDay: 'Day', viewList: 'List',
     listMineOnly: 'My bookings only', listShowPast: 'Show past bookings', listEmpty: 'No bookings match.',
-    listDate: 'Date', listPeriods: 'Periods', listIpads: 'iPad', listClass: 'Class', listQty: 'Qty', listTeacher: 'Teacher', listNote: 'Note', listCountPrefix: '', listCountSuffix: ' booking(s)', listTitle: 'Booking list', listOpen: 'View',
+    listDate: 'Date', listPeriods: 'Periods', listIpads: 'iPad', listClass: 'Class', listQty: 'Qty', listTeacher: 'Teacher', listNote: 'Note', listCountPrefix: '', listCountSuffix: ' booking(s)', listTitle: 'Booking list', listOpen: 'View', listShowDeleted: 'Show deleted bookings', listDeletedTag: 'Deleted',
     listSearch: 'Search', listSearchPh: 'Teacher, class, note…', listIpadAll: 'All iPads', listClassAll: 'All classes', listFrom: 'From', listTo: 'To', listClear: 'Clear filters',
     periodCol: 'Period',
     icyReservedTag: 'IT Reserved',
@@ -347,6 +347,7 @@ var ui = {
   loansOpen: false,
   listMine: true,     /* 列表：只顯示我的預約 */
   listPast: false,    /* 列表：顯示已過去的預約 */
+  listDeleted: false, /* 列表：顯示已刪除的預約 */
   listQ: '', listIpad: '', listClass: '', listFrom: '', listTo: ''   /* 列表：搜尋及篩選 */
 };
 
@@ -424,7 +425,10 @@ function connectFirestore(){
       if (sig === lastSnapshotSig) return; /* nothing actually changed — skip re-render */
       lastSnapshotSig = sig;
       var firstLoad = !STATE.updatedAt;
-      STATE.bookings = mapToArray(data.bookings);
+      var allBookings = mapToArray(data.bookings);
+      /* 已刪除的預約仍保留在資料庫（deleted: true），只在列表模式顯示 */
+      STATE.bookings = allBookings.filter(function(g){ return !g.deleted; });
+      STATE.deletedBookings = allBookings.filter(function(g){ return g.deleted; });
       STATE.reservations = mapToArray(data.reservations);
       STATE.loans = mapToArray(data.loans);
       STATE.updatedAt = Date.now();
@@ -452,6 +456,10 @@ function applyAction(state, action){
       break;
     case 'deleteGroup':
       state.bookings = state.bookings.filter(function(g){ return g.id !== action.id; });
+      if (action.group) {
+        state.deletedBookings = (state.deletedBookings || []).filter(function(g){ return g.id !== action.id; });
+        state.deletedBookings.push(action.group);
+      }
       break;
     case 'saveIpads':
       state.ipads = action.ipads;
@@ -505,7 +513,7 @@ function syncAction(action){
   var upd = {};
   switch (action.kind) {
     case 'upsertGroup': upd['bookings.' + action.group.id] = action.group; break;
-    case 'deleteGroup': upd['bookings.' + action.id] = fsDocRef.del(); break;
+    case 'deleteGroup': upd['bookings.' + action.id] = action.group || fsDocRef.del(); break;   /* 保留記錄並標示為已刪除 */
     case 'saveIpads': upd.ipads = action.ipads; break;
     case 'savePeriods': upd.periods = action.periods; break;
     case 'addReservation': upd['reservations.' + action.reservation.id] = action.reservation; break;
@@ -687,6 +695,7 @@ function renderToolbar(){
       '<div class="toolbar-nav list-filters">' +
         '<label class="list-check"><input type="checkbox" data-role="list-mine"' + (ui.listMine?' checked':'') + '> ' + escapeHtml(t('listMineOnly')) + '</label>' +
         '<label class="list-check"><input type="checkbox" data-role="list-past"' + (ui.listPast?' checked':'') + '> ' + escapeHtml(t('listShowPast')) + '</label>' +
+        '<label class="list-check"><input type="checkbox" data-role="list-deleted"' + (ui.listDeleted?' checked':'') + '> ' + escapeHtml(t('listShowDeleted')) + '</label>' +
       '</div>' +
       '<div class="toolbar-title">' + escapeHtml(t('listTitle')) + '</div>' + seg + '</div>';
   }
@@ -703,6 +712,8 @@ function renderToolbar(){
 
 /* ===================== render: list ===================== */
 /** 只重繪結果，不影響正在輸入的搜尋欄 */
+/** 刪除時間，例如 20/10/2026 10:41 */
+function fmtStamp(ms){ var d = new Date(ms); return d.getDate() + '/' + (d.getMonth()+1) + '/' + d.getFullYear() + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
 function refreshListResults(){
   var box = document.getElementById('list-results');
   if (box) box.innerHTML = renderListResults(); else renderShell();
@@ -736,7 +747,8 @@ function renderListResults(){
   STATE.periods.forEach(function(p, i){ order[p.id] = i; });
   var firstPeriod = function(g){ return Math.min.apply(null, g.periodIds.map(function(id){ return order[id] == null ? 99 : order[id]; })); };
   var q = (ui.listQ || '').trim().toLowerCase();
-  var list = STATE.bookings.filter(function(g){
+  var source = ui.listDeleted ? STATE.bookings.concat(STATE.deletedBookings || []) : STATE.bookings;
+  var list = source.filter(function(g){
     if (!ui.listPast && g.date < today) return false;
     if (ui.listMine && !isMine(g)) return false;
     if (ui.listIpad && g.ipadIds.indexOf(ui.listIpad) < 0) return false;
@@ -756,7 +768,9 @@ function renderListResults(){
     var info = STATE.calendar[g.date];
     var label = bookingClassLabel(g);
     var periods = g.periodIds.slice().sort(function(a, b){ return (order[a]||0) - (order[b]||0); });
-    return '<tr class="' + (g.date < today ? 'is-past' : '') + '">' +
+    var del = g.deleted ? '<span class="list-deleted-tag">' + escapeHtml(t('listDeletedTag')) + '</span>' +
+      '<small class="list-deleted-by">' + escapeHtml((g.deletedBy || '') + (g.deletedAt ? ' ' + fmtStamp(g.deletedAt) : '')) + '</small>' : '';
+    return '<tr class="' + (g.date < today ? 'is-past' : '') + (g.deleted ? ' is-deleted' : '') + '">' +
       '<td class="nowrap">' + escapeHtml(fmtFullDate(g.date)) + ' ' + dayTagHtml(info) + '</td>' +
       '<td>' + escapeHtml(periods.map(pName).join(ui.lang === 'en' ? ', ' : '、')) + '</td>' +
       '<td class="nowrap">' + escapeHtml(g.ipadIds.map(iName).join(', ')) + '</td>' +
@@ -764,7 +778,7 @@ function renderListResults(){
       '<td class="num">' + (+g.qty || 0) + '</td>' +
       '<td>' + escapeHtml(g.teacher || '') + '</td>' +
       '<td>' + escapeHtml(g.note || '') + '</td>' +
-      '<td><button class="btn small" data-act="open-group" data-group="' + g.id + '">' + escapeHtml(t('listOpen')) + '</button></td>' +
+      '<td class="list-act">' + (g.deleted ? del : '<button class="btn small" data-act="open-group" data-group="' + g.id + '">' + escapeHtml(t('listOpen')) + '</button>') + '</td>' +
       '</tr>';
   }).join('');
   return '<p class="list-count">' + escapeHtml(t('listCountPrefix') + list.length + t('listCountSuffix')) + '</p>' +
@@ -1030,7 +1044,9 @@ function submitBooking(){
 function deleteBookingConfirmed(){
   var id = ui.modal.groupId;
   closeModal();
-  doAction({ kind:'deleteGroup', id: id });
+  var old = STATE.bookings.filter(function(g){ return g.id === id; })[0];
+  var marked = old ? Object.assign({}, old, { deleted: true, deletedAt: Date.now(), deletedBy: env.teacherName || env.email || '', deletedByEmail: env.email || '' }) : null;
+  doAction({ kind:'deleteGroup', id: id, group: marked });
   showToast(t('toastBookingDeleted'));
 }
 
@@ -1592,6 +1608,7 @@ function bindGlobalEvents(){
     var el = e.target;
     if (el.getAttribute && el.getAttribute('data-role') === 'list-mine') { ui.listMine = el.checked; refreshListResults(); return; }
     if (el.getAttribute && el.getAttribute('data-role') === 'list-past') { ui.listPast = el.checked; refreshListResults(); return; }
+    if (el.getAttribute && el.getAttribute('data-role') === 'list-deleted') { ui.listDeleted = el.checked; refreshListResults(); return; }
     if (el.getAttribute && el.getAttribute('data-role') === 'lf') { ui[el.getAttribute('data-key')] = el.value; refreshListResults(); return; }
     if (el.id === 'f-class') {
       syncBookingFieldsFromDOM();

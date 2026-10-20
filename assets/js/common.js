@@ -5,9 +5,9 @@ import {
 import {
   getFirestore, doc, getDoc, collection, query, where, getCountFromServer,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261019b";
-import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261019b";
-import { SYSTEMS } from "./systems.js?v=20261019b";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261020b";
+import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261020b";
+import { SYSTEMS } from "./systems.js?v=20261020b";
 
 startI18n();
 
@@ -28,7 +28,7 @@ document.addEventListener("click", (e) => {
 });
 // 網址加上 #mine 時直接打開「我的申請」
 if (location.hash === "#mine") showTab("mine");   // module 程式執行時頁面已載入
-export { tr, t, isEn } from "./i18n.js?v=20261019b";
+export { tr, t, isEn } from "./i18n.js?v=20261020b";
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -386,19 +386,41 @@ export function withTimeout(promise, ms, msg) {
   return Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error(msg)), ms))]);
 }
 
-/** 讀取在「平台設定」中隱藏的系統 */
-export async function getHiddenSystems() {
-  try {
-    return (await getDoc(doc(db, "settings", "systems"))).data()?.hidden || [];
-  } catch (e) {
-    console.warn("未能讀取系統顯示設定", e);
-    return [];
-  }
+/**
+ * 系統開放對象（在「平台設定」選擇）：
+ * all＝全部老師、it＝只限IT組（管理員）、hidden＝隱藏（任何人都不會在清單看到，亦不能開啟）
+ */
+export const ACCESS = {
+  all:    { label: "全部老師", tone: "go" },
+  it:     { label: "IT組",     tone: "wait" },
+  hidden: { label: "隱藏",     tone: "muted" },
+};
+/** 某系統的開放對象；未設定時：只限管理員的系統為 IT組，其他為全部老師（舊版「已隱藏」視為 IT組） */
+export function accessOf(sys, settings = {}) {
+  const v = settings.access?.[sys.id];
+  if (v && ACCESS[v] && !(sys.adminOnly && v === "all")) return v;
+  if (sys.adminOnly) return "it";
+  return (settings.hidden || []).includes(sys.id) ? "it" : "all";
 }
-
-/** 按顯示設定篩選系統：老師看不到已隱藏的系統，管理員則全部可見 */
-export const visibleSystems = (hidden, isAdmin) =>
-  SYSTEMS.filter((s) => isAdmin || (!hidden.includes(s.id) && !s.adminOnly));
+/** 讀取系統開放設定，回傳 { 系統ID: "all" | "it" | "hidden" } */
+export async function getSystemAccess() {
+  let data = {};
+  try {
+    data = (await getDoc(doc(db, "settings", "systems"))).data() || {};
+  } catch (e) {
+    console.warn("未能讀取系統開放設定", e);
+  }
+  return Object.fromEntries(SYSTEMS.map((x) => [x.id, accessOf(x, data)]));
+}
+/** 可以使用的系統 */
+export const canUse = (access, sysId, isAdmin) => {
+  const v = access?.[sysId] || "all";
+  return v === "all" || (v === "it" && isAdmin);
+};
+/** 在首頁及側邊選單顯示的系統 */
+export const visibleSystems = (access, isAdmin) => SYSTEMS.filter((s) => canUse(access, s.id, isAdmin));
+/** 管理員看到的標籤：只限IT組的系統加上「IT組」 */
+export const accessTag = (access, s) => (access?.[s.id] === "it" ? "IT組" : "");
 
 /* ---------- 讀取 Excel（SheetJS，按需要才載入） ---------- */
 const XLSX_SOURCES = [
@@ -453,7 +475,7 @@ function startPending() {
   document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshPending(); });
 }
 
-function setupDrawer(root, isAdmin, current, hidden = []) {
+function setupDrawer(root, isAdmin, current, access = {}) {
   const backdrop = document.createElement("div");
   backdrop.className = "drawer-backdrop";
   const drawer = document.createElement("nav");
@@ -471,8 +493,8 @@ function setupDrawer(root, isAdmin, current, hidden = []) {
     </div>
     ${link("index.html", "平台首頁", "home", "🏠")}
     <p class="drawer-group">系統</p>
-    ${visibleSystems(hidden, isAdmin).map((s) => `
-      ${link(s.href, s.name + (hidden.includes(s.id) ? "（已隱藏）" : ""), s.id, s.icon || "🧩", false,
+    ${visibleSystems(access, isAdmin).map((s) => `
+      ${link(s.href, s.name, s.id, s.icon || "🧩", false,
         isAdmin && s.pending ? pendingBadge(s.id) : "")}
       ${isAdmin && s.adminHref && (current === s.id || current === `${s.id}-admin`)
         ? link(s.adminHref, s.adminLabel || "管理及審批", `${s.id}-admin`, "", true) : ""}`).join("")}
@@ -553,38 +575,32 @@ export function boot({ root = "./", current = "", onReady }) {
       showGate(gate, `${email}：${APP.blockedMessage || "此帳戶不能使用此平台。"}`);
       return;
     }
-    const [isAdmin, hiddenSystems] = await withTimeout(Promise.all([
+    const [isAdmin, access] = await withTimeout(Promise.all([
       getDoc(doc(db, "admins", email)).then((d) => d.exists()).catch((e) => { console.warn("未能檢查管理員身份", e); return false; }),
-      getHiddenSystems(),
+      getSystemAccess(),
     ]), 12000, "連線資料庫逾時，請檢查網絡後重新整理");
     renderHeader(header, root, user, isAdmin);
-    setupDrawer(root, isAdmin, current, hiddenSystems);
+    setupDrawer(root, isAdmin, current, access);
     gate.hidden = true;
     main.hidden = false;
-    // 已隱藏的系統：老師不能進入（管理員仍可進入測試）
+    // 按「平台設定」的開放對象限制進入
     const sysId = current.replace(/-admin$/, "");
     const sysDef = SYSTEMS.find((x) => x.id === sysId);
-    if (!isAdmin && sysDef?.adminOnly) {
+    if (sysDef && !canUse(access, sysId, isAdmin)) {
+      const hiddenSys = access[sysId] === "hidden";
       main.innerHTML = `
         <section class="notice wrap">
-          <h1>只限IT組使用</h1>
-          <p>這個系統只供IT組（平台管理員）使用。</p>
-          <a class="btn btn--primary" href="${root}index.html">返回平台首頁</a>
-        </section>`;
-      return;
-    }
-    if (!isAdmin && hiddenSystems.includes(sysId) && sysDef) {
-      main.innerHTML = `
-        <section class="notice wrap">
-          <h1>此系統暫未開放</h1>
-          <p>IT組暫時隱藏了這個系統。如有需要，請聯絡IT組。</p>
-          <a class="btn btn--primary" href="${root}index.html">返回平台首頁</a>
+          <h1>${hiddenSys ? "此系統暫未開放" : "只限IT組使用"}</h1>
+          <p>${hiddenSys
+            ? (isAdmin ? "這個系統已在「平台設定」設為隱藏。如要使用，請把開放對象改為「IT組」或「全部老師」。" : "IT組暫時隱藏了這個系統。如有需要，請聯絡IT組。")
+            : "這個系統只供IT組（平台管理員）使用。"}</p>
+          <a class="btn btn--primary" href="${root}${hiddenSys && isAdmin ? "settings.html" : "index.html"}">${hiddenSys && isAdmin ? "前往平台設定" : "返回平台首頁"}</a>
         </section>`;
       return;
     }
     if (!started) {
       started = true;
-      await onReady({ user, isAdmin, hiddenSystems });
+      await onReady({ user, isAdmin, access });
       if (isAdmin) startPending();   // 管理員：顯示各系統未處理數量
     }
    } catch (e) {

@@ -1,20 +1,20 @@
 import {
-  boot, db, esc, toast, APP, isBlockedEmail, fmtTimestamp, fmtDate, todayId, enhanceDateInputs, downloadCSV,
-} from "./common.js?v=20261019b";
+  boot, ACCESS, db, esc, toast, APP, isBlockedEmail, fmtTimestamp, fmtDate, todayId, enhanceDateInputs, downloadCSV,
+} from "./common.js?v=20261020b";
 import {
   collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, getDocs, writeBatch,
   serverTimestamp, arrayRemove, addDoc, query, orderBy, limit, where, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { SYSTEMS } from "./systems.js?v=20261019b";
-import { sendEmail } from "./email.js?v=20261019b";
-import { syncNotifyList, wantsNotify } from "./notify.js?v=20261019b";
+import { SYSTEMS } from "./systems.js?v=20261020b";
+import { sendEmail } from "./email.js?v=20261020b";
+import { syncNotifyList, wantsNotify } from "./notify.js?v=20261020b";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { me: "", admins: [] };
 
 boot({
   root: "./", current: "settings",
-  onReady: ({ user, isAdmin, hiddenSystems }) => {
+  onReady: ({ user, isAdmin, access }) => {
     if (!isAdmin) {
       $("#main").innerHTML = `
         <section class="notice">
@@ -29,7 +29,7 @@ boot({
     $("#year-section").hidden = false;
     $("#mail-section").hidden = false;
     $("#sys-section").hidden = false;
-    setupSystems(hiddenSystems);
+    setupSystems(access);
     setupYear();
     setupMailCheck();
 
@@ -382,37 +382,37 @@ function watchMailLog(coll) {
   });
 }
 
-/* ================= 系統顯示 ================= */
-function setupSystems(initialHidden = []) {
+/* ================= 系統開放對象 ================= */
+function setupSystems(initial = {}) {
   const box = $("#sys-list");
-  let hidden = [...initialHidden];
+  const access = { ...initial };
   box.innerHTML = `
     <ul class="sys-list">
       ${SYSTEMS.map((s) => `
         <li>
-          <label class="check">
-            <input type="checkbox" data-sys-show="${s.id}" ${hidden.includes(s.id) ? "" : "checked"}>
-            <span class="sys-icon" aria-hidden="true">${s.icon || "🧩"}</span>
-            <span>${esc(s.name)}</span>
-          </label>
-          <span class="badge badge--${hidden.includes(s.id) ? "muted" : "go"}" data-sys-state="${s.id}">${hidden.includes(s.id) ? "已隱藏" : "顯示中"}</span>
+          <span class="sys-name"><span class="sys-icon" aria-hidden="true">${s.icon || "🧩"}</span><span>${esc(s.name)}</span></span>
+          <span class="seg-choice" role="radiogroup" aria-label="${esc(s.name)} 開放對象">
+            ${Object.entries(ACCESS).map(([k, v]) => {
+              const locked = s.adminOnly && k === "all";
+              return `<label class="seg-opt${locked ? " is-disabled" : ""}" ${locked ? 'title="這個系統的資料只限管理員讀取，不能開放給全部老師"' : ""}>
+                <input type="radio" name="acc-${s.id}" value="${k}" data-sys="${s.id}" ${access[s.id] === k ? "checked" : ""} ${locked ? "disabled" : ""}>
+                <span>${esc(v.label)}</span></label>`;
+            }).join("")}
+          </span>
         </li>`).join("")}
     </ul>`;
   box.addEventListener("change", async (e) => {
-    const cb = e.target.closest("[data-sys-show]");
-    if (!cb) return;
-    const id = cb.dataset.sysShow;
+    const r = e.target.closest("[data-sys]");
+    if (!r) return;
+    const id = r.dataset.sys;
+    const prev = access[id];
     const name = SYSTEMS.find((x) => x.id === id)?.name || id;
-    const next = cb.checked ? hidden.filter((x) => x !== id) : [...new Set([...hidden, id])];
     try {
-      await setDoc(doc(db, "settings", "systems"), { hidden: next, updatedBy: S.me, updatedAt: serverTimestamp() });
-      hidden = next;
-      const badge = box.querySelector(`[data-sys-state="${id}"]`);
-      badge.textContent = cb.checked ? "顯示中" : "已隱藏";
-      badge.className = `badge badge--${cb.checked ? "go" : "muted"}`;
-      toast(cb.checked ? `已向老師顯示「${name}」。` : `已向老師隱藏「${name}」。`, "success");
+      await setDoc(doc(db, "settings", "systems"), { access: { [id]: r.value }, updatedBy: S.me, updatedAt: serverTimestamp() }, { merge: true });
+      access[id] = r.value;
+      toast(`「${name}」已設為：${ACCESS[r.value].label}。`, "success");
     } catch (err) {
-      cb.checked = !cb.checked;
+      box.querySelector(`input[name="acc-${id}"][value="${prev}"]`).checked = true;
       toast("未能更新：" + err.message, "error");
     }
   });
