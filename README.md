@@ -182,6 +182,7 @@ python3 tools/set-version.py
 - 語言跟隨平台右上角的 EN／中文。
 - 資料存於平台 Firestore 的 `ipad/state` 文件。老師只可新增／修改借用記錄（`bookings`），其他設定只限管理員。
 - 第一次由管理員開啟時，會以預設設定建立資料。（由舊 iPad借用記錄表匯入的功能已移除。）
+- 載入：`ipad.js` 在登入後立即開始即時讀取資料（與平台檢查及 iframe 載入同時進行），並先顯示上次存於本機的資料（`localStorage` 的 `ipad-state-cache`，只供顯示，取得最新資料後才可修改）；`index.html` 亦會預先下載 `app.js`、`app.css`。
 - 「平台設定 → 刪除舊學年資料」包括 iPad 借用記錄。
 - 校曆（Day 1–6、特別活動日）仍寫在 `app.js` 的 `defaultState()`，新學年需更新。
 

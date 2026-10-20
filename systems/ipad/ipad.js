@@ -1,8 +1,9 @@
-import { boot, db, isEn } from "../../assets/js/common.js?v=20261020e";
+import { boot, db, isEn, auth, isStaffEmail } from "../../assets/js/common.js?v=20261020f";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  doc, getDoc, setDoc, updateDoc, onSnapshot, deleteField,
+  doc, setDoc, updateDoc, onSnapshot, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { IPAD_DOC } from "./ipad-config.js?v=20261020e";
+import { IPAD_DOC } from "./ipad-config.js?v=20261020f";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null };
@@ -13,12 +14,54 @@ const clean = (v) => (v && typeof v === "object" && !Array.isArray(v) && Object.
   ? v : JSON.parse(JSON.stringify(v ?? null));
 const cleanAll = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, clean(v)]));
 
+/* ---------- 即時資料 ----------
+ * 登入後立即開始讀取（不用等待平台其他檢查及 iframe 載入），
+ * 並先顯示上次的資料（只存於本機），令頁面盡快出現。 */
+const CACHE_KEY = "ipad-state-cache";
+const LIVE = { data: undefined, error: null, listeners: new Set(), waiters: [], started: false };
+function startLive() {
+  if (LIVE.started) return;
+  LIVE.started = true;
+  onSnapshot(ref(), (snap) => {
+    LIVE.data = snap.exists() ? snap.data() : null;
+    LIVE.waiters.splice(0).forEach((w) => w.resolve(LIVE.data));
+    LIVE.listeners.forEach((l) => l.onData(LIVE.data));
+    if (LIVE.data && !snap.metadata?.hasPendingWrites) {
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify(LIVE.data)); } catch { /* 空間不足時只影響下次載入速度 */ }
+    }
+  }, (err) => {
+    LIVE.error = err;
+    LIVE.started = false;
+    LIVE.waiters.splice(0).forEach((w) => w.reject(err));
+    LIVE.listeners.forEach((l) => l.onError?.(err));
+  });
+}
+onAuthStateChanged(auth, (user) => {
+  if (user && isStaffEmail((user.email || "").toLowerCase())) startLive();
+});
+function cachedData() {
+  try { return JSON.parse(localStorage.getItem(CACHE_KEY) || "null"); } catch { return null; }
+}
+
 /** 提供給 iframe 內 iPad 借用表使用的資料存取 */
 function makeStore() {
   return {
-    get: () => getDoc(ref()).then((s) => (s.exists() ? s.data() : null)),
+    /** 資料庫的最新資料（第一次讀取完成後才回傳） */
+    get: () => {
+      startLive();
+      if (LIVE.data !== undefined) return Promise.resolve(LIVE.data);
+      return new Promise((resolve, reject) => LIVE.waiters.push({ resolve, reject }));
+    },
+    /** 上次的資料（只用於即時顯示） */
+    cached: cachedData,
     create: (data) => setDoc(ref(), cleanAll(data)),
-    subscribe: (onData, onError) => onSnapshot(ref(), (s) => onData(s.data()), onError),
+    subscribe: (onData, onError) => {
+      const l = { onData, onError };
+      LIVE.listeners.add(l);
+      startLive();
+      if (LIVE.data !== undefined) onData(LIVE.data);
+      return () => LIVE.listeners.delete(l);
+    },
     update: (upd) => updateDoc(ref(), cleanAll(upd)),
     del: () => deleteField(),
   };
@@ -48,17 +91,9 @@ function startApp(isAdmin, user) {
 
 boot({
   root: "../../", current: "ipad",
-  onReady: async ({ user, isAdmin }) => {
+  onReady: ({ user, isAdmin }) => {
     S.user = user;
-    let exists = true;
-    try { exists = (await getDoc(ref())).exists(); } catch (e) { console.warn(e); }
-    // 第一次使用：管理員開啟時以預設設定建立資料
-    if (!exists && isAdmin) { startApp(true, user); return; }
-    if (!exists) {
-      $("#setup").hidden = false;
-      $("#setup").innerHTML = `<p class="empty">iPad借用尚未設定，請由管理員開啟一次本頁。</p>`;
-      return;
-    }
+    // 資料未建立時：管理員開啟會以預設設定建立；老師會看到提示（由 app.js 處理）
     startApp(isAdmin, user);
   },
 });

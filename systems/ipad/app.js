@@ -392,6 +392,14 @@ function connectFirestore(){
     return;
   }
   fsDocRef = store;
+  /* 先顯示上次的資料（唯讀），取得最新資料後才可修改 */
+  var cached = store.cached && store.cached();
+  if (cached) applySnapshot(cached, true);
+  store.subscribe(function(data){
+    if (data) applySnapshot(data, false);
+  }, function(err){
+    showToast(t('toastConnLost') + (err && err.message ? err.message : ''));
+  });
   store.get().then(function(data){
     if (!data) {
       if (!env.isAdmin) throw new Error(t('notInitialized'));
@@ -399,31 +407,33 @@ function connectFirestore(){
     }
   }).then(function(){
     isReadOnly = false;
-    store.subscribe(function(data){
-      if (!data) return;
-      if (data.ipads) STATE.ipads = data.ipads;
-      if (data.periods) STATE.periods = data.periods;
-      var sig = JSON.stringify([data.ipads, data.periods, data.bookings, data.reservations, data.loans]);
-      if (sig === lastSnapshotSig) return; /* nothing actually changed — skip re-render */
-      lastSnapshotSig = sig;
-      var firstLoad = !STATE.updatedAt;
-      var allBookings = mapToArray(data.bookings);
-      /* 已刪除的預約仍保留在資料庫（deleted: true），只在列表模式顯示 */
-      STATE.bookings = allBookings.filter(function(g){ return !g.deleted; });
-      STATE.deletedBookings = allBookings.filter(function(g){ return g.deleted; });
-      STATE.reservations = mapToArray(data.reservations);
-      STATE.loans = mapToArray(data.loans);
-      STATE.updatedAt = Date.now();
-      renderAll({ keepModal: true });
-      if (firstLoad && env.openAdmin) openSettings();
-    }, function(err){
-      showToast(t('toastConnLost') + (err && err.message ? err.message : ''));
-    });
+    renderAll({ keepModal: true });
   }).catch(function(err){
     isReadOnly = true;
     renderAll();
     showToast(t('toastDbConnFail') + (err && err.message ? err.message : ''));
   });
+}
+
+/** 把資料庫的資料放入畫面；fromCache：上次的本機資料 */
+var liveLoaded = false;
+function applySnapshot(data, fromCache){
+  if (data.ipads) STATE.ipads = data.ipads;
+  if (data.periods) STATE.periods = data.periods;
+  var sig = JSON.stringify([data.ipads, data.periods, data.bookings, data.reservations, data.loans]);
+  var firstLive = !fromCache && !liveLoaded;
+  if (!fromCache) liveLoaded = true;
+  if (sig === lastSnapshotSig && !firstLive) return; /* nothing actually changed — skip re-render */
+  lastSnapshotSig = sig;
+  var allBookings = mapToArray(data.bookings);
+  /* 已刪除的預約仍保留在資料庫（deleted: true），只在列表模式顯示 */
+  STATE.bookings = allBookings.filter(function(g){ return !g.deleted; });
+  STATE.deletedBookings = allBookings.filter(function(g){ return g.deleted; });
+  STATE.reservations = mapToArray(data.reservations);
+  STATE.loans = mapToArray(data.loans);
+  STATE.updatedAt = Date.now();
+  renderAll({ keepModal: true });
+  if (firstLive && env.openAdmin) openSettings();
 }
 
 function mapToArray(m){
