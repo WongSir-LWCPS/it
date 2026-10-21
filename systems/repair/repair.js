@@ -1,14 +1,14 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId,
-} from "../../assets/js/common.js?v=20261020f";
+} from "../../assets/js/common.js?v=20261021b";
 import {
   collection, addDoc, onSnapshot, query, where, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { auth, isStaffEmail } from "../../assets/js/common.js?v=20261020f";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261020f";
-import { REPAIR, RSTATUS, chineseName } from "./repair-config.js?v=20261020f";
-import { buildRepairEmail } from "./repair-email.js?v=20261020f";
+import { auth, isStaffEmail } from "../../assets/js/common.js?v=20261021b";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261021b";
+import { REPAIR, RSTATUS, chineseName } from "./repair-config.js?v=20261021b";
+import { buildRepairEmail } from "./repair-email.js?v=20261021b";
 
 const $ = (sel) => document.querySelector(sel);
 /** 簡短日期，令表格不會太闊，例如 16/10/2026 */

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-Hant-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IT組工作資料｜IT一站式平台</title>
+  <link rel="icon" href="../../assets/img/favicon.png">
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261021b">
+  <script>
+    // 程式載入或執行失敗時，在頁面上顯示原因（而不是空白頁）
+    (function () {
+      function show(msg) {
+        var el = document.getElementById("loading") || document.getElementById("load-fail");
+        if (!el) {
+          el = document.createElement("div");
+          el.id = "load-fail";
+          el.className = "loading";
+          document.body.insertBefore(el, document.body.firstChild.nextSibling);
+        }
+        el.innerHTML = "系統未能載入：" + String(msg).replace(/</g, "&lt;") +
+          "<br>請按 Ctrl + Shift + R（Mac：Cmd + Shift + R）重新整理。如仍未能解決，請把這段文字截圖告訴IT組。";
+      }
+      window.__showLoadError = show;
+      // 程式檔下載失敗（例如 404）
+      window.addEventListener("error", function (e) {
+        var t = e.target;
+        if (t && t !== window) {            // 資源載入失敗：只理會程式檔（字型、圖片失敗不影響使用）
+          if (t.tagName === "SCRIPT") show("未能下載程式檔 " + (t.src || ""));
+          return;
+        }
+        show(e.message || "程式錯誤");
+      }, true);
+      window.addEventListener("unhandledrejection", function (e) { show((e.reason && e.reason.message) || "程式錯誤"); });
+      // 15 秒後仍未顯示任何內容
+      setTimeout(function () {
+        var main = document.getElementById("main"), gate = document.getElementById("gate");
+        if (document.getElementById("loading") || (main && main.hidden && gate && gate.hidden)) show("載入時間過長，請檢查網絡連線");
+      }, 15000);
+    })();
+  </script>
+</head>
+<body>
+  <header id="site-header" class="site-header"></header>
+  <p id="loading" class="loading">載入中…</p>
+  <div id="gate" class="gate" hidden></div>
+
+  <main id="main" class="wrap wrap--wide" hidden>
+    <nav class="crumbs" aria-label="位置">
+      <a href="../../index.html">IT一站式平台</a>
+      <span aria-hidden="true">/</span>
+      <span>IT組工作資料</span>
+      <button class="btn btn--small crumbs-action" type="button" id="lock-btn" hidden>🔒 鎖上</button>
+    </nav>
+    <h1>IT組工作資料</h1>
+    <p class="hint">只限IT組使用。所有內容以主密碼在瀏覽器內加密後才儲存，資料庫只有加密後的內容。閒置 30 分鐘會自動鎖上。</p>
+
+    <!-- 第一次設定主密碼 -->
+    <section id="setup" class="card-form wrap--narrow" hidden>
+      <h2>設定主密碼</h2>
+      <p>第一次使用，請設定一個只有IT組知道的主密碼。打開這個系統時都要輸入主密碼。</p>
+      <p class="warn">主密碼不會儲存在任何地方。如遺失主密碼，所有資料將無法還原，請把主密碼妥善記錄（例如放在密碼管理工具）。</p>
+      <form id="setup-form" novalidate>
+        <label class="field"><span>主密碼（最少 10 個字元）</span><input type="password" name="p1" autocomplete="new-password" minlength="10"></label>
+        <label class="field"><span>再輸入一次</span><input type="password" name="p2" autocomplete="new-password"></label>
+        <p class="warn" id="setup-warn" hidden></p>
+        <div class="actions actions--start"><button class="btn btn--primary" type="submit">設定主密碼</button></div>
+      </form>
+    </section>
+
+    <!-- 解鎖 -->
+    <section id="unlock" class="card-form wrap--narrow" hidden>
+      <h2>🔒 輸入主密碼</h2>
+      <form id="unlock-form" novalidate>
+        <label class="field"><span>主密碼</span><input type="password" name="pw" autocomplete="current-password"></label>
+        <p class="warn" id="unlock-warn" hidden></p>
+        <div class="actions actions--start"><button class="btn btn--primary" type="submit">解鎖</button></div>
+      </form>
+    </section>
+
+    <!-- 已解鎖 -->
+    <section id="desk" hidden>
+      <div class="desk-top">
+        <label class="field field--compact field--grow"><span>搜尋所有分頁</span>
+          <input id="g-search" type="search" placeholder="例如 IP、器材名稱、帳戶、聯絡人…" autocomplete="off"></label>
+        <div class="desk-actions">
+          <button class="btn btn--small btn--primary" type="button" id="tab-add">＋ 新增分頁</button>
+          <button class="btn btn--small" type="button" id="import-open">匯入 Excel</button>
+          <button class="btn btn--small" type="button" id="pw-change">更改主密碼</button>
+        </div>
+      </div>
+      <div id="g-results" hidden></div>
+      <div class="tabs desk-tabs" role="tablist" id="desk-tabs"></div>
+      <div id="desk-body"></div>
+    </section>
+  </main>
+
+  <!-- 分頁設定 -->
+  <dialog id="tab-dialog" class="sheet sheet--wide" aria-labelledby="tab-dialog-title">
+    <form id="tab-form" novalidate>
+      <div class="dev-head"><h2 id="tab-dialog-title">新增分頁</h2><button class="btn btn--small" type="button" data-close>關閉</button></div>
+      <label class="field"><span>分頁名稱</span><input name="title" maxlength="40" placeholder="例如：常用聯絡人、器材 IP、工作流程"></label>
+      <fieldset class="field" id="tab-kind-field">
+        <legend>形式</legend>
+        <div class="choices choices--tight">
+          <label class="choice"><input type="radio" name="kind" value="table" checked><span>表格（自訂欄位）</span></label>
+          <label class="choice"><input type="radio" name="kind" value="note"><span>筆記（自由文字，例如工作流程）</span></label>
+        </div>
+      </fieldset>
+      <div id="col-editor"></div>
+      <p class="warn" id="tab-warn" hidden></p>
+      <div class="actions actions--start">
+        <button class="btn btn--primary" type="submit">儲存</button>
+        <button class="btn btn--stop" type="button" id="tab-delete" hidden>刪除這個分頁</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 編輯一行 -->
+  <dialog id="row-dialog" class="sheet sheet--wide" aria-labelledby="row-dialog-title">
+    <form id="row-form" novalidate>
+      <div class="dev-head"><h2 id="row-dialog-title">編輯</h2><button class="btn btn--small" type="button" data-close>關閉</button></div>
+      <div id="row-fields"></div>
+      <div class="actions actions--start">
+        <button class="btn btn--primary" type="submit">儲存</button>
+        <button class="btn btn--stop" type="button" id="row-delete" hidden>刪除這一行</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 匯入 Excel -->
+  <dialog id="import-dialog" class="sheet sheet--xwide" aria-labelledby="import-title">
+    <div class="dev-head"><h2 id="import-title">匯入 Excel 工作表</h2><button class="btn btn--small" type="button" data-close>關閉</button></div>
+    <p class="hint">選擇檔案及工作表，再選擇哪一行是標題。每次匯入一張工作表，會新增為一個表格分頁；排版複雜的工作表（例如一頁有多個表），可匯入後再整理，或以不同標題行分開匯入。</p>
+    <div class="field-row">
+      <label class="field"><span>檔案（.xlsx）</span><input type="file" id="im-file" accept=".xlsx,.xls,.csv"></label>
+      <label class="field"><span>工作表</span><select id="im-sheet" disabled></select></label>
+    </div>
+    <div id="im-body"></div>
+  </dialog>
+
+  <!-- 更改主密碼 -->
+  <dialog id="pw-dialog" class="sheet" aria-labelledby="pw-title">
+    <form id="pw-form" novalidate>
+      <div class="dev-head"><h2 id="pw-title">更改主密碼</h2><button class="btn btn--small" type="button" data-close>關閉</button></div>
+      <p class="hint">所有分頁會以新主密碼重新加密。更改後，其他IT組同事要用新主密碼解鎖。</p>
+      <label class="field"><span>目前的主密碼</span><input type="password" name="old" autocomplete="current-password"></label>
+      <label class="field"><span>新主密碼（最少 10 個字元）</span><input type="password" name="p1" autocomplete="new-password"></label>
+      <label class="field"><span>再輸入一次</span><input type="password" name="p2" autocomplete="new-password"></label>
+      <p class="warn" id="pw-warn" hidden></p>
+      <div class="actions actions--start"><button class="btn btn--primary" type="submit">更改主密碼</button></div>
+    </form>
+  </dialog>
+
+  <script type="module" src="itdesk.js?v=20261021b"></script>
+</body>
+</html>

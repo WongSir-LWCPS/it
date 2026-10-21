@@ -717,3 +717,27 @@ tr.is-issue td { background: var(--stop-bg); }
 .seg-opt.is-disabled { cursor: not-allowed; }
 .seg-opt.is-disabled span { opacity: .4; text-decoration: line-through; }
 @media (max-width: 560px) { .sys-list li { flex-direction: column; align-items: flex-start; } }
+/* IT組工作資料 */
+.desk-top { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.desk-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.desk-tabs { margin-top: 8px; }
+.desk-bar { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 12px 0 8px; }
+.desk-bar-left, .desk-bar-right { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.desk-table td { vertical-align: top; }
+.secret-cell { white-space: nowrap; }
+.secret-val { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin-right: 4px; }
+.secret-val.is-masked { letter-spacing: 1px; color: var(--muted); }
+.icon-mini { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 0 5px; font-size: .8rem; line-height: 1.6; cursor: pointer; }
+.icon-mini:hover { border-color: var(--ink); }
+.note-view { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; line-height: 1.7; min-height: 120px; }
+.note-edit { width: 100%; min-height: 420px; font: inherit; line-height: 1.6; padding: 14px 16px; border: 1px solid var(--ink); border-radius: 14px; background: var(--surface); }
+.col-list { list-style: none; margin: 6px 0 10px; padding: 0; display: grid; gap: 6px; }
+.col-list li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.col-list [data-col-name] { flex: 1 1 200px; font: inherit; padding: 6px 10px; border: 1px solid #C7CEDF; border-radius: 8px; }
+.secret-input { display: flex; gap: 6px; align-items: center; }
+.secret-input input { flex: 1 1 auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.g-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 4px; font-size: .92rem; max-height: 320px; overflow: auto; }
+.g-list li { padding: 6px 10px; background: var(--paper); border-radius: 8px; }
+.sheet--xwide { width: min(1100px, calc(100vw - 24px)); }
+.im-table th { vertical-align: top; min-width: 130px; }
+.im-colname { display: block; width: 100%; margin: 4px 0; font: inherit; font-size: .85rem; padding: 4px 6px; border: 1px solid #C7CEDF; border-radius: 6px; }

@@ -85,4 +85,13 @@ export const SYSTEMS = [
     adminOnly: true,  // 只限平台管理員（IT組）
     notify: false,
   },
+  {
+    id: "itdesk",
+    name: "IT組工作資料",
+    desc: "（只限IT組）IT組的工作流程及資料，例如常用聯絡人、器材 IP、帳戶密碼。所有內容以主密碼加密。",
+    href: "systems/itdesk/index.html",
+    icon: "🔐",
+    adminOnly: true,  // 只限平台管理員（IT組）
+    notify: false,
+  },
 ];
