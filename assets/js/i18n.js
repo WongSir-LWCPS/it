@@ -45,6 +45,9 @@ const DICT = {
   "這個系統的資料只限管理員讀取，不能開放給全部老師": "This system's data can only be read by administrators, so it cannot be opened to all teachers",
   "選擇每個系統開放給誰使用：「全部老師」所有教職員都可使用；「IT組」只有管理員看到及可以進入（例如正式推出前測試）；「隱藏」任何人都不會在平台首頁及側邊選單看到，亦不能開啟。QEF iPad管理、器材資產管理及IT組工作資料的資料只限管理員讀取，不能開放給全部老師。": "Choose who can use each system: “All teachers” – all staff; “IT Team” – only administrators can see and open it (e.g. for testing before launch); “Hidden” – nobody sees it on the home page or menu, and it cannot be opened. QEF iPad Management, Equipment Assets and IT Team Workspace data can only be read by administrators, so they cannot be opened to all teachers.",
   // IT組工作資料
+  "範疇": "Scope",
+  "例如：LED WALL 維修與工程": "e.g. LED wall repair and works",
+  "例如：聯絡多在群組": "e.g. usually contacted via group chat",
   "外判商聯絡人": "Contractors",
   "外判商與工程聯絡人清單": "Contractor & Engineering Contacts",
   "過濾廠商名稱或項目…": "Filter by company or service…",

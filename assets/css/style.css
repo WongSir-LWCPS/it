@@ -781,3 +781,4 @@ tr.is-issue td { background: var(--stop-bg); }
 #cx-dialog [data-cx-phone-add] { width: auto; }
 @media (max-width: 560px) { .field .cx-phone-row { flex-wrap: wrap; } .field .cx-phone-row input { flex-basis: 45%; } }
 #cx-dialog [data-cx-phone-add] { align-self: flex-start; display: inline-flex; }
+.cx-note { color: var(--muted); font-size: .92rem; }
