@@ -1,6 +1,6 @@
 // IT組工作資料：影印機及打印機
 // 資料（包括 IP、MAC、登入密碼）不會寫在程式內：第一次使用時由 Excel 匯入，之後在頁面修改，全部以主密碼加密儲存。
-import { esc, toast, loadXlsx } from "../../../assets/js/common.js?v=20261022f";
+import { esc, toast, loadXlsx } from "../../../assets/js/common.js?v=20261022g";
 
 const uid = (p = "p") => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const FLOORS = ["地下", "1樓", "2樓", "3樓", "4樓", "5樓", "6樓", "7樓", "其他"];
@@ -82,15 +82,21 @@ function renderView() {
     <div class="pr-tools">
       <label class="check"><input type="checkbox" data-pr-reveal ${V.reveal ? "checked" : ""}> 顯示密碼</label>
     </div>
-    ${list.length ? floors.map((f) => {
-      const rows = list.filter((x) => (x.floor || "其他") === f).sort((a, b) => String(a.room).localeCompare(String(b.room), "zh-Hant", { numeric: true }));
-      return `
-      <h3 class="pr-floor">${esc(f)} <small>${rows.length} 部</small></h3>
+    ${list.length ? `
       <div class="table-scroll cx-scroll"><table class="cx-table pr-table" data-no-translate>
-        <thead><tr><th>型號</th><th>位置</th><th>Toner</th><th>IP 位址</th><th>MAC</th><th>登入</th><th>備註</th><th><span class="sr-only">編輯</span></th></tr></thead>
-        <tbody>${rows.map(rowHtml).join("")}</tbody>
-      </table></div>`;
-    }).join("") : `<p class="empty pr-pad">沒有符合的影印機。</p>`}
+        <colgroup>
+          <col class="pr-c-model"><col class="pr-c-room"><col class="pr-c-toner"><col class="pr-c-ip"><col class="pr-c-mac">
+          <col class="pr-c-login"><col class="pr-c-pw"><col class="pr-c-note"><col class="pr-c-edit">
+        </colgroup>
+        <thead><tr><th>影印機型號</th><th>位置</th><th>Toner</th><th>IP Address</th><th>Mac</th><th>Login</th><th>Password</th><th>備注</th><th><span class="sr-only">編輯</span></th></tr></thead>
+        ${floors.map((f) => {
+          const rows = list.filter((x) => (x.floor || "其他") === f).sort((a, b) => String(a.room).localeCompare(String(b.room), "zh-Hant", { numeric: true }));
+          return `<tbody>
+            <tr class="pr-floor-row"><th colspan="9" scope="rowgroup">${esc(f)} <small>${rows.length} 部</small></th></tr>
+            ${rows.map(rowHtml).join("")}
+          </tbody>`;
+        }).join("")}
+      </table></div>` : `<p class="empty pr-pad">沒有符合的影印機。</p>`}
     ${tonerSummary(items)}`;
 }
 
@@ -103,7 +109,8 @@ function rowHtml(x) {
       <td class="pr-mono">${esc(x.toner || "")}</td>
       <td>${x.ip ? `<a class="pr-ip" href="http://${esc(x.ip)}" target="_blank" rel="noopener noreferrer" title="開啟影印機的網頁管理介面">${esc(x.ip)}</a>` : `<span class="hint">—</span>`}</td>
       <td class="pr-mono">${esc(x.mac || "")}</td>
-      <td class="pr-login">${esc(x.login || "")}${x.password ? `<span class="pr-pw" data-pw>${pw}</span>
+      <td class="pr-login">${esc(x.login || "")}</td>
+      <td class="pr-pwcell">${x.password ? `<span class="pr-pw" data-pw>${pw}</span>
         <button class="icon-mini" type="button" data-pr-peek title="顯示">👁</button>
         <button class="icon-mini" type="button" data-pr-copy title="複製密碼">📋</button>` : ""}</td>
       <td class="cx-note">${esc(x.note || "")}</td>

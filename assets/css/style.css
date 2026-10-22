@@ -794,6 +794,18 @@ tr.is-issue td { background: var(--stop-bg); }
 .pr-ip { color: #2A5B9B; font-weight: 700; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-decoration: none; white-space: nowrap; }
 .pr-ip:hover { text-decoration: underline; }
 .pr-login { white-space: nowrap; }
+/* 影印機：單一表格，各樓層用分組列，欄寬一致 */
+.pr-table { table-layout: fixed; min-width: 1080px; }
+.pr-table th, .pr-table td { overflow-wrap: anywhere; }
+.pr-c-model { width: 16%; } .pr-c-room { width: 11%; } .pr-c-toner { width: 9%; }
+.pr-c-ip { width: 11%; } .pr-c-mac { width: 15%; } .pr-c-login { width: 8%; }
+.pr-c-pw { width: 12%; } .pr-c-note { width: auto; } .pr-c-edit { width: 40px; }
+.pr-table tr.pr-floor-row th { background: var(--soft, #f1f5f9); text-align: left; font-size: 1rem; padding-top: 10px; padding-bottom: 10px; border-top: 2px solid var(--line, #e2e8f0); cursor: default; }
+.pr-table tr.pr-floor-row small { color: var(--muted); font-weight: 500; font-size: .85rem; margin-left: 6px; }
+.pr-table tbody + tbody tr.pr-floor-row th { border-top-width: 6px; border-top-color: transparent; box-shadow: inset 0 2px 0 var(--line, #e2e8f0); }
+.pr-pwcell { white-space: nowrap; }
+.pr-table td.pr-mono { overflow-wrap: normal; }
+
 .pr-pw { display: inline-block; margin: 0 4px 0 8px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
 .pr-pad { padding: 18px 22px; }
 .pr-empty { padding: 28px 22px; }
