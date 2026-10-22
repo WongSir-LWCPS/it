@@ -1,13 +1,14 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
+  initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, browserPopupRedirectResolver,
+  GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, collection, query, where, getCountFromServer,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig, APP } from "./firebase-config.js?v=20261022i";
-import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261022i";
-import { SYSTEMS } from "./systems.js?v=20261022i";
+import { firebaseConfig, APP } from "./firebase-config.js?v=20261023a";
+import { startI18n, isEn, setLang, WEEKDAYS_EN, MONTHS_EN } from "./i18n.js?v=20261023a";
+import { SYSTEMS } from "./systems.js?v=20261023a";
 
 startI18n();
 
@@ -28,10 +29,46 @@ document.addEventListener("click", (e) => {
 });
 // 網址加上 #mine 時直接打開「我的申請」
 if (location.hash === "#mine") showTab("mine");   // module 程式執行時頁面已載入
-export { tr, t, isEn } from "./i18n.js?v=20261022i";
+export { tr, t, isEn } from "./i18n.js?v=20261023a";
+
+window.__commonLoaded = true;   // 給頁面的「載入時間過長」檢查用：程式檔已下載
 
 export const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+
+/*
+ * 登入狀態的儲存方式：
+ * 部分瀏覽器的 IndexedDB 會「卡住」（不回應亦不報錯），令 Firebase 登入一直等待，頁面停在「載入中」，
+ * 重新整理亦無效，要關閉分頁才回復。因此先用 2.5 秒測試 IndexedDB；如不回應，或之前曾經卡住，
+ * 便改用 localStorage 儲存登入狀態（可能需要再登入一次）。
+ */
+const IDB_FLAG = "auth-use-localstorage";
+const IDB_FLAG_DAYS = 14;
+function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch { /* 無法儲存 */ } }
+function idbFlagged() {
+  const t = Number(lsGet(IDB_FLAG) || 0);
+  return t > 0 && Date.now() - t < IDB_FLAG_DAYS * 86400000;
+}
+function probeIndexedDB(ms = 2500) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (ok) => { if (!done) { done = true; resolve(ok); } };
+    setTimeout(() => finish(false), ms);
+    try {
+      const req = indexedDB.open("lwcps-idb-probe", 1);
+      req.onsuccess = () => { try { req.result.close(); } catch { /* 略過 */ } finish(true); };
+      req.onerror = () => finish(false);
+      req.onblocked = () => finish(false);
+    } catch { finish(false); }
+  });
+}
+const useIdb = !idbFlagged() && typeof indexedDB !== "undefined" && await probeIndexedDB();
+if (!useIdb && !idbFlagged()) lsSet(IDB_FLAG, String(Date.now()));
+export const authStorage = useIdb ? "indexeddb" : "localstorage";
+export const auth = initializeAuth(app, {
+  persistence: useIdb ? [indexedDBLocalPersistence, browserLocalPersistence] : [browserLocalPersistence],
+  popupRedirectResolver: browserPopupRedirectResolver,
+});
 // 註：曾啟用 Firestore 本機快取（persistentLocalCache），但在部分瀏覽器會令讀取停頓、頁面無法載入，已取消。
 export const db = getFirestore(app);
 export { APP };
@@ -555,8 +592,20 @@ export function boot({ root = "./", current = "", onReady }) {
   gate.dataset.root = root;
   renderHeader(header, root, null, false);
   let started = false;
+  let authFired = false;
+
+  // 保險：登入狀態 8 秒仍未有回應（多數是 IndexedDB 卡住），改用 localStorage 並自動重新載入一次
+  setTimeout(() => {
+    if (authFired || authStorage !== "indexeddb") return;
+    let reloaded = false;
+    try { reloaded = sessionStorage.getItem("auth-auto-reload") === "1"; sessionStorage.setItem("auth-auto-reload", "1"); } catch { /* 略過 */ }
+    if (reloaded) return;
+    lsSet(IDB_FLAG, String(Date.now()));
+    location.reload();
+  }, 8000);
 
   onAuthStateChanged(auth, async (user) => {
+   authFired = true;
    try {
     loading?.remove();
     if (!user) {
