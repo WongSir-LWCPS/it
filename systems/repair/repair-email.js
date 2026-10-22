@@ -1,5 +1,5 @@
-import { fmtDate } from "../../assets/js/common.js?v=20261022d";
-import { adminMail } from "../../assets/js/notify.js?v=20261022d";
+import { fmtDate } from "../../assets/js/common.js?v=20261022f";
+import { adminMail } from "../../assets/js/notify.js?v=20261022f";
 
 /** 新報告通知 IT組（完成維修不寄電郵） */
 export function buildRepairEmail(r) {

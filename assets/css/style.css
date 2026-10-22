@@ -782,3 +782,38 @@ tr.is-issue td { background: var(--stop-bg); }
 @media (max-width: 560px) { .field .cx-phone-row { flex-wrap: wrap; } .field .cx-phone-row input { flex-basis: 45%; } }
 #cx-dialog [data-cx-phone-add] { align-self: flex-start; display: inline-flex; }
 .cx-note { color: var(--muted); font-size: .92rem; }
+/* IT組工作資料：影印機 */
+.pr-icon { font-size: 1.3rem; }
+.pr-views { margin-right: 4px; }
+.pr-tools { display: flex; justify-content: flex-end; padding: 10px 22px 0; }
+.pr-floor { margin: 18px 22px 8px; font-size: 1.05rem; display: flex; align-items: baseline; gap: 8px; }
+.pr-floor small { color: var(--muted); font-weight: 500; font-size: .85rem; }
+.pr-table td { vertical-align: top; }
+.pr-alias { color: var(--muted); }
+.pr-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9rem; }
+.pr-ip { color: #2A5B9B; font-weight: 700; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-decoration: none; white-space: nowrap; }
+.pr-ip:hover { text-decoration: underline; }
+.pr-login { white-space: nowrap; }
+.pr-pw { display: inline-block; margin: 0 4px 0 8px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
+.pr-pad { padding: 18px 22px; }
+.pr-empty { padding: 28px 22px; }
+.pr-toner { padding: 6px 22px 18px; }
+.pr-toner h3 { font-size: 1rem; margin: 14px 0 8px; }
+.pr-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pr-chip { display: inline-flex; gap: 8px; align-items: center; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); font: inherit; cursor: pointer; }
+.pr-chip:hover { border-color: var(--ink); }
+.pr-map-bar { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; padding: 14px 22px; }
+.pr-map-tabs, .pr-map-actions { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.pr-map-tab { padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font: inherit; cursor: pointer; }
+.pr-map-tab.is-on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.pr-placing { margin: 0 22px 8px; padding: 8px 12px; background: var(--wait-bg); border-radius: 8px; }
+.pr-map { position: relative; margin: 0 22px 18px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff; }
+.pr-map img { display: block; width: 100%; height: auto; user-select: none; }
+.pr-map.is-placing { cursor: crosshair; }
+.pr-map.is-placing .pr-pin { pointer-events: none; }
+.pr-pin { position: absolute; transform: translate(-50%, -50%); background: none; border: 0; padding: 0; cursor: pointer; }
+.pr-pin-dot { display: block; width: 18px; height: 18px; border-radius: 50%; background: #F7E463; border: 3px solid #6FA8DC; box-shadow: 0 0 0 2px #fff; }
+.pr-pin-label { position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%); white-space: nowrap; background: rgba(27, 37, 80, .92); color: #fff;
+  font-size: .78rem; line-height: 1.35; padding: 4px 8px; border-radius: 6px; opacity: 0; pointer-events: none; transition: opacity .12s; text-align: center; }
+.pr-pin:hover .pr-pin-label, .pr-pin:focus .pr-pin-label { opacity: 1; }
+.pr-unplaced { margin: 0 22px 16px; } .pr-unplaced summary { cursor: pointer; color: var(--muted); }

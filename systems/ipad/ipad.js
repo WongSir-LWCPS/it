@@ -1,9 +1,9 @@
-import { boot, db, isEn, auth, isStaffEmail } from "../../assets/js/common.js?v=20261022d";
+import { boot, db, isEn, auth, isStaffEmail } from "../../assets/js/common.js?v=20261022f";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   doc, setDoc, updateDoc, onSnapshot, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { IPAD_DOC } from "./ipad-config.js?v=20261022d";
+import { IPAD_DOC } from "./ipad-config.js?v=20261022f";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null };

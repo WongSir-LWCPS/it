@@ -1,15 +1,16 @@
-import { boot, db, esc, toast } from "../../assets/js/common.js?v=20261022d";
+import { boot, db, esc, toast } from "../../assets/js/common.js?v=20261022f";
 import {
-  collection, doc, onSnapshot, getDoc, setDoc, writeBatch, serverTimestamp,
+  collection, doc, onSnapshot, getDoc, setDoc, deleteDoc, writeBatch, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { newKeyMeta, unlock, encryptJSON, decryptJSON } from "./itdesk-crypto.js?v=20261022d";
-import { contactsPage } from "./pages/contacts.js?v=20261022d";
+import { newKeyMeta, unlock, encryptJSON, decryptJSON } from "./itdesk-crypto.js?v=20261022f";
+import { contactsPage } from "./pages/contacts.js?v=20261022f";
+import { printersPage } from "./pages/printers.js?v=20261022f";
 
 /*
  * IT組工作資料：每個頁面各有自己的版面及資料（例如外判商聯絡人、器材 IP）。
  * 新增頁面：在 pages/ 建立模組（提供 id、name、icon、defaultData()、render()），再加入下面的 PAGES。
  */
-const PAGES = [contactsPage];
+const PAGES = [contactsPage, printersPage];
 
 const $ = (sel) => document.querySelector(sel);
 const META_REF = () => doc(db, "itdesk_meta", "key");
@@ -182,6 +183,11 @@ async function savePage(id, data) {
   await setDoc(doc(PAGES_COLL(), id), { box: await encryptJSON(S.key, data), updatedAt: serverTimestamp(), updatedBy: S.user.email });
 }
 
+async function removePage(id) {
+  delete S.pages[id];
+  await deleteDoc(doc(PAGES_COLL(), id));
+}
+
 /* ---------- 頁面切換 ---------- */
 function setupDesk() {
   $("#page-nav").addEventListener("click", (e) => {
@@ -204,6 +210,10 @@ function renderPage() {
   if (!rec) { box.innerHTML = `<p class="empty">正在準備頁面…</p>`; return; }
   p.render(box, rec.data, {
     save: (data) => savePage(p.id, data),
+    // 頁面的附加文件（例如位置圖圖片），ID 以頁面 ID 開頭，同樣加密
+    extra: (name) => S.pages[`${p.id}__${name}`]?.data ?? null,
+    saveExtra: (name, data) => savePage(`${p.id}__${name}`, data),
+    removeExtra: (name) => removePage(`${p.id}__${name}`),
     updatedBy: rec.updatedBy,
     updatedAt: rec.updatedAt?.toDate ? rec.updatedAt.toDate() : null,
     user: S.user,

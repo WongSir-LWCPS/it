@@ -1,16 +1,16 @@
 import {
   boot, chineseName, db, esc, toast, fmtDate, daysUntil, parseDateId, weekdayName,
   enhanceDateInputs, timePicker, fmtTime12,
-} from "../../assets/js/common.js?v=20261022d";
+} from "../../assets/js/common.js?v=20261022f";
 import {
   collection, doc, onSnapshot, writeBatch, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261022d";
-import { buildKtvEmail } from "./ktv-email.js?v=20261022d";
-import { KTV, STATUS } from "./ktv-config.js?v=20261022d";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261022f";
+import { buildKtvEmail } from "./ktv-email.js?v=20261022f";
+import { KTV, STATUS } from "./ktv-config.js?v=20261022f";
 import {
   timeLabel, toMin, lockIdOf, findConflict, buildDays, overlapsKtvWindow, minBookDate, canBook, sortBookings,
-} from "./ktv-common.js?v=20261022d";
+} from "./ktv-common.js?v=20261022f";
 
 const S = {
   user: null, isAdmin: false, regularDates: [], bookings: [], hidePast: true,
