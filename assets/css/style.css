@@ -754,9 +754,9 @@ tr.is-issue td { background: var(--stop-bg); }
 .cx-search { width: min(320px, 70vw); font: inherit; padding: 9px 14px; border: 1px solid #C7CEDF; border-radius: 10px; background: var(--surface); }
 .cx-search:focus { outline: 2px solid var(--ink); outline-offset: 0; }
 .cx-scroll { border: 0; border-radius: 0; }
-.cx-table { width: 100%; border-collapse: collapse; }
-.cx-table th { background: var(--paper); color: var(--muted); font-weight: 700; font-size: .92rem; text-align: left; padding: 14px 22px; white-space: nowrap; }
-.cx-table td { padding: 16px 22px; border-top: 1px solid var(--line); vertical-align: middle; }
+.cx-table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.cx-table th { background: var(--paper); color: var(--muted); font-weight: 700; font-size: .8rem; text-align: left; padding: 11px 16px; white-space: nowrap; }
+.cx-table td { padding: 11px 16px; border-top: 1px solid var(--line); vertical-align: middle; }
 .cx-table tbody tr { cursor: pointer; }
 .cx-table tbody tr:hover td { background: #F7F9FC; }
 .cx-company { font-weight: 700; white-space: nowrap; }
@@ -773,7 +773,7 @@ tr.is-issue td { background: var(--stop-bg); }
 .cx-phone-row input { flex: 1 1 160px; font: inherit; padding: 8px 10px; border: 1px solid #C7CEDF; border-radius: 8px; }
 .cx-phone-row select { font: inherit; padding: 8px 10px; border: 1px solid #C7CEDF; border-radius: 8px; background: var(--surface); }
 .cx-actions [data-cx-delete] { margin-left: auto; }
-@media (max-width: 640px) { .cx-table th, .cx-table td { padding: 12px 14px; } }
+@media (max-width: 640px) { .cx-table th, .cx-table td { padding: 10px 12px; } }
 .field .cx-phone-row { flex-wrap: nowrap; align-items: center; }
 .field .cx-phone-row input { width: auto; flex: 1 1 0; min-width: 0; }
 .field .cx-phone-row select { width: auto; flex: 0 0 auto; }
@@ -781,7 +781,7 @@ tr.is-issue td { background: var(--stop-bg); }
 #cx-dialog [data-cx-phone-add] { width: auto; }
 @media (max-width: 560px) { .field .cx-phone-row { flex-wrap: wrap; } .field .cx-phone-row input { flex-basis: 45%; } }
 #cx-dialog [data-cx-phone-add] { align-self: flex-start; display: inline-flex; }
-.cx-note { color: var(--muted); font-size: .92rem; }
+.cx-note { color: var(--muted); font-size: .95em; }
 /* IT組工作資料：影印機 */
 .pr-icon { font-size: 1.3rem; }
 .pr-views { margin-right: 4px; }
@@ -790,17 +790,17 @@ tr.is-issue td { background: var(--stop-bg); }
 .pr-floor small { color: var(--muted); font-weight: 500; font-size: .85rem; }
 .pr-table td { vertical-align: top; }
 .pr-alias { color: var(--muted); }
-.pr-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9rem; }
+.pr-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .95em; }
 .pr-ip { color: #2A5B9B; font-weight: 700; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-decoration: none; white-space: nowrap; }
 .pr-ip:hover { text-decoration: underline; }
 .pr-login { white-space: nowrap; }
 /* 影印機：單一表格，各樓層用分組列，欄寬一致 */
-.pr-table { table-layout: fixed; min-width: 1080px; }
+.pr-table { table-layout: fixed; min-width: 980px; }
 .pr-table th, .pr-table td { overflow-wrap: anywhere; }
 .pr-c-model { width: 16%; } .pr-c-room { width: 11%; } .pr-c-toner { width: 9%; }
 .pr-c-ip { width: 11%; } .pr-c-mac { width: 15%; } .pr-c-login { width: 8%; }
 .pr-c-pw { width: 12%; } .pr-c-note { width: auto; } .pr-c-edit { width: 40px; }
-.pr-table tr.pr-floor-row th { background: var(--soft, #f1f5f9); text-align: left; font-size: 1rem; padding-top: 10px; padding-bottom: 10px; border-top: 2px solid var(--line, #e2e8f0); cursor: default; }
+.pr-table tr.pr-floor-row th { background: var(--soft, #f1f5f9); text-align: left; font-size: .92rem; padding-top: 10px; padding-bottom: 10px; border-top: 2px solid var(--line, #e2e8f0); cursor: default; }
 .pr-table tr.pr-floor-row small { color: var(--muted); font-weight: 500; font-size: .85rem; margin-left: 6px; }
 .pr-table tbody + tbody tr.pr-floor-row th { border-top-width: 6px; border-top-color: transparent; box-shadow: inset 0 2px 0 var(--line, #e2e8f0); }
 .pr-pwcell { white-space: nowrap; }
