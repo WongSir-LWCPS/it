@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../assets/css/style.css?v=20261022a">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261022c">
   <script>
     // 程式載入或執行失敗時，在頁面上顯示原因（而不是空白頁）
     (function () {
@@ -84,64 +84,13 @@
 
     <!-- 已解鎖 -->
     <section id="desk" hidden>
-      <div class="desk-top">
-        <label class="field field--compact field--grow"><span>搜尋所有分頁</span>
-          <input id="g-search" type="search" placeholder="例如 IP、器材名稱、帳戶、聯絡人…" autocomplete="off"></label>
-        <div class="desk-actions">
-          <button class="btn btn--small btn--primary" type="button" id="tab-add">＋ 新增分頁</button>
-          <button class="btn btn--small" type="button" id="import-open">匯入 Excel</button>
-          <button class="btn btn--small" type="button" id="pw-change">更改主密碼</button>
-        </div>
+      <div class="desk-nav-row">
+        <div class="tabs desk-tabs" role="tablist" id="page-nav"></div>
+        <button class="btn btn--small" type="button" id="pw-change">更改主密碼</button>
       </div>
-      <div id="g-results" hidden></div>
-      <div class="tabs desk-tabs" role="tablist" id="desk-tabs"></div>
-      <div id="desk-body"></div>
+      <div id="page-body"></div>
     </section>
   </main>
-
-  <!-- 分頁設定 -->
-  <dialog id="tab-dialog" class="sheet sheet--wide" aria-labelledby="tab-dialog-title">
-    <form id="tab-form" novalidate>
-      <div class="dev-head"><h2 id="tab-dialog-title">新增分頁</h2><button class="btn btn--small" type="button" data-close>關閉</button></div>
-      <label class="field"><span>分頁名稱</span><input name="title" maxlength="40" placeholder="例如：常用聯絡人、器材 IP、工作流程"></label>
-      <fieldset class="field" id="tab-kind-field">
-        <legend>形式</legend>
-        <div class="choices choices--tight">
-          <label class="choice"><input type="radio" name="kind" value="table" checked><span>表格（自訂欄位）</span></label>
-          <label class="choice"><input type="radio" name="kind" value="note"><span>筆記（自由文字，例如工作流程）</span></label>
-        </div>
-      </fieldset>
-      <div id="col-editor"></div>
-      <p class="warn" id="tab-warn" hidden></p>
-      <div class="actions actions--start">
-        <button class="btn btn--primary" type="submit">儲存</button>
-        <button class="btn btn--stop" type="button" id="tab-delete" hidden>刪除這個分頁</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- 編輯一行 -->
-  <dialog id="row-dialog" class="sheet sheet--wide" aria-labelledby="row-dialog-title">
-    <form id="row-form" novalidate>
-      <div class="dev-head"><h2 id="row-dialog-title">編輯</h2><button class="btn btn--small" type="button" data-close>關閉</button></div>
-      <div id="row-fields"></div>
-      <div class="actions actions--start">
-        <button class="btn btn--primary" type="submit">儲存</button>
-        <button class="btn btn--stop" type="button" id="row-delete" hidden>刪除這一行</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- 匯入 Excel -->
-  <dialog id="import-dialog" class="sheet sheet--xwide" aria-labelledby="import-title">
-    <div class="dev-head"><h2 id="import-title">匯入 Excel 工作表</h2><button class="btn btn--small" type="button" data-close>關閉</button></div>
-    <p class="hint">選擇檔案及工作表，再選擇哪一行是標題。每次匯入一張工作表，會新增為一個表格分頁；排版複雜的工作表（例如一頁有多個表），可匯入後再整理，或以不同標題行分開匯入。</p>
-    <div class="field-row">
-      <label class="field"><span>檔案（.xlsx）</span><input type="file" id="im-file" accept=".xlsx,.xls,.csv"></label>
-      <label class="field"><span>工作表</span><select id="im-sheet" disabled></select></label>
-    </div>
-    <div id="im-body"></div>
-  </dialog>
 
   <!-- 更改主密碼 -->
   <dialog id="pw-dialog" class="sheet" aria-labelledby="pw-title">
@@ -156,6 +105,6 @@
     </form>
   </dialog>
 
-  <script type="module" src="itdesk.js?v=20261022a"></script>
+  <script type="module" src="itdesk.js?v=20261022c"></script>
 </body>
 </html>
