@@ -1,14 +1,14 @@
 import {
   boot, db, esc, toast, todayId, downloadCSV, enhanceDateInputs,
-} from "../../assets/js/common.js?v=20261022h";
+} from "../../assets/js/common.js?v=20261022i";
 import {
   collection, doc, onSnapshot, updateDoc, deleteDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { auth, isStaffEmail, refreshPending } from "../../assets/js/common.js?v=20261022h";
-import { emailEnabled } from "../../assets/js/email.js?v=20261022h";
-import { syncNotifyList } from "../../assets/js/notify.js?v=20261022h";
-import { REPAIR, RSTATUS } from "./repair-config.js?v=20261022h";
+import { auth, isStaffEmail, refreshPending } from "../../assets/js/common.js?v=20261022i";
+import { emailEnabled } from "../../assets/js/email.js?v=20261022i";
+import { syncNotifyList } from "../../assets/js/notify.js?v=20261022i";
+import { REPAIR, RSTATUS } from "./repair-config.js?v=20261022i";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, list: [], q: "" };
