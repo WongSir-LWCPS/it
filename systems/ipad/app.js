@@ -1469,10 +1469,21 @@ function showToast(msg){
 
 /* ===================== global events ===================== */
 function bindGlobalEvents(){
+  /* 只有在背景「按下並放開」才算點擊背景：在表格內選取文字後把滑鼠移到表格外放開，不會關閉視窗 */
+  var downOnBackdrop = null;
+  document.addEventListener('mousedown', function(e){
+    var bd = e.target.closest ? e.target.closest('[data-backdrop]') : null;
+    downOnBackdrop = (bd && e.target === bd) ? bd : null;
+  }, true);
   document.addEventListener('click', function(e){
     var backdrop = e.target.closest ? e.target.closest('[data-backdrop]') : null;
+    var startedOnBackdrop = downOnBackdrop === backdrop;
+    downOnBackdrop = null;
     if (backdrop && e.target === backdrop) {
+      if (!startedOnBackdrop) return;
       var act0 = backdrop.getAttribute('data-backdrop');
+      /* 借用表格：點擊背景不會關閉，以免填寫中的內容消失；請按「取消」或 ✕ */
+      if (act0 === 'close-modal' && ui.modal && ui.modal.type === 'booking') return;
       if (act0 === 'close-modal') { closeModal(); return; }
       if (act0 === 'confirm-no') { ui.confirm=null; renderConfirmOverlay(); return; }
     }

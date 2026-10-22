@@ -1,5 +1,5 @@
 // IT組工作資料：逐張匯入 Excel 工作表，新增為表格分頁
-import { esc, toast, loadXlsx } from "../../assets/js/common.js?v=20261021b";
+import { esc, toast, loadXlsx } from "../../assets/js/common.js?v=20261022a";
 
 const $ = (sel) => document.querySelector(sel);
 const I = { ctx: null, wb: null, XLSX: null, grid: [], cols: [], sheet: "" };

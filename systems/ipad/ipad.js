@@ -1,16 +1,24 @@
-import { boot, db, isEn, auth, isStaffEmail } from "../../assets/js/common.js?v=20261021b";
+import { boot, db, isEn, auth, isStaffEmail } from "../../assets/js/common.js?v=20261022a";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   doc, setDoc, updateDoc, onSnapshot, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { IPAD_DOC } from "./ipad-config.js?v=20261021b";
+import { IPAD_DOC } from "./ipad-config.js?v=20261022a";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null };
 const ref = () => doc(db, ...IPAD_DOC);
 
-/** Firestore 不接受 undefined：一般資料先清理，deleteField() 等特殊值保留 */
-const clean = (v) => (v && typeof v === "object" && !Array.isArray(v) && Object.getPrototypeOf(v) !== Object.prototype)
+/**
+ * Firestore 不接受 undefined，亦不接受由 iframe 建立的物件（屬於另一個 JavaScript 環境，Firestore 會當作「自訂物件」而拒絕儲存）。
+ * 因此一般資料一律複製成本頁的普通物件；只有 deleteField() 等 Firestore 特殊值保留原樣。
+ * 判斷方法不依賴 Object.prototype（每個 iframe 各有一個）：普通物件的原型再上一層是 null。
+ */
+const isPlainAnyRealm = (v) => {
+  const proto = Object.getPrototypeOf(v);
+  return proto === null || Object.getPrototypeOf(proto) === null;
+};
+const clean = (v) => (v && typeof v === "object" && !Array.isArray(v) && !isPlainAnyRealm(v))
   ? v : JSON.parse(JSON.stringify(v ?? null));
 const cleanAll = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, clean(v)]));
 

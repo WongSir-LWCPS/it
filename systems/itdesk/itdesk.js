@@ -1,9 +1,9 @@
-import { boot, db, esc, toast, downloadCSV, todayId } from "../../assets/js/common.js?v=20261021b";
+import { boot, db, esc, toast, downloadCSV, todayId } from "../../assets/js/common.js?v=20261022a";
 import {
   collection, doc, onSnapshot, getDoc, setDoc, writeBatch, deleteDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { newKeyMeta, unlock, encryptJSON, decryptJSON } from "./itdesk-crypto.js?v=20261021b";
-import { setupImport } from "./itdesk-import.js?v=20261021b";
+import { newKeyMeta, unlock, encryptJSON, decryptJSON } from "./itdesk-crypto.js?v=20261022a";
+import { setupImport } from "./itdesk-import.js?v=20261022a";
 
 const $ = (sel) => document.querySelector(sel);
 const META_REF = () => doc(db, "itdesk_meta", "key");

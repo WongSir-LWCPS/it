@@ -2,11 +2,11 @@
 // 支援兩種格式：
 // 1. 學校的 iPad 資產表（iPad機名稱、S/N、所屬的MDM 系統、最終擁有權所屬、Model、借用人、身份、借用時間、歸還時間、備註1、備註2）
 // 2. 本系統的更新範本（Label、類別、機序號、型號……）
-import { db, esc, toast, loadXlsx, todayId } from "../../assets/js/common.js?v=20261021b";
+import { db, esc, toast, loadXlsx, todayId } from "../../assets/js/common.js?v=20261022a";
 import {
   doc, collection, writeBatch, serverTimestamp, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { ASSET, USAGE, STATUS, placeText } from "./assets-config.js?v=20261021b";
+import { ASSET, USAGE, STATUS, placeText } from "./assets-config.js?v=20261022a";
 
 const $ = (sel) => document.querySelector(sel);
 const I = { ctx: null, plan: null };
