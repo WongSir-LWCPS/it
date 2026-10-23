@@ -1,16 +1,16 @@
 import {
   boot, chineseName, db, esc, toast, fmtDate, daysUntil, parseDateId, weekdayName,
   enhanceDateInputs, timePicker, fmtTime12,
-} from "../../assets/js/common.js?v=20261023a";
+} from "../../assets/js/common.js?v=20261023b";
 import {
   collection, doc, onSnapshot, writeBatch, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261023a";
-import { buildKtvEmail } from "./ktv-email.js?v=20261023a";
-import { KTV, STATUS } from "./ktv-config.js?v=20261023a";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261023b";
+import { buildKtvEmail } from "./ktv-email.js?v=20261023b";
+import { KTV, STATUS } from "./ktv-config.js?v=20261023b";
 import {
   timeLabel, toMin, lockIdOf, findConflict, buildDays, overlapsKtvWindow, minBookDate, canBook, sortBookings,
-} from "./ktv-common.js?v=20261023a";
+} from "./ktv-common.js?v=20261023b";
 
 const S = {
   user: null, isAdmin: false, regularDates: [], bookings: [], hidePast: true,
@@ -141,11 +141,13 @@ function bookedCell(b, extra = false) {
   if (b.status === "approved") {
     return `<div class="slot slot--approved">${time}
       <span class="slot-topic" data-no-translate>${esc(b.topic)}</span>
-      <span class="slot-meta"><span data-no-translate>${esc(b.teacherName)}</span><span class="tag">${esc(b.mode)}</span></span></div>`;
+      <span class="slot-meta"><span data-no-translate>${esc(b.teacherName)}</span><span class="tag">${esc(b.mode)}</span></span>
+      ${b.remarks ? `<span class="slot-remarks" data-no-translate>📝 ${esc(b.remarks)}</span>` : ""}</div>`;
   }
   return `<div class="slot slot--pending">${time}
     <span class="slot-topic" data-no-translate>${esc(b.topic)}</span>
-    <span class="slot-meta"><span data-no-translate>${esc(b.teacherName)}</span>，審批中</span></div>`;
+    <span class="slot-meta"><span data-no-translate>${esc(b.teacherName)}</span>，審批中</span>
+    ${b.remarks ? `<span class="slot-remarks" data-no-translate>📝 ${esc(b.remarks)}</span>` : ""}</div>`;
 }
 
 function openCell(date, i) {

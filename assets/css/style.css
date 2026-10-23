@@ -233,6 +233,7 @@ body.no-scroll { overflow: hidden; }
 .slot-topic { font-weight: 700; line-height: 1.35; }
 .slot-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: .85rem; color: var(--ink-2); }
 .slot-note { color: var(--muted); font-size: .85rem; }
+.slot-remarks { display: block; margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(0,0,0,.12); font-size: .8rem; color: var(--ink-2); line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
 .slot--approved { background: var(--go-bg); border-color: transparent; box-shadow: inset 4px 0 0 var(--go); }
 .slot--pending { background: var(--wait-bg); border-color: transparent; box-shadow: inset 4px 0 0 var(--wait); }
 .slot--quiet { background: transparent; }
