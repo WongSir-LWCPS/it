@@ -1,10 +1,10 @@
-import { boot, db, esc, toast } from "../../assets/js/common.js?v=20261023e";
+import { boot, db, esc, toast } from "../../assets/js/common.js?v=20261023f";
 import {
   collection, doc, onSnapshot, getDoc, setDoc, deleteDoc, writeBatch, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { newKeyMeta, unlock, encryptJSON, decryptJSON } from "./itdesk-crypto.js?v=20261023e";
-import { contactsPage } from "./pages/contacts.js?v=20261023e";
-import { printersPage } from "./pages/printers.js?v=20261023e";
+import { newKeyMeta, unlock, encryptJSON, decryptJSON } from "./itdesk-crypto.js?v=20261023f";
+import { contactsPage } from "./pages/contacts.js?v=20261023f";
+import { printersPage } from "./pages/printers.js?v=20261023f";
 
 /*
  * IT組工作資料：每個頁面各有自己的版面及資料（例如外判商聯絡人、器材 IP）。
@@ -26,21 +26,38 @@ boot({
   onReady: ({ user, isAdmin }) => {
     if (!isAdmin) return;   // 非管理員已由 boot() 擋住
     S.user = user;
+    // 曾經設定主密碼的電腦：不用等待讀取資料庫，先顯示解鎖方塊（按「解鎖」時才等待密碼資料）
+    if (lsGet(READY_FLAG) === "1") showOnly("unlock");
+    else $("#desk-loading").hidden = false;
     onSnapshot(META_REF(), (snap) => {
       if (S.changing) return;   // 正在更改主密碼
+      $("#desk-loading").hidden = true;
       const meta = snap.exists() ? snap.data() : null;
+      metaLoaded(meta);
+      if (meta) lsSet(READY_FLAG, "1");
       const changed = S.meta && meta && S.meta.salt !== meta.salt;
       S.meta = meta;
       if (!meta) { showOnly("setup"); return; }
       if (changed && S.key) { lock("主密碼已被其他同事更改，請以新的主密碼解鎖。"); return; }
       if (!S.key) showOnly("unlock");
-    }, (e) => { $("#unlock").hidden = false; $("#unlock-warn").hidden = false; $("#unlock-warn").textContent = "未能讀取資料：" + e.message; });
+    }, (e) => {
+      S.metaError = "未能讀取資料：" + e.message;
+      $("#desk-loading").hidden = true;
+      metaLoaded(null);
+      $("#unlock").hidden = false; $("#unlock-warn").hidden = false; $("#unlock-warn").textContent = S.metaError;
+    });
     setupForms();
     setupDesk();
     ["click", "keydown", "pointermove", "scroll"].forEach((ev) => document.addEventListener(ev, () => { S.lastActive = Date.now(); }, { passive: true }));
     setInterval(() => { if (S.key && Date.now() - S.lastActive > IDLE_MS) lock("閒置超過 30 分鐘，已自動鎖上。"); }, 30000);
   },
 });
+
+const READY_FLAG = "itdesk-has-key";   // 只記錄「已設定主密碼」，不含任何密碼資料
+function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch { /* 略過 */ } }
+let metaLoaded;
+const metaReady = new Promise((r) => { metaLoaded = r; });
 
 function showOnly(which) {
   ["setup", "unlock", "desk"].forEach((id) => { $(`#${id}`).hidden = id !== which; });
@@ -91,9 +108,14 @@ function setupForms() {
     const f = e.target;
     const btn = f.querySelector("button[type=submit]");
     const warn = (m) => { $("#unlock-warn").hidden = !m; $("#unlock-warn").textContent = m; };
-    if (!S.meta) return;
     btn.disabled = true;
     btn.textContent = "解鎖中…";
+    if (!S.meta) await metaReady;
+    if (!S.meta) {
+      btn.disabled = false; btn.textContent = "解鎖";
+      if (S.metaError) warn(S.metaError); else showOnly("setup");
+      return;
+    }
     const key = await unlock(f.pw.value, S.meta);
     btn.disabled = false;
     btn.textContent = "解鎖";

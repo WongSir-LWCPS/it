@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../../assets/css/style.css?v=20261023e">
+  <link rel="stylesheet" href="../../assets/css/style.css?v=20261023f">
   <script>
     // 程式載入或執行失敗時，在頁面上顯示原因（而不是空白頁）
     (function () {
@@ -59,6 +59,8 @@
     <h1>IT組工作資料</h1>
     <p class="hint">只限IT組使用。所有內容以主密碼在瀏覽器內加密後才儲存，資料庫只有加密後的內容。閒置 30 分鐘會自動鎖上。</p>
 
+    <p id="desk-loading" class="empty" hidden>正在讀取…</p>
+
     <!-- 第一次設定主密碼 -->
     <section id="setup" class="card-form wrap--narrow" hidden>
       <h2>設定主密碼</h2>
@@ -73,7 +75,7 @@
     </section>
 
     <!-- 解鎖 -->
-    <section id="unlock" class="card-form wrap--narrow" hidden>
+    <section id="unlock" class="card-form unlock-card" hidden>
       <h2>🔒 輸入主密碼</h2>
       <form id="unlock-form" novalidate>
         <label class="field"><span>主密碼</span><input type="password" name="pw" autocomplete="current-password"></label>
@@ -105,6 +107,6 @@
     </form>
   </dialog>
 
-  <script type="module" src="itdesk.js?v=20261023e"></script>
+  <script type="module" src="itdesk.js?v=20261023f"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 // IT組工作資料：影印機及打印機
 // 資料（包括 IP、MAC、登入密碼）不會寫在程式內：第一次使用時由 Excel 匯入，之後在頁面修改，全部以主密碼加密儲存。
-import { esc, toast, loadXlsx } from "../../../assets/js/common.js?v=20261023e";
+import { esc, toast, loadXlsx } from "../../../assets/js/common.js?v=20261023f";
 
 const uid = (p = "p") => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const FLOORS = ["地下", "1樓", "2樓", "3樓", "4樓", "5樓", "6樓", "7樓", "其他"];
@@ -145,7 +145,7 @@ function renderMap(list) {
       ${cur ? `<div class="pr-map-actions">
         <label class="field field--compact"><span>標示影印機位置</span>
           <select data-pr-place><option value="">選擇影印機，再按位置圖…</option>
-            ${V.data.items.map((x) => `<option value="${x.id}" ${V.placing === x.id ? "selected" : ""}>${esc(x.model)}${x.room ? `（${esc(x.room)}）` : ""}${x.pin?.map === cur.id ? " ✓" : ""}</option>`).join("")}
+            ${V.data.items.map((x) => `<option value="${x.id}" ${V.placing === x.id ? "selected" : ""}>${esc(pinName(x, V.data.items))}${x.pin?.map === cur.id ? " ✓" : ""}</option>`).join("")}
           </select></label>
         <button type="button" class="btn btn--small" data-pr-map-rename>改名</button>
         <button type="button" class="btn btn--small" data-pr-map-replace>更換圖片</button>
@@ -165,7 +165,7 @@ function renderMap(list) {
           </button>`).join("")}
       </div>
       ${unplaced.length ? `<details class="pr-unplaced"><summary>未標示位置：${unplaced.length} 部</summary>
-        <p class="hint" data-no-translate>${unplaced.map((x) => esc(`${x.model}${x.room ? `（${x.room}）` : ""}`)).join("、")}</p></details>` : ""}` : ""}`;
+        <p class="hint" data-no-translate>${unplaced.map((x) => esc(pinName(x, V.data.items))).join("、")}</p></details>` : ""}` : ""}`;
 }
 
 /** 位置圖上顯示：完整品牌型號＋簡稱；沒有簡稱而同一張圖有相同型號時，改為顯示位置以便分辨 */
