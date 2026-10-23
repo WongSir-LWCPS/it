@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId,
-} from "../../assets/js/common.js?v=20261023c";
+} from "../../assets/js/common.js?v=20261023e";
 import {
   collection, doc, onSnapshot, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { emailEnabled } from "../../assets/js/email.js?v=20261023c";
-import { notifyAdmins, syncNotifyList } from "../../assets/js/notify.js?v=20261023c";
-import { CSTATUS, purposeText } from "./copilot-config.js?v=20261023c";
-import { buildCopilotEmail } from "./copilot-email.js?v=20261023c";
+import { emailEnabled } from "../../assets/js/email.js?v=20261023e";
+import { notifyAdmins, syncNotifyList } from "../../assets/js/notify.js?v=20261023e";
+import { CSTATUS, purposeText } from "./copilot-config.js?v=20261023e";
+import { buildCopilotEmail } from "./copilot-email.js?v=20261023e";
 
 const $ = (sel) => document.querySelector(sel);
 const applicantEmail = (r) => r.applicantEmail || r.email;

@@ -1,14 +1,14 @@
 import {
   boot, db, esc, toast, chineseName, fmtDate, todayId, isStaffEmail, enhanceDateInputs, timePicker,
-} from "../../assets/js/common.js?v=20261023c";
+} from "../../assets/js/common.js?v=20261023e";
 import {
   collection, doc, addDoc, updateDoc, onSnapshot, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261023c";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261023e";
 import {
   INFO, ISTATUS, deviceName, deviceWithPlace, findClashes, isActive, slotEnd,
-} from "./infostation-config.js?v=20261023c";
-import { buildInfoEmail, slotText } from "./infostation-email.js?v=20261023c";
+} from "./infostation-config.js?v=20261023e";
+import { buildInfoEmail, slotText } from "./infostation-email.js?v=20261023e";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, all: [], dates: [], closed: [] };

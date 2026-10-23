@@ -1,6 +1,6 @@
 // IT組工作資料：影印機及打印機
 // 資料（包括 IP、MAC、登入密碼）不會寫在程式內：第一次使用時由 Excel 匯入，之後在頁面修改，全部以主密碼加密儲存。
-import { esc, toast, loadXlsx } from "../../../assets/js/common.js?v=20261023c";
+import { esc, toast, loadXlsx } from "../../../assets/js/common.js?v=20261023e";
 
 const uid = (p = "p") => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const FLOORS = ["地下", "1樓", "2樓", "3樓", "4樓", "5樓", "6樓", "7樓", "其他"];
@@ -158,13 +158,25 @@ function renderMap(list) {
       <div class="pr-map${V.placing ? " is-placing" : ""}" data-pr-canvas>
         ${img ? `<img src="${img}" alt="${esc(cur.name)} 位置圖" draggable="false">` : `<p class="empty pr-pad">正在載入圖片…</p>`}
         ${pins.map((x) => `
-          <button type="button" class="pr-pin" style="left:${x.pin.x}%;top:${x.pin.y}%" data-pr-pin="${x.id}" aria-label="${esc(x.model)}">
+          <button type="button" class="pr-pin" style="left:${x.pin.x}%;top:${x.pin.y}%" data-pr-pin="${x.id}" aria-label="${esc(pinName(x, pins))}">
             <span class="pr-pin-dot"></span>
-            <span class="pr-pin-label" data-no-translate><b>${esc(x.alias || x.model)}</b>${x.ip ? `<br>${esc(x.ip)}` : ""}</span>
+            <span class="pr-pin-tag" data-no-translate><b>${esc(x.model)}</b>${pinSub(x, pins) ? `<br>${esc(pinSub(x, pins))}` : ""}</span>
+            <span class="pr-pin-label" data-no-translate><b>${esc(x.model)}</b>${x.alias ? `<br>${esc(x.alias)}` : ""}${x.room && x.room !== x.alias ? `<br>${esc(x.room)}` : ""}${x.ip ? `<br>${esc(x.ip)}` : ""}</span>
           </button>`).join("")}
       </div>
       ${unplaced.length ? `<details class="pr-unplaced"><summary>未標示位置：${unplaced.length} 部</summary>
         <p class="hint" data-no-translate>${unplaced.map((x) => esc(`${x.model}${x.room ? `（${x.room}）` : ""}`)).join("、")}</p></details>` : ""}` : ""}`;
+}
+
+/** 位置圖上顯示：完整品牌型號＋簡稱；沒有簡稱而同一張圖有相同型號時，改為顯示位置以便分辨 */
+function pinSub(x, pins) {
+  if (x.alias) return x.alias;
+  const dup = pins.some((o) => o.id !== x.id && o.model === x.model && !o.alias);
+  return dup ? (x.room || "") : "";
+}
+function pinName(x, pins) {
+  const sub = pinSub(x, pins);
+  return sub ? `${x.model}（${sub}）` : x.model;
 }
 
 function relPos(e, el) {
