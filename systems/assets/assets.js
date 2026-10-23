@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, fmtDate, todayId, enhanceDateInputs, downloadCSV,
-} from "../../assets/js/common.js?v=20261023b";
+} from "../../assets/js/common.js?v=20261023c";
 import {
   collection, doc, onSnapshot, getDoc, getDocs, query, where, writeBatch, serverTimestamp, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   ASSET, USAGE, STATUS, CHECK, placeText,
-} from "./assets-config.js?v=20261023b";
-import { setupImport } from "./assets-import.js?v=20261023b";
+} from "./assets-config.js?v=20261023c";
+import { setupImport } from "./assets-import.js?v=20261023c";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, items: [], openId: null };

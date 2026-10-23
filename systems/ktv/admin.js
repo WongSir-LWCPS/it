@@ -1,17 +1,17 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, daysUntil, parseDateId, toDateId, pad, todayId,
   enhanceDateInputs, timePicker,
-} from "../../assets/js/common.js?v=20261023b";
+} from "../../assets/js/common.js?v=20261023c";
 import {
   collection, doc, onSnapshot, writeBatch, updateDoc, setDoc, getDoc, serverTimestamp, arrayUnion, arrayRemove,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { KTV, STATUS } from "./ktv-config.js?v=20261023b";
+import { KTV, STATUS } from "./ktv-config.js?v=20261023c";
 import {
   timeLabel, toMin, lockIdOf, isActive, regularIndex, findConflict, sortBookings,
-} from "./ktv-common.js?v=20261023b";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261023b";
-import { buildKtvEmail } from "./ktv-email.js?v=20261023b";
-import { emailEnabled } from "../../assets/js/email.js?v=20261023b";
+} from "./ktv-common.js?v=20261023c";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261023c";
+import { buildKtvEmail } from "./ktv-email.js?v=20261023c";
+import { emailEnabled } from "../../assets/js/email.js?v=20261023c";
 
 const S = {
   user: null, regularDates: [], bookings: [], filter: "active", upcoming: false,
@@ -164,8 +164,12 @@ function renderAll() {
     .filter((b) => !S.upcoming || daysUntil(b.date) >= 0)
     .sort(sortBookings);
   const box = $("#all-list");
-  if (!list.length) { box.innerHTML = `<p class="empty">沒有符合條件的節目。按「新增節目」可直接加入。</p>`; return; }
-  box.innerHTML = `
+  const legacy = S.bookings.filter(hasLegacyNote);
+  const legacyBar = legacy.length ? `
+    <div class="notice-bar">有 ${legacy.length} 個節目的備註含「根據 T003 備忘補上」（匯入舊資料時加入）。
+      <button class="btn btn--small" type="button" data-clean-legacy>刪除這段備註</button></div>` : "";
+  if (!list.length) { box.innerHTML = legacyBar + `<p class="empty">沒有符合條件的節目。按「新增節目」可直接加入。</p>`; return; }
+  box.innerHTML = legacyBar + `
     <div class="table-scroll">
       <table class="table">
         <thead><tr><th>播放日期</th><th>時間</th><th>主題</th><th>負責老師</th><th>模式</th><th>狀態</th><th>審批備註</th><th><span class="sr-only">操作</span></th></tr></thead>
@@ -189,6 +193,37 @@ function renderAll() {
       </table>
     </div>`;
 }
+
+/* ---------- 刪除匯入時加入的「根據 T003 備忘補上」 ---------- */
+const LEGACY_RE = /[（(]?\s*根據\s*T003\s*備忘補上\s*[)）]?[。．.，,;；]?/g;
+const stripLegacy = (v) => String(v || "").replace(LEGACY_RE, "").replace(/\s{2,}/g, " ").trim();
+function hasLegacyNote(b) {
+  return ["remarks", "reviewNote"].some((k) => typeof b[k] === "string" && stripLegacy(b[k]) !== b[k].trim());
+}
+async function cleanLegacyNotes(btn) {
+  const list = S.bookings.filter(hasLegacyNote);
+  if (!list.length || !confirm(`從 ${list.length} 個節目的備註刪除「根據 T003 備忘補上」？其他備註內容會保留。`)) return;
+  btn.disabled = true;
+  try {
+    for (let i = 0; i < list.length; i += 400) {
+      const batch = writeBatch(db);
+      for (const b of list.slice(i, i + 400)) {
+        const upd = {};
+        for (const k of ["remarks", "reviewNote"]) if (typeof b[k] === "string") upd[k] = stripLegacy(b[k]);
+        batch.update(doc(db, "ktv_bookings", b.id), upd);
+      }
+      await batch.commit();
+    }
+    toast(`已更新 ${list.length} 個節目的備註。`, "success");
+  } catch (e) {
+    btn.disabled = false;
+    toast("未能更新：" + e.message, "error");
+  }
+}
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-clean-legacy]");
+  if (btn) cleanLegacyNotes(btn);
+});
 
 /* ---------- 新增／修改節目 ---------- */
 function setupEditDialog() {

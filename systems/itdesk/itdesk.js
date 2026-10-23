@@ -1,10 +1,10 @@
-import { boot, db, esc, toast } from "../../assets/js/common.js?v=20261023b";
+import { boot, db, esc, toast } from "../../assets/js/common.js?v=20261023c";
 import {
   collection, doc, onSnapshot, getDoc, setDoc, deleteDoc, writeBatch, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { newKeyMeta, unlock, encryptJSON, decryptJSON } from "./itdesk-crypto.js?v=20261023b";
-import { contactsPage } from "./pages/contacts.js?v=20261023b";
-import { printersPage } from "./pages/printers.js?v=20261023b";
+import { newKeyMeta, unlock, encryptJSON, decryptJSON } from "./itdesk-crypto.js?v=20261023c";
+import { contactsPage } from "./pages/contacts.js?v=20261023c";
+import { printersPage } from "./pages/printers.js?v=20261023c";
 
 /*
  * IT組工作資料：每個頁面各有自己的版面及資料（例如外判商聯絡人、器材 IP）。
