@@ -2,24 +2,31 @@
 // - 各年申請人名單（教育局申請者名單／借用情況文件）
 // - 每學年向教育局回覆的借用情況（A／B／C／D）
 // - 檢查新申請者是否三年內已申請
-import { db, esc, toast, downloadCSV, loadXlsx } from "../../assets/js/common.js?v=20261023f";
+import { db, esc, toast, downloadCSV, loadXlsx } from "../../assets/js/common.js?v=20261025a";
 import {
   collection, doc, onSnapshot, writeBatch, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { currentYearStart, yearLabel } from "./qef-config.js?v=20261023f";
+import { currentYearStart, yearLabel } from "./qef-config.js?v=20261025a";
 
 const $ = (sel) => document.querySelector(sel);
 const WINDOW = 3;   // 檢查最近幾個學年
 
-/** 回覆狀態（以最近年度教育局文件的寫法為準） */
+/** 回覆狀態（以 2026/27 學年教育局文件的寫法為準） */
 const REPLY = {
-  A: "A - Continues to borrow the device",
-  B: "B - Continues studying in the school but no longer needs to borrow the device which has been returned for redeployment.",
-  C: "C - Returned the device for redeployment",
+  A: "A - Continues to borrow the device/router",
+  B: "B - Continues to borrow the device which needs replacement",
+  C: "C - Returned the device/router for redeployment",
   D: "D - Returned the device which needs replacement",
 };
-const REPLY_ZH = { A: "繼續借用", B: "仍在校但已歸還", C: "已歸還（可再借出）", D: "已歸還（需更換）" };
-const TONE = { A: "go", B: "muted", C: "wait", D: "stop" };
+const REPLY_ZH = { A: "繼續借用", B: "繼續借用（裝置需替換）", C: "已歸還（借給其他學生）", D: "已歸還（裝置需替換）" };
+/** 詳細說明（顯示在圖例） */
+const REPLY_DETAIL = {
+  A: "繼續借用裝置／路由器：這學生在本學年繼續借用裝置／路由器。",
+  B: "繼續借用裝置，但裝置需要替換：仍合資格及需要繼續借用；裝置於 2021/22 至 2023/24 學年期間購買，規格不再符合學校電子學習需要，申請替換已獲教育局批准，並會於日後提交合資格證明。",
+  C: "已歸還裝置／路由器，用以借給其他合資格學生。",
+  D: "已歸還裝置，但該裝置需要替換：裝置於 2021/22 至 2023/24 學年期間購買，規格不再符合學校電子學習需要，申請替換已獲教育局批准。",
+};
+const TONE = { A: "go", B: "info", C: "wait", D: "stop" };
 
 const A = { list: [], loaded: false, ctx: null, plan: null, sort: { key: "year", dir: -1 } };
 const collator = new Intl.Collator("zh-Hant", { numeric: true, sensitivity: "base" });
@@ -42,7 +49,7 @@ export function setupApplicants(ctx) {
   $("#a-year").innerHTML = [y + 1, y, y - 1].map((v) => `<option value="${v}" ${v === y ? "selected" : ""}>${yearLabel(v)}</option>`).join("");
   $("#a-r-title").textContent = `教育局借用情況回覆（${yearLabel(replyYear())}）`;
   $("#a-legend").innerHTML = Object.entries(REPLY).map(([k, v]) =>
-    `<li><span class="badge badge--${TONE[k]}">${k}</span> ${esc(REPLY_ZH[k])}：<small>${esc(v)}</small></li>`).join("");
+    `<li><span class="badge badge--${TONE[k]}">${k}</span> ${esc(REPLY_ZH[k])}：<small>${esc(v)}</small><br><small class="hint" data-no-translate>${esc(REPLY_DETAIL[k])}</small></li>`).join("");
   // 第一次打開分頁才讀取，節省讀取量
   document.querySelector('.tab[data-tab="apply"]').addEventListener("click", load, { once: true });
   ["#a-f-year", "#a-f-level", "#a-f-status", "#a-q"].forEach((id) => $(id).addEventListener("input", renderList));
@@ -83,6 +90,9 @@ const replyYear = () => currentYearStart();
 /** 某學年名單上的申請人 */
 const listedIn = (y) => A.list.filter((r) => r.statuses?.[yk(y)]);
 
+/** 選項修改前選擇的 B（舊定義為「仍在校但已歸還」） */
+const stale = (list, y) => list.filter((r) => r.statuses[yk(y)].code === "B" && /continues studying/i.test(r.statuses[yk(y)].text || ""));
+
 function renderReplySummary() {
   const y = replyYear();
   const list = listedIn(y);
@@ -90,7 +100,8 @@ function renderReplySummary() {
   $("#a-r-summary").innerHTML = list.length ? `
     <p>${yearLabel(y)} 名單共 <strong>${list.length}</strong> 人：
       ${Object.keys(REPLY).map((k) => `<span class="badge badge--${TONE[k]}">${k}</span> ${n(k)}`).join("　")}
-      　<span class="badge badge--stop">未回覆</span> <strong>${n("")}</strong></p>`
+      　<span class="badge badge--stop">未回覆</span> <strong>${n("")}</strong></p>
+    ${stale(list, y).length ? `<p class="warn">有 ${stale(list, y).length} 人在選項修改前已選擇 B（舊定義：仍在校但已歸還），新定義的 B 是「繼續借用，但裝置需要替換」。請在下表把狀態篩選為「B」重新檢查。</p>` : ""}`
     : `<p class="hint">${yearLabel(y)} 未有教育局名單。請先在頁面最底匯入今年教育局的名單。</p>`;
 }
 
@@ -213,19 +224,21 @@ async function setReply(id, code) {
 
 /**
  * 按 QEF iPad 借用情況建議狀態：
- * 現正借用 → A；已歸還而該 iPad 現時維修中／待注銷／已注銷 → D；其他已歸還 → C；
- * 去年已回覆 C／D 而今年沒有借用 → 沿用去年。沒有資料的不會填寫。
+ * 現正借用 → A（去年回覆 B 的沿用 B）；已歸還而該 iPad 現時維修中／待注銷／已注銷，或去年回覆 B／D → D；其他已歸還 → C；
+ * 今年沒有借用記錄而去年回覆 C／D → 沿用去年。
+ * B（繼續借用但需替換）要教育局批准替換，系統無法判斷，需人手選擇。沒有資料的不會填寫。
  */
 function suggestFor(r, y) {
   const loans = loansOf(normStrn(r.strn));
-  if (loans.some((x) => x.current)) return "A";
   const prev = r.statuses?.[yk(y - 1)]?.code;
+  if (loans.some((x) => x.current)) return prev === "B" ? "B" : "A";
   const returned = loans.filter((x) => !x.current);
   if (returned.length) {
     const last = returned[returned.length - 1];
-    return ["repair", "pendingWriteOff", "retired"].includes(last.d.status) && (last.years || []).includes(yearLabel(y)) ? "D" : (prev === "D" ? "D" : "C");
+    const broken = ["repair", "pendingWriteOff", "retired"].includes(last.d.status) && (last.years || []).includes(yearLabel(y));
+    return broken || prev === "B" || prev === "D" ? "D" : "C";
   }
-  if (prev === "C" || prev === "D" || prev === "B") return prev;
+  if (prev === "C" || prev === "D") return prev;
   return "";
 }
 
@@ -266,7 +279,7 @@ function exportReply() {
   const rows = [["No.", "Student Reference Number (STRN)", "Student Name", "Class Level (Application Year)", "Status"]];
   list.forEach((r, i) => {
     const s = r.statuses[yk(y)];
-    rows.push([i + 1, r.strn, r.name, appText(r), s.code ? (s.text || REPLY[s.code]) : ""]);
+    rows.push([i + 1, r.strn, r.name, appText(r), s.code ? REPLY[s.code] : ""]);
   });
   downloadCSV(`QEF_Status_${y}-${y + 1}.csv`, rows);
 }

@@ -1,16 +1,17 @@
-import { boot, db, esc, toast } from "../../assets/js/common.js?v=20261023f";
+import { boot, db, esc, toast } from "../../assets/js/common.js?v=20261025a";
 import {
   collection, doc, onSnapshot, getDoc, setDoc, deleteDoc, writeBatch, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { newKeyMeta, unlock, encryptJSON, decryptJSON } from "./itdesk-crypto.js?v=20261023f";
-import { contactsPage } from "./pages/contacts.js?v=20261023f";
-import { printersPage } from "./pages/printers.js?v=20261023f";
+import { newKeyMeta, unlock, encryptJSON, decryptJSON } from "./itdesk-crypto.js?v=20261025a";
+import { contactsPage } from "./pages/contacts.js?v=20261025a";
+import { printersPage } from "./pages/printers.js?v=20261025a";
+import { devicesPage } from "./pages/devices.js?v=20261025a";
 
 /*
  * IT組工作資料：每個頁面各有自己的版面及資料（例如外判商聯絡人、器材 IP）。
  * 新增頁面：在 pages/ 建立模組（提供 id、name、icon、defaultData()、render()），再加入下面的 PAGES。
  */
-const PAGES = [contactsPage, printersPage];
+const PAGES = [contactsPage, printersPage, devicesPage];
 
 const $ = (sel) => document.querySelector(sel);
 const META_REF = () => doc(db, "itdesk_meta", "key");

@@ -265,6 +265,7 @@ body.no-scroll { overflow: hidden; }
 .badge--wait { background: var(--wait-bg); color: var(--wait); }
 .badge--stop { background: var(--stop-bg); color: var(--stop); }
 .badge--muted { background: var(--paper); color: var(--muted); }
+.badge--info { background: #E6F0FB; color: #2A5B9B; }
 
 /* ---------- 表格欄位 ---------- */
 .field { display: flex; flex-direction: column; gap: 6px; margin: 0 0 16px; border: 0; padding: 0; min-width: 0; flex: 1; }
@@ -841,3 +842,15 @@ tr.is-issue td { background: var(--stop-bg); }
 .unlock-card h2 { font-size: 1.05rem; margin: 0 0 10px; }
 .unlock-card .field { margin-bottom: 10px; }
 .unlock-card .field input { max-width: none; width: 100%; }
+/* IT組工作資料：裝置 IP 記錄 */
+.dv-table { min-width: 1240px; }
+.dv-c-name { width: 15%; } .dv-c-ip { width: 13%; } .dv-c-vlan { width: 10%; } .dv-c-mac { width: 11%; } .dv-c-sn { width: 7%; }
+.dv-c-login { width: 9%; } .dv-c-pw { width: 11%; } .dv-c-type { width: 13%; } .dv-c-note { width: auto; }
+.dv-pre { white-space: pre-line; }
+.dv-ipline { white-space: normal; }
+.dv-table .dv-name { white-space: normal; overflow-wrap: anywhere; }
+.dv-ipline + .dv-ipline, .dv-acc + .dv-acc { margin-top: 4px; }
+.dv-acc { min-height: 1.6em; white-space: nowrap; }
+.dv-dup { display: inline-block; font-size: .7rem; font-weight: 700; color: #8A4B00; background: #FFF1D6; border: 1px solid #F2C77A; border-radius: 999px; padding: 0 6px; cursor: help; }
+.dv-dup-note { margin-right: auto; color: #8A4B00; font-size: .85rem; }
+.dv-cat { font: inherit; font-size: .9rem; padding: 7px 10px; border: 1px solid #C7CEDF; border-radius: 8px; background: var(--surface); }
