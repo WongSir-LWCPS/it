@@ -2,11 +2,11 @@
 // - 各年申請人名單（教育局申請者名單／借用情況文件）
 // - 每學年向教育局回覆的借用情況（A／B／C／D）
 // - 檢查新申請者是否三年內已申請
-import { db, esc, toast, downloadCSV, loadXlsx } from "../../assets/js/common.js?v=20261025a";
+import { db, esc, toast, downloadCSV, loadXlsx } from "../../assets/js/common.js?v=20261029a";
 import {
   collection, doc, onSnapshot, writeBatch, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { currentYearStart, yearLabel } from "./qef-config.js?v=20261025a";
+import { currentYearStart, yearLabel } from "./qef-config.js?v=20261029a";
 
 const $ = (sel) => document.querySelector(sel);
 const WINDOW = 3;   // 檢查最近幾個學年
@@ -203,7 +203,7 @@ function loanText(strn) {
   const l = loansOf(normStrn(strn));
   if (!l.length) return "";
   return l.map((x) => x.current
-    ? `<span class="badge badge--go">現正借用 ${esc(x.label)}</span>`
+    ? (x.d.status === "pendingReturn" ? `<span class="badge badge--info">待還機 ${esc(x.label)}</span>` : `<span class="badge badge--go">現正借用 ${esc(x.label)}</span>`)
     : `<small>${esc(x.label)}（${esc(x.years.join("、"))}${x.outcome ? `，${esc(x.outcome)}` : ""}）</small>`).join(" ");
 }
 
@@ -231,6 +231,7 @@ async function setReply(id, code) {
 function suggestFor(r, y) {
   const loans = loansOf(normStrn(r.strn));
   const prev = r.statuses?.[yk(y - 1)]?.code;
+  if (loans.some((x) => x.current && x.d.status === "pendingReturn")) return "";   // 待還機：需人手判斷
   if (loans.some((x) => x.current)) return prev === "B" ? "B" : "A";
   const returned = loans.filter((x) => !x.current);
   if (returned.length) {

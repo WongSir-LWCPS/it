@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId, pad, enhanceDateInputs, downloadCSV, loadXlsx,
-} from "../../assets/js/common.js?v=20261025a";
+} from "../../assets/js/common.js?v=20261029a";
 import {
   collection, doc, onSnapshot, getDoc, getDocs, query, where, writeBatch, serverTimestamp, updateDoc, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { setupApplicants } from "./qef-applicants.js?v=20261025a";
+import { setupApplicants } from "./qef-applicants.js?v=20261029a";
 import {
   QEF, STATUS, statusText, mdmStatus, currentYearStart, yearLabel, defaultMdmExpiry, mdmExpiry, yearEnd, addYear,
-} from "./qef-config.js?v=20261025a";
+} from "./qef-config.js?v=20261029a";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, devices: [], openId: null };
@@ -125,6 +125,7 @@ function renderStats() {
   const cards = [
     ["總數（不包括已注銷）", S.devices.length - count("retired")],
     ["借出中", count("loaned")],
+    ["待還機", count("pendingReturn")],
     ["可借出", count("available")],
     ["維修中", count("repair")],
     ["遺失", count("lost")],
@@ -200,7 +201,7 @@ function renderList() {
               <td>${esc(d.holder?.cls || "")}</td>
               <td>${esc(d.holder?.no || "")}</td>
               <td>${esc(d.holder?.name || "")}${pastHit ? `${d.holder ? "<br>" : ""}<small class="badge badge--muted">曾借用：${esc(pastHit.name)}（${esc(pastHit.years.join("、"))}）</small>` : ""}</td>
-              <td><span class="badge badge--${STATUS[d.status]?.tone || "muted"}">${esc(statusText(d))}</span></td>
+              <td><span class="badge badge--${STATUS[d.status]?.tone || "muted"}">${esc(statusText(d))}</span>${d.status === "pendingReturn" && d.pendingNote ? `<br><small class="pending-note">${esc(d.pendingNote)}</small>` : ""}</td>
             </tr>`;
           }).join("")}
         </tbody>
@@ -210,12 +211,12 @@ function renderList() {
 
 function exportCSV() {
   const rows = [["Label No.", "機序號", "批次", "MDM 系統", "MDM 到期日", "Pencil Label No.", "Pencil 機序號", "狀態",
-    "持有者", "STRN", "班別", "學號", "點算日期", "iPads機身", "Apple Pencil", "備註"]];
+    "持有者", "STRN", "班別", "學號", "點算日期", "iPads機身", "Apple Pencil", "備註", "待還機備註"]];
   for (const d of filtered()) {
     const h = d.holder || {};
     const c = d.check || {};
     rows.push([d.label, d.serial, d.batch, d.mdm, mdmExpiry(d) || "", d.pencilLabel, d.pencilSerial,
-      statusText(d), h.name, h.strn, h.cls, h.no, c.date, c.body, c.pencil, d.note]);
+      statusText(d), h.name, h.strn, h.cls, h.no, c.date, c.body, c.pencil, d.note, d.status === "pendingReturn" ? d.pendingNote || "" : ""]);
   }
   downloadCSV(`QEF_iPad_${todayId()}.csv`, rows);
 }
@@ -246,6 +247,7 @@ async function renderDetail(id, keep = false) {
       <dt>Apple Pencil</dt><dd>${esc(d.pencilLabel || "—")} <span class="mono">${esc(d.pencilSerial || "")}</span></dd>
       <dt>持有者</dt><dd>${h ? `${esc(holderText(h))} <span class="mono">${esc(h.strn || "")}</span>${h.since ? `，${fmtDate(h.since)} 起` : ""}` : "—"}</dd>
       <dt>最近檢查</dt><dd>${c.date ? `${fmtDate(c.date)}：機身 ${esc(c.body || "—")}，Pencil ${esc(c.pencil || "—")}` : "—"}</dd>
+      ${d.status === "pendingReturn" ? `<dt>待還機備註</dt><dd class="pre">${esc(d.pendingNote || "—")}${d.pendingSince ? `<br><small class="hint">${fmtDate(d.pendingSince)} 起待還機</small>` : ""}</dd>` : ""}
       ${d.note ? `<dt>備註</dt><dd class="pre">${esc(d.note)}</dd>` : ""}
     </dl>
 
@@ -269,6 +271,28 @@ async function renderDetail(id, keep = false) {
       </form>` : ""}
 
     ${d.status === "loaned" ? `
+      <form class="card-form dev-form" data-form="pending">
+        <h3>標示為待還機</h3>
+        <p class="hint">iPad 仍在學生手上，但需要交還（例如畢業、退學、轉校、放棄借用）。歸還後再按下面的「歸還」。</p>
+        <div class="field-row">
+          <label class="field field--grow"><span>備註（選填）</span><input name="note" maxlength="200" placeholder="例如：6月畢業，已通知家長 30/6 前交還"></label>
+        </div>
+        <button class="btn" type="submit">標示為待還機</button>
+      </form>` : ""}
+
+    ${d.status === "pendingReturn" ? `
+      <form class="card-form dev-form" data-form="pendingNote">
+        <h3>待還機</h3>
+        <div class="field-row">
+          <label class="field field--grow"><span>備註</span><input name="note" maxlength="200" value="${esc(d.pendingNote || "")}" placeholder="例如：已通知家長、約定交還日期"></label>
+        </div>
+        <div class="actions actions--start">
+          <button class="btn" type="submit">儲存備註</button>
+          <button class="btn btn--small" type="button" data-act="unpending">改回借出中</button>
+        </div>
+      </form>` : ""}
+
+    ${d.status === "loaned" || d.status === "pendingReturn" ? `
       <form class="card-form dev-form" data-form="return">
         <h3>歸還</h3>
         <div class="field-row">
@@ -284,11 +308,11 @@ async function renderDetail(id, keep = false) {
         <button class="btn btn--primary" type="submit">歸還</button>
       </form>` : ""}
 
-    ${d.status !== "loaned" ? `
+    ${d.status !== "loaned" && d.status !== "pendingReturn" ? `
       <form class="card-form dev-form" data-form="status">
         <h3>更改狀態</h3>
         <div class="field-row">
-          <label class="field"><span>新狀態</span><select name="status">${Object.entries(STATUS).filter(([k]) => k !== "loaned" && k !== d.status)
+          <label class="field"><span>新狀態</span><select name="status">${Object.entries(STATUS).filter(([k]) => k !== "loaned" && k !== "pendingReturn" && k !== d.status)
             .map(([k, v]) => `<option value="${k}">${v.label}</option>`).join("")}</select></label>
           <label class="field"><span>注銷學年（待注銷／已注銷適用）</span><input name="writeOffYear" maxlength="5" value="${esc(d.writeOffYear || thisYear())}"></label>
           <label class="field field--grow"><span>原因／備註</span><input name="note" maxlength="200" placeholder="例如：送修、爆 mon、待注銷原因"></label>
@@ -402,6 +426,15 @@ $("#dev-dialog").addEventListener("click", async (e) => {
     if (!confirm(`把 ${d.label} 的 MDM 到期日由 ${fmtDate(m.expiry)} 延至 ${fmtDate(renewTarget(m.expiry))}？`)) return;
     await setMdmExpiry([d], renewTarget(m.expiry));
   }
+  if (e.target.closest('[data-act="unpending"]')) {
+    const d = S.devices.find((x) => x.id === S.openId);
+    if (!d || !confirm(`把 ${d.label} 改回「借出中」？待還機備註會被清除。`)) return;
+    const b = writeBatch(db);
+    b.update(devRef(d.id), { status: "loaned", pendingNote: deleteField(), pendingSince: deleteField(), updatedAt: serverTimestamp(), updatedBy: S.user.email });
+    b.set(doc(histColl()), { deviceId: d.id, label: d.label, type: "status", from: "pendingReturn", to: "loaned", date: todayId(),
+      student: d.holder || null, note: d.pendingNote ? `原待還機備註：${d.pendingNote}` : "", by: S.user.email, at: serverTimestamp() });
+    try { await b.commit(); toast("已改回借出中。", "success"); } catch (err) { toast("未能儲存：" + err.message, "error"); }
+  }
 });
 
 /** 續期一年：由到期日延一年；已過期的由上學年完結日起計（即延至本學年完結） */
@@ -474,8 +507,15 @@ $("#dev-dialog").addEventListener("submit", async (e) => {
     if (!entry.years.includes(thisYear())) entry.years = [...entry.years, thisYear()];
     Object.assign(entry, { outcome: v("reason"), to: check.date });
     if (idx != null) log[idx] = entry; else log.push(entry);
-    batch.update(devRef(d.id), { ...base, status: problem ? "repair" : "available", holder: null, lastHolder: d.holder || null, check, holderLog: log });
+    batch.update(devRef(d.id), { ...base, status: problem ? "repair" : "available", holder: null, lastHolder: d.holder || null, check, holderLog: log, pendingNote: deleteField(), pendingSince: deleteField() });
     batch.set(doc(histColl()), { ...hist, type: "return", student: d.holder || null, date: check.date, reason: v("reason"), check, note: v("note") });
+  } else if (type === "pending") {
+    batch.update(devRef(d.id), { ...base, status: "pendingReturn", pendingNote: v("note"), pendingSince: todayId() });
+    batch.set(doc(histColl()), { ...hist, type: "status", from: d.status, to: "pendingReturn", date: todayId(), student: d.holder || null, note: v("note") });
+  } else if (type === "pendingNote") {
+    if (v("note") === (d.pendingNote || "")) { toast("備註沒有改變。"); return; }
+    batch.update(devRef(d.id), { ...base, pendingNote: v("note") });
+    batch.set(doc(histColl()), { ...hist, type: "edit", date: todayId(), note: `待還機備註：${d.pendingNote || "—"} → ${v("note") || "—"}` });
   } else if (type === "status") {
     const st = v("status");
     const upd = { ...base, status: st };
@@ -509,7 +549,8 @@ $("#dev-dialog").addEventListener("submit", async (e) => {
   }
   try {
     await batch.commit();
-    toast({ loan: "已借出。", return: "已登記歸還。", status: "已更改狀態。", edit: "已儲存資料。", holder: "已更正持有者資料。" }[type], "success");
+    toast({ loan: "已借出。", return: "已登記歸還。", status: "已更改狀態。", edit: "已儲存資料。", holder: "已更正持有者資料。",
+      pending: "已標示為待還機。", pendingNote: "已儲存備註。" }[type], "success");
   } catch (err) {
     toast("未能儲存：" + err.message, "error");
   }
@@ -982,6 +1023,10 @@ function planUpdate(rows) {
         }
       }
     }
+    if (status === "pendingReturn" && (action === "return" || !(student || d?.holder))) {
+      errors.push(`第 ${rowNo} 行：${label} 設為「待還機」須有持有者。`);
+      continue;
+    }
     if (status && status !== d?.status && !(action === "loan" || action === "transfer") && !(action === "return" && status === "available")) {
       notes.push(`狀態：${STATUS[d?.status]?.label || "—"} → ${STATUS[status].label}`);
     }
@@ -1035,7 +1080,7 @@ async function runUpdate(btn) {
         };
         if (it.action === "return") {
           closeOpen("已歸還");
-          Object.assign(upd, { holder: null, lastHolder: d.holder || null, status: it.status || "available", holderLog: log });
+          Object.assign(upd, { holder: null, lastHolder: d.holder || null, status: it.status && it.status !== "pendingReturn" && it.status !== "loaned" ? it.status : "available", holderLog: log });
         } else if (it.action === "loan" || it.action === "transfer") {
           if (it.action === "transfer") closeOpen("轉借");
           const st = { ...it.student, since: today };
@@ -1053,6 +1098,8 @@ async function runUpdate(btn) {
         } else if (it.status) {
           upd.status = it.status;
         }
+        if (upd.status === "pendingReturn" && d.status !== "pendingReturn") upd.pendingSince = today;
+        if (d.status === "pendingReturn" && upd.status && upd.status !== "pendingReturn") { upd.pendingNote = deleteField(); upd.pendingSince = deleteField(); }
         if (it.isNew) {
           Object.assign(upd, { label: it.label, status: upd.status || "available", holder: upd.holder ?? null, createdAt: serverTimestamp() });
           if (!upd.mdm) upd.mdm = QEF.mdmSystems[0];

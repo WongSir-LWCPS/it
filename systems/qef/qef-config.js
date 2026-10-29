@@ -11,6 +11,7 @@ export const QEF = {
 
 export const STATUS = {
   loaned:    { label: "借出中",   tone: "go" },
+  pendingReturn: { label: "待還機", tone: "info" },   // 仍在學生手上，等待歸還（可填寫備註）
   available: { label: "可借出",   tone: "wait" },
   repair:    { label: "維修中",   tone: "stop" },
   lost:      { label: "遺失",     tone: "stop" },

@@ -854,3 +854,5 @@ tr.is-issue td { background: var(--stop-bg); }
 .dv-dup { display: inline-block; font-size: .7rem; font-weight: 700; color: #8A4B00; background: #FFF1D6; border: 1px solid #F2C77A; border-radius: 999px; padding: 0 6px; cursor: help; }
 .dv-dup-note { margin-right: auto; color: #8A4B00; font-size: .85rem; }
 .dv-cat { font: inherit; font-size: .9rem; padding: 7px 10px; border: 1px solid #C7CEDF; border-radius: 8px; background: var(--surface); }
+.pending-note { display: inline-block; margin-top: 3px; color: #2A5B9B; font-size: .78rem; line-height: 1.35; max-width: 220px; white-space: normal; }
+#stats.stat-grid { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }

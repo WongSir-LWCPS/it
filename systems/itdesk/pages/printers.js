@@ -1,6 +1,6 @@
 // IT組工作資料：影印機及打印機
 // 資料（包括 IP、MAC、登入密碼）不會寫在程式內：第一次使用時由 Excel 匯入，之後在頁面修改，全部以主密碼加密儲存。
-import { esc, toast, loadXlsx } from "../../../assets/js/common.js?v=20261025a";
+import { esc, toast, loadXlsx } from "../../../assets/js/common.js?v=20261029a";
 
 const uid = (p = "p") => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const FLOORS = ["地下", "1樓", "2樓", "3樓", "4樓", "5樓", "6樓", "7樓", "其他"];
