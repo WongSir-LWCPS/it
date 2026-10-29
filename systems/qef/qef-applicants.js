@@ -2,11 +2,11 @@
 // - 各年申請人名單（教育局申請者名單／借用情況文件）
 // - 每學年向教育局回覆的借用情況（A／B／C／D）
 // - 檢查新申請者是否三年內已申請
-import { db, esc, toast, downloadCSV, loadXlsx } from "../../assets/js/common.js?v=20261029a";
+import { db, esc, toast, downloadCSV, loadXlsx } from "../../assets/js/common.js?v=20261029c";
 import {
   collection, doc, onSnapshot, writeBatch, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { currentYearStart, yearLabel } from "./qef-config.js?v=20261029a";
+import { currentYearStart, yearLabel } from "./qef-config.js?v=20261029c";
 
 const $ = (sel) => document.querySelector(sel);
 const WINDOW = 3;   // 檢查最近幾個學年
@@ -269,6 +269,31 @@ async function suggest() {
   }
 }
 
+/**
+ * 學生在某學年的年級：
+ * 先看 QEF iPad 借用記錄中該學年的班別（例如 4B → P4），否則由申請年級推算（例如 2023/24 P1 → 2026/27 P4）。
+ * 已離校或畢業的學生（借用記錄的歸還原因為畢業、退學、轉校，或推算已超過 P6）留空。
+ */
+const LEFT = ["畢業", "退學", "轉校"];
+function levelIn(r, y) {
+  const strn = normStrn(r.strn);
+  // 已離校或畢業（歸還原因為畢業、退學、轉校）：不用年級
+  const left = A.ctx.getDevices().some((d) => (d.holderLog || []).some((x) => x.strn && normStrn(x.strn) === strn && LEFT.includes(x.outcome)));
+  if (left) return "";
+  for (const d of A.ctx.getDevices()) {
+    const cands = [
+      d.holder?.strn && normStrn(d.holder.strn) === strn ? { cls: d.holder.cls, years: [yearLabel(y)] } : null,
+      ...(d.holderLog || []).filter((x) => x.strn && normStrn(x.strn) === strn),
+    ].filter(Boolean);
+    const hit = cands.find((x) => (x.years || []).includes(yearLabel(y)) && /^[1-6]/.test(String(x.cls || "").trim()));
+    if (hit) return `P${String(hit.cls).trim()[0]}`;
+  }
+  const n = Number(String(r.level || "").replace(/\D/g, ""));
+  if (!n || !r.yearStart) return "";
+  const lv = n + (y - r.yearStart);
+  return lv >= 1 && lv <= 6 ? `P${lv}` : "";
+}
+
 /** 匯出教育局格式的回覆 */
 function exportReply() {
   const y = replyYear();
@@ -277,10 +302,12 @@ function exportReply() {
   if (!list.length) { toast(`${yearLabel(y)} 未有名單。`, "error"); return; }
   const missing = list.filter((r) => !r.statuses[yk(y)].code).length;
   if (missing && !confirm(`尚有 ${missing} 人未回覆，仍要匯出嗎？`)) return;
-  const rows = [["No.", "Student Reference Number (STRN)", "Student Name", "Class Level (Application Year)", "Status"]];
+  const rows = [["No.", "Student Reference Number (STRN)", "Student Name", "Class Level (Application Year)", "Status",
+    `Class Level (${y}/${String(y + 1).slice(-2)})`]];
   list.forEach((r, i) => {
     const s = r.statuses[yk(y)];
-    rows.push([i + 1, r.strn, r.name, appText(r), s.code ? REPLY[s.code] : ""]);
+    // 借用情況為 C／D 時，加上學生本學年的年級
+    rows.push([i + 1, r.strn, r.name, appText(r), s.code ? REPLY[s.code] : "", s.code === "C" || s.code === "D" ? levelIn(r, y) : ""]);
   });
   downloadCSV(`QEF_Status_${y}-${y + 1}.csv`, rows);
 }

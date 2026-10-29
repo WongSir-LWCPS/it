@@ -1,12 +1,12 @@
 import {
   boot, db, esc, toast, chineseName, isStaffEmail, fmtDate, fmtTimestamp, todayId, enhanceDateInputs,
-} from "../../assets/js/common.js?v=20261029a";
+} from "../../assets/js/common.js?v=20261029c";
 import {
   collection, doc, addDoc, updateDoc, onSnapshot, query, where, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { notifyAdmins } from "../../assets/js/notify.js?v=20261029a";
-import { COPILOT, CSTATUS, loanDays, purposeText } from "./copilot-config.js?v=20261029a";
-import { buildCopilotEmail } from "./copilot-email.js?v=20261029a";
+import { notifyAdmins } from "../../assets/js/notify.js?v=20261029c";
+import { COPILOT, CSTATUS, loanDays, purposeText } from "./copilot-config.js?v=20261029c";
+import { buildCopilotEmail } from "./copilot-email.js?v=20261029c";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, mine: [] };
