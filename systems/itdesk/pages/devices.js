@@ -1,6 +1,6 @@
 // IT組工作資料：裝置 IP 記錄（伺服器、網絡設備、無線基站、影音及課室設備等）
 // 資料（包括 IP、MAC、登入密碼）不會寫在程式內：由 Excel 匯入或在頁面新增，全部以主密碼加密儲存。
-import { esc, toast, loadXlsx } from "../../../assets/js/common.js?v=20261029c";
+import { esc, toast, loadXlsx } from "../../../assets/js/common.js?v=20261030a";
 
 const uid = (p = "d") => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const CATS = ["伺服器", "網絡設備", "無線網絡", "影音及課室", "打印機", "其他"];

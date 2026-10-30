@@ -2,11 +2,11 @@
 // - 各年申請人名單（教育局申請者名單／借用情況文件）
 // - 每學年向教育局回覆的借用情況（A／B／C／D）
 // - 檢查新申請者是否三年內已申請
-import { db, esc, toast, downloadCSV, loadXlsx } from "../../assets/js/common.js?v=20261029c";
+import { db, esc, toast, downloadCSV, loadXlsx } from "../../assets/js/common.js?v=20261030a";
 import {
   collection, doc, onSnapshot, writeBatch, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { currentYearStart, yearLabel } from "./qef-config.js?v=20261029c";
+import { currentYearStart, yearLabel } from "./qef-config.js?v=20261030a";
 
 const $ = (sel) => document.querySelector(sel);
 const WINDOW = 3;   // 檢查最近幾個學年
@@ -60,6 +60,14 @@ export function setupApplicants(ctx) {
   $("#a-check-file").addEventListener("change", checkFile);
   $("#a-import-file").addEventListener("change", importFile);
   $("#a-import-result").addEventListener("click", (e) => { if (e.target.closest("[data-a-run]")) runImport(e.target.closest("[data-a-run]")); });
+  $("#a-r-summary").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-a-find]");
+    if (!b) return;
+    $("#a-q").value = b.dataset.aFind;
+    $("#a-f-status").value = "";
+    renderList();
+    $("#a-list").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
   $("#a-list").addEventListener("click", (e) => {
     const h = e.target.closest("[data-a-sort]");
     if (!h) return;
@@ -93,6 +101,62 @@ const listedIn = (y) => A.list.filter((r) => r.statuses?.[yk(y)]);
 /** 選項修改前選擇的 B（舊定義為「仍在校但已歸還」） */
 const stale = (list, y) => list.filter((r) => r.statuses[yk(y)].code === "B" && /continues studying/i.test(r.statuses[yk(y)].text || ""));
 
+/**
+ * 核對回覆與 QEF iPad 借用情況，找出數字對不上的原因：
+ * - 回覆 C／D，但仍持有 iPad（借出中／待還機）
+ * - 回覆 A／B，但沒有持有 iPad
+ * - 持有 iPad 的學生不在名單上
+ * - 同一學生持有多於一部 iPad
+ */
+function reconcile(list, y) {
+  const devs = A.ctx.getDevices().filter((d) => d.holder && d.status !== "retired");
+  const byStrn = new Map();
+  for (const d of devs) {
+    const k = d.holder.strn ? normStrn(d.holder.strn) : `name:${String(d.holder.name || "").trim()}`;
+    byStrn.set(k, [...(byStrn.get(k) || []), d]);
+  }
+  const held = (r) => byStrn.get(normStrn(r.strn)) || byStrn.get(`name:${String(r.name || "").trim()}`) || [];
+  const listed = new Set(list.flatMap((r) => [normStrn(r.strn), `name:${String(r.name || "").trim()}`]));
+  const code = (r) => r.statuses[yk(y)].code || "";
+  const dl = (ds) => ds.map((d) => `${d.label}（${STATUS_ZH[d.status] || d.status}）`).join("、");
+  const issues = [];
+  for (const r of list) {
+    const h = held(r);
+    if ((code(r) === "C" || code(r) === "D") && h.length) {
+      issues.push({ r, msg: h.every((d) => d.status === "pendingReturn")
+        ? `回覆 ${code(r)}，iPad ${dl(h)} 仍未交還（交還後會一致）`
+        : `回覆 ${code(r)}，但仍持有 ${dl(h)}` });
+    }
+    if ((code(r) === "A" || code(r) === "B") && !h.length) issues.push({ r, msg: `回覆 ${code(r)}，但系統沒有借出 iPad 給這位學生` });
+    if (h.length > 1) issues.push({ r, msg: `同時持有 ${h.length} 部 iPad：${dl(h)}` });
+  }
+  const outside = devs.filter((d) => !listed.has(d.holder.strn ? normStrn(d.holder.strn) : `name:${String(d.holder.name || "").trim()}`));
+  for (const d of outside) {
+    issues.push({ r: { strn: d.holder.strn || "", name: d.holder.name || "" }, msg: `持有 ${d.label}（${STATUS_ZH[d.status] || d.status}），但不在 ${yearLabel(y)} 名單上` });
+  }
+  return { issues, holders: devs.length };
+}
+const STATUS_ZH = { loaned: "借出中", pendingReturn: "待還機", available: "可借出", repair: "維修中", lost: "遺失", pendingWriteOff: "待注銷", retired: "已注銷" };
+function reconcileHtml(list, y) {
+  if (!A.ctx.getDevices().length) return "";
+  const { issues, holders } = reconcile(list, y);
+  const n = (c) => list.filter((r) => (r.statuses[yk(y)].code || "") === c).length;
+  return `
+    <details class="reconcile" ${issues.length ? "open" : ""}>
+      <summary>${issues.length ? `⚠ 核對 iPad 借用情況：有 ${issues.length} 項需要檢查` : "✓ 核對 iPad 借用情況：回覆與 iPad 借用記錄一致"}</summary>
+      <p class="hint">名單上回覆 A＋B 共 ${n("A") + n("B")} 人；系統現時有 ${holders} 部 iPad 有持有者（借出中＋待還機）。兩者應該相同，除非有下列情況。</p>
+      ${issues.length ? `<table class="table table--compact"><thead><tr><th>STRN</th><th>姓名</th><th>情況</th></tr></thead><tbody>
+        ${issues.map((x) => `<tr><td class="mono"><button type="button" class="link-btn" data-a-find="${esc(x.r.strn || x.r.name)}">${esc(x.r.strn || "—")}</button></td>
+          <td>${esc(x.r.name || "")}</td><td>${esc(x.msg)}</td></tr>`).join("")}
+      </tbody></table>` : ""}
+    </details>`;
+}
+
+/** iPad 資料更新後重新核對 */
+export function refreshApplicants() {
+  if (A.loaded) renderReplySummary();
+}
+
 function renderReplySummary() {
   const y = replyYear();
   const list = listedIn(y);
@@ -101,6 +165,7 @@ function renderReplySummary() {
     <p>${yearLabel(y)} 名單共 <strong>${list.length}</strong> 人：
       ${Object.keys(REPLY).map((k) => `<span class="badge badge--${TONE[k]}">${k}</span> ${n(k)}`).join("　")}
       　<span class="badge badge--stop">未回覆</span> <strong>${n("")}</strong></p>
+    ${reconcileHtml(list, y)}
     ${stale(list, y).length ? `<p class="warn">有 ${stale(list, y).length} 人在選項修改前已選擇 B（舊定義：仍在校但已歸還），新定義的 B 是「繼續借用，但裝置需要替換」。請在下表把狀態篩選為「B」重新檢查。</p>` : ""}`
     : `<p class="hint">${yearLabel(y)} 未有教育局名單。請先在頁面最底匯入今年教育局的名單。</p>`;
 }
