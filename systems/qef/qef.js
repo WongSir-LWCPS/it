@@ -1,13 +1,13 @@
 import {
   boot, db, esc, toast, fmtDate, fmtTimestamp, todayId, pad, enhanceDateInputs, downloadCSV, loadXlsx,
-} from "../../assets/js/common.js?v=20261030a";
+} from "../../assets/js/common.js?v=20261103a";
 import {
   collection, doc, onSnapshot, getDoc, getDocs, query, where, writeBatch, serverTimestamp, updateDoc, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { setupApplicants, refreshApplicants } from "./qef-applicants.js?v=20261030a";
+import { setupApplicants, refreshApplicants } from "./qef-applicants.js?v=20261103a";
 import {
   QEF, STATUS, statusText, mdmStatus, currentYearStart, yearLabel, defaultMdmExpiry, mdmExpiry, yearEnd, addYear,
-} from "./qef-config.js?v=20261030a";
+} from "./qef-config.js?v=20261103a";
 
 const $ = (sel) => document.querySelector(sel);
 const S = { user: null, devices: [], openId: null };
@@ -874,8 +874,8 @@ function renderMdm() {
     return;
   }
   box.innerHTML = `
-    <div class="table-scroll">
-      <table class="table">
+    <div class="table-scroll mdm-scroll">
+      <table class="table mdm-table">
         <thead><tr>
           <th><input type="checkbox" id="m-all" class="st-check" aria-label="全選"></th>
           ${th("mdm", "label", "Label")}${th("mdm", "serial", "機序號")}${th("mdm", "batch", "批次")}${th("mdm", "mdm", "MDM 系統")}${th("mdm", "status", "狀態")}${th("mdm", "mdmCat", `${yearLabel(y)} MDM`)}${th("mdm", "expiry", "MDM 到期日")}${th("mdm", "renewal", "最近續期")}
@@ -886,15 +886,15 @@ function renderMdm() {
             const r = d.mdmLastRenewal;
             return `
             <tr>
-              <td><input type="checkbox" class="st-check" data-msel="${esc(d.id)}" ${S.mdmSel.has(d.id) ? "checked" : ""} aria-label="選擇 ${esc(d.label)}"></td>
-              <td><strong>${esc(d.label)}</strong></td>
-              <td class="mono">${esc(d.serial)}</td>
-              <td>${esc(d.batch || "")}</td>
-              <td>${esc(d.mdm || "")}</td>
-              <td><span class="badge badge--${STATUS[d.status]?.tone}">${esc(statusText(d))}</span></td>
-              <td><span class="badge badge--${CAT[c][1]}">${CAT[c][0]}</span></td>
-              <td class="nowrap">${mdmExpiry(d) ? fmtDate(mdmExpiry(d)) : "—"}</td>
-              <td>${r ? `${fmtDate(r.date)}${r.note ? `<br><small>${esc(r.note)}</small>` : ""}` : ""}</td>
+              <td class="m-c-check"><input type="checkbox" class="st-check" data-msel="${esc(d.id)}" ${S.mdmSel.has(d.id) ? "checked" : ""} aria-label="選擇 ${esc(d.label)}"></td>
+              <td class="m-c-label"><strong>${esc(d.label)}</strong></td>
+              <td class="mono m-c-serial" data-label="機序號">${esc(d.serial)}</td>
+              <td class="m-c-batch" data-label="批次">${esc(d.batch || "")}</td>
+              <td class="m-c-sys" data-label="MDM">${esc(d.mdm || "")}</td>
+              <td class="m-c-status" data-label="狀態"><span class="badge badge--${STATUS[d.status]?.tone}">${esc(statusText(d))}</span></td>
+              <td class="m-c-cat" data-label="${yearLabel(y)}"><span class="badge badge--${CAT[c][1]}">${CAT[c][0]}</span></td>
+              <td class="nowrap m-c-exp" data-label="到期日">${mdmExpiry(d) ? fmtDate(mdmExpiry(d)) : "—"}</td>
+              <td class="m-c-renew" data-label="最近續期">${r ? `${fmtDate(r.date)}${r.note ? `<br><small>${esc(r.note)}</small>` : ""}` : ""}</td>
             </tr>`;
           }).join("")}
         </tbody>

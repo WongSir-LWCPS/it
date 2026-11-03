@@ -859,3 +859,31 @@ tr.is-issue td { background: var(--stop-bg); }
 .reconcile { margin: 8px 0 12px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .reconcile summary { cursor: pointer; font-weight: 700; }
 .reconcile .table { margin-top: 8px; font-size: .88rem; }
+/* QEF MDM 管理：手機版面 */
+.mdm-summary { min-width: 0; }
+@media (max-width: 640px) {
+  #tab-mdm .stock-head { display: block; }
+  #tab-mdm .mdm-summary .stat-grid--tight { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #tab-mdm .batch-table th, #tab-mdm .batch-table td { padding: 8px 10px; font-size: .85rem; }
+  #tab-mdm .filter-bar .field--compact { flex: 1 1 30%; min-width: 0; }
+  #tab-mdm .filter-bar .field--compact select, #tab-mdm .filter-bar .field--compact input { width: 100%; }
+  #tab-mdm .filter-bar #m-export { flex: 1 1 100%; }
+  .mdm-bar .field--compact { flex: 1 1 100%; }
+  .mdm-bar .field--compact input { width: 100%; }
+  /* iPad 清單改為卡片 */
+  .mdm-scroll { overflow: visible; border: 0; background: none; }
+  .mdm-table, .mdm-table tbody { display: block; }
+  .mdm-table thead tr { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); margin-bottom: 8px; }
+  .mdm-table thead th { display: none; padding: 0; border: 0; background: none; }
+  .mdm-table thead th:first-child { display: block; }
+  .mdm-table thead tr::after { content: "全選"; font-size: .85rem; color: var(--muted); }
+  .mdm-table tbody tr { display: grid; grid-template-columns: 28px 1fr auto; gap: 4px 10px; align-items: center;
+    padding: 10px 12px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+  .mdm-table tbody td { display: block; padding: 0; border: 0; font-size: .85rem; white-space: normal; }
+  .mdm-table .m-c-check { grid-row: 1 / span 2; }
+  .mdm-table .m-c-label { grid-column: 2; font-size: 1rem; }
+  .mdm-table .m-c-cat { grid-column: 3; grid-row: 1; justify-self: end; }
+  .mdm-table td[data-label]:not(.m-c-cat) { grid-column: 2 / span 2; color: var(--ink-2); }
+  .mdm-table td[data-label]:not(.m-c-cat)::before { content: attr(data-label) "："; color: var(--muted); }
+  .mdm-table td:empty { display: none; }
+}
